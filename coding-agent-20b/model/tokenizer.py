@@ -345,9 +345,21 @@ class CodeTokenizer:
         self.merge_ranks = {}
 
     def _build_vocab(self, vocab: List[str], merges: List[Tuple[str, str]]):
-        """Build vocabulary from trained BPE data."""
+        """Build vocabulary from trained BPE data.
+
+        Byte-fallback guarantee: all 256 byte-level symbols are always
+        present, so ANY unicode string encodes without <unk>.
+        """
         self.token_to_id = dict(self.special_tokens)
         self.id_to_token = {v: k for k, v in self.special_tokens.items()}
+
+        # Byte fallback first (must precede merges so merges can reference them)
+        for i in range(256):
+            char = self._byte_to_char(i)
+            if char not in self.token_to_id:
+                idx = len(self.token_to_id)
+                self.token_to_id[char] = idx
+                self.id_to_token[idx] = char
 
         # Add BPE vocabulary
         for token in vocab:
@@ -395,11 +407,16 @@ class CodeTokenizer:
             # Convert to byte-level
             bytes_str = ''.join(self._byte_to_char(b) for b in pre_token.encode('utf-8'))
 
-            # Apply BPE
+            # Apply BPE; byte-fallback: unknown merged symbols decompose
+            # to their constituent byte symbols (never emit <unk> for text).
             bpe_tokens = self._apply_bpe(bytes_str)
             for token in bpe_tokens:
-                token_id = self.token_to_id.get(token, self.special_tokens["<unk>"])
-                tokens.append(token_id)
+                token_id = self.token_to_id.get(token)
+                if token_id is not None:
+                    tokens.append(token_id)
+                else:
+                    for ch in token:
+                        tokens.append(self.token_to_id.get(ch, self.special_tokens["<unk>"]))
 
         return tokens
 
@@ -541,6 +558,166 @@ class CodeTokenizer:
 
 
 # ============================================================
+# PRODUCTION BPE TRAINER (streaming, incremental, byte-fallback)
+# ============================================================
+
+class EfficientBPETrainer:
+    """Scalable byte-level BPE trainer.
+
+    Fixes vs. the legacy BPETrainer:
+    - Streams the corpus (iterator of strings / files); no corpus-size cap
+      and the corpus is never materialised in RAM.
+    - Incremental pair counting with an inverted word->pairs index and a
+      max-heap, so each merge only recounts words containing the merged
+      pair (near O(corpus) total work instead of O(vocab x corpus)).
+    - Byte fallback: the 256 byte symbols are always in the vocab.
+    - Deterministic tie-breaking (pair frequency, then lexicographic) so
+      training is reproducible for a fixed seed/corpus order.
+    """
+
+    def __init__(self, vocab_size: int = 128256, min_frequency: int = 2,
+                 special_tokens: Optional[Dict[str, int]] = None):
+        self.vocab_size = vocab_size
+        self.min_frequency = min_frequency
+        self.special_tokens = special_tokens or SPECIAL_TOKENS
+        self.pre_tokenizer = CodePreTokenizer()
+
+    @staticmethod
+    def _byte_to_char(byte_val: int) -> str:
+        if 33 <= byte_val <= 126:
+            return chr(byte_val)
+        if byte_val == 32:
+            return "Ġ"
+        if byte_val == 10:
+            return "Ċ"
+        if byte_val == 9:
+            return "ĉ"
+        return chr(byte_val + 256)
+
+    def _count_word_freqs(self, texts) -> Counter:
+        word_freqs: Counter = Counter()
+        for text in texts:  # streaming: one document at a time
+            if not text:
+                continue
+            for pre in self.pre_tokenizer.pre_tokenize(text):
+                word = "".join(self._byte_to_char(b) for b in pre.encode("utf-8"))
+                word_freqs[word] += 1
+        return word_freqs
+
+    def train_from_iterator(self, texts, verbose: bool = True) -> "CodeTokenizer":
+        word_freqs = self._count_word_freqs(texts)
+        if verbose:
+            print(f"Unique pre-tokens: {len(word_freqs):,}")
+        return self._train_from_word_freqs(word_freqs, verbose=verbose)
+
+    def train(self, texts: List[str], verbose: bool = True) -> "CodeTokenizer":
+        """Backwards-compatible list API (delegates to the streaming path)."""
+        return self.train_from_iterator(iter(texts), verbose=verbose)
+
+    def _train_from_word_freqs(self, word_freqs: Counter, verbose: bool = True) -> "CodeTokenizer":
+        num_merges = max(0, self.vocab_size - len(self.special_tokens) - 256)
+        splits: Dict[str, List[str]] = {w: list(w) for w in word_freqs}
+        # pair -> count, pair -> set(words containing it)
+        pair_counts: Counter = Counter()
+        pair_to_words: Dict[Tuple[str, str], set] = defaultdict(set)
+        for word, freq in word_freqs.items():
+            chars = splits[word]
+            for j in range(len(chars) - 1):
+                pair = (chars[j], chars[j + 1])
+                pair_counts[pair] += freq
+                pair_to_words[pair].add(word)
+
+        def heap_key(pair, count):
+            return (-count, pair)  # min-heap => highest count, lexicographic tie-break
+
+        heap = [heap_key(p, c) for p, c in pair_counts.items()]
+        heapq.heapify(heap)
+        merges: List[Tuple[str, str]] = []
+        vocab = {self._byte_to_char(i) for i in range(256)}
+
+        def push(pair):
+            c = pair_counts.get(pair, 0)
+            if c >= self.min_frequency:
+                heapq.heappush(heap, heap_key(pair, c))
+
+        while heap and len(merges) < num_merges:
+            neg_count, pair = heapq.heappop(heap)
+            count = -neg_count
+            if pair_counts.get(pair, 0) != count or count < self.min_frequency:
+                continue  # stale heap entry
+            merged = pair[0] + pair[1]
+            merges.append(pair)
+            vocab.add(merged)
+            affected = list(pair_to_words.get(pair, ()))
+            for word in affected:
+                freq = word_freqs[word]
+                chars = splits[word]
+                # subtract old pair contributions
+                for j in range(len(chars) - 1):
+                    old = (chars[j], chars[j + 1])
+                    pair_counts[old] -= freq
+                    if pair_counts[old] <= 0:
+                        del pair_counts[old]
+                new_chars, j = [], 0
+                while j < len(chars):
+                    if j < len(chars) - 1 and chars[j] == pair[0] and chars[j + 1] == pair[1]:
+                        new_chars.append(merged)
+                        j += 2
+                    else:
+                        new_chars.append(chars[j])
+                        j += 1
+                splits[word] = new_chars
+                for j in range(len(new_chars) - 1):
+                    new_pair = (new_chars[j], new_chars[j + 1])
+                    pair_counts[new_pair] = pair_counts.get(new_pair, 0) + freq
+                    pair_to_words[new_pair].add(word)
+                    push(new_pair)
+            pair_to_words.pop(pair, None)
+            if verbose and len(merges) % 5000 == 0:
+                print(f"  Merge {len(merges)}/{num_merges}")
+        if verbose:
+            print(f"Learned {len(merges)} merges; vocab={len(vocab) + len(self.special_tokens):,}")
+        return CodeTokenizer(vocab=sorted(vocab), merges=merges, special_tokens=self.special_tokens)
+
+
+class TokenizerValidator:
+    """Compression / round-trip / fertility validation for a trained tokenizer."""
+
+    @staticmethod
+    def validate(tokenizer: "CodeTokenizer", samples: List[str]) -> Dict:
+        total_chars = total_bytes = total_tokens = unk = 0
+        roundtrip_ok = True
+        per_sample = []
+        for s in samples:
+            ids = tokenizer.encode(s, add_special_tokens=False)
+            back = tokenizer.decode(ids, skip_special_tokens=True)
+            ok = (back == s)
+            roundtrip_ok = roundtrip_ok and ok
+            total_chars += len(s)
+            total_bytes += len(s.encode("utf-8"))
+            total_tokens += max(len(ids), 1)
+            unk += sum(1 for i in ids if i == tokenizer.special_tokens["<unk>"])
+            per_sample.append({"chars": len(s), "tokens": len(ids),
+                               "chars_per_token": len(s) / max(len(ids), 1), "roundtrip": ok})
+        return {
+            "num_samples": len(samples),
+            "chars_per_token": total_chars / max(total_tokens, 1),
+            "bytes_per_token": total_bytes / max(total_tokens, 1),
+            "unk_rate": unk / max(total_tokens, 1),
+            "roundtrip_ok": roundtrip_ok,
+            "per_sample": per_sample,
+        }
+
+    @staticmethod
+    def assert_production_ready(report: Dict, min_chars_per_token: float = 2.5,
+                                  max_unk_rate: float = 0.001) -> None:
+        assert report["roundtrip_ok"], "tokenizer round-trip failure"
+        assert report["unk_rate"] <= max_unk_rate, f"unk_rate {report['unk_rate']} too high (byte-fallback broken?)"
+        assert report["chars_per_token"] >= min_chars_per_token, (
+            f"chars/token {report['chars_per_token']:.2f} < {min_chars_per_token}: merges are not helping")
+
+
+# ============================================================
 # CHAT TEMPLATE
 # ============================================================
 
@@ -598,3 +775,18 @@ class CodeChatTemplate:
         """Encode a conversation to token IDs."""
         text = self.format_conversation(messages)
         return self.tokenizer.encode(text, add_special_tokens=True)
+
+    # -- native multi-turn tool-call format -------------------------------
+    # Wire format (special tokens the model is trained to emit):
+    #   <|assistant|> ... <|tool_call|> {"tool": ..., "arguments": {...}} <eos>
+    #   <|tool_result|> {"tool": ..., "result": {...}} <eos>
+    # The JSON payload is validated against TOOL_SCHEMAS by agent.parser.
+    @staticmethod
+    def format_tool_call(tool: str, arguments: Dict) -> str:
+        import json as _json
+        return "<|tool_call|>\n" + _json.dumps({"tool": tool, "arguments": arguments}) + "\n<eos>"
+
+    @staticmethod
+    def format_tool_result(tool: str, result: Dict) -> str:
+        import json as _json
+        return "<|tool_result|>\n" + _json.dumps({"tool": tool, "result": result}) + "\n<eos>"

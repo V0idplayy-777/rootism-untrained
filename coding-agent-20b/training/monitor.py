@@ -400,6 +400,45 @@ class TrainingMonitor:
             self.tb_writer.close()
 
 
+class RecoveryPolicy:
+    """Turns monitor recommendations into concrete, bounded actions.
+
+    Escalation: spike -> REDUCE_LR (x0.5, max 3x) -> SKIP_BATCH for
+    non-finite losses -> ROLLBACK to latest verified checkpoint when spikes
+    persist. A cooldown prevents thrashing.
+    """
+
+    ACTIONS = ("none", "reduce_lr", "skip_batch", "rollback")
+
+    def __init__(self, max_lr_reductions: int = 3, cooldown_steps: int = 50):
+        self.max_lr_reductions = max_lr_reductions
+        self.cooldown_steps = cooldown_steps
+        self.lr_reductions = 0
+        self._last_action_step = -10**9
+        self.consecutive_spikes = 0
+
+    def decide(self, step: int, loss: float, recommendations: dict) -> str:
+        import math as _math
+        if loss is not None and (not _math.isfinite(loss)):
+            return "skip_batch"
+        if recommendations.get("spike_detected"):
+            self.consecutive_spikes += 1
+        elif step % 10 == 0:
+            self.consecutive_spikes = max(0, self.consecutive_spikes - 1)
+        if step - self._last_action_step < self.cooldown_steps:
+            return "none"
+        if self.consecutive_spikes >= 3:
+            self._last_action_step = step
+            return "rollback"
+        if recommendations.get("should_reduce_lr") and self.lr_reductions < self.max_lr_reductions:
+            self.lr_reductions += 1
+            self._last_action_step = step
+            return "reduce_lr"
+        if recommendations.get("grad_explosion"):
+            return "skip_batch"
+        return "none"
+
+
 class RecoveryManager:
     """Manage training recovery from failures."""
     

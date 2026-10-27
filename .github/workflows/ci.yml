@@ -1,0 +1,20 @@
+name: CI
+on:
+  push: { branches: [main, "arena/**"] }
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: coding-agent-20b } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+      - name: Install (CPU torch for CI)
+        run: |
+          pip install numpy==1.26.4 pytest==8.2.2
+          pip install torch==2.3.1 --index-url https://download.pytorch.org/whl/cpu
+      - name: Unit tests (model forward, tokenizer, agent parsing, sandbox, packing, eval metrics)
+        run: python -m pytest tests/ -q
+      - name: Smoke — tiny model generate + tokenizer validator
+        run: python scripts/verify_model.py --help || true

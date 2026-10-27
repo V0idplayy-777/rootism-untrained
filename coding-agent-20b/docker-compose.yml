@@ -1,0 +1,21 @@
+services:
+  serve:
+    build: { context: ., target: serve }
+    ports: ["8000:8000"]
+    volumes: ["./checkpoints:/app/checkpoints:ro"]
+    read_only: true
+    tmpfs: ["/tmp:size=256m"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    deploy:
+      resources:
+        limits: { memory: 8G, cpus: "4.0" }
+  eval:
+    build: { context: ., target: eval }
+    volumes: ["./checkpoints:/app/checkpoints:ro", "./eval_cache:/app/eval_cache"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+  train:
+    build: { context: ., target: train }
+    volumes: ["./data:/app/data:ro", "./checkpoints:/app/checkpoints"]
+    environment: ["WANDB_MODE=offline"]

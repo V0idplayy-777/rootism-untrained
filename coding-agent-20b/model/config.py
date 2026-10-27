@@ -45,6 +45,16 @@ class CodingAgentConfig:
     rope_theta: float = 500000.0
     attention_dropout: float = 0.0
     attention_bias: bool = False
+    # RoPE scaling for contexts beyond max_position_embeddings at train time.
+    # rope_scaling_type: None | "ntk" | "yarn"; rope_scaling_factor e.g. 4.0 => 32k from 8k.
+    rope_scaling_type: Optional[str] = None
+    rope_scaling_factor: float = 1.0
+    original_max_position_embeddings: int = 8192
+
+    # === Generation / tool-use ===
+    tool_call_token_id: int = 48       # <|tool_call|>
+    tool_result_token_id: int = 49     # <|tool_result|>
+    kv_cache_max_tokens: int = 32768   # paged-KV eviction budget at inference
 
     # === Initialization ===
     initializer_range: float = 0.02
@@ -180,6 +190,26 @@ def get_7b_config() -> CodingAgentConfig:
         max_position_embeddings=8192,
         sliding_window=4096,
         rope_theta=500000.0,
+    )
+
+
+def get_20b_32k_config() -> CodingAgentConfig:
+    """20B with YaRN-scaled RoPE for 32k agent trajectories (train 8k, extend 4x)."""
+    return CodingAgentConfig(
+        vocab_size=128256, hidden_size=6144, intermediate_size=16384,
+        num_hidden_layers=60, num_attention_heads=48, num_kv_heads=8,
+        max_position_embeddings=32768, sliding_window=4096,
+        rope_theta=500000.0, rope_scaling_type="yarn", rope_scaling_factor=4.0,
+        original_max_position_embeddings=8192,
+    )
+
+
+def get_tiny_config(vocab_size: int = 320) -> CodingAgentConfig:
+    """CPU smoke-test config (fast forward/generate in CI)."""
+    return CodingAgentConfig(
+        vocab_size=vocab_size, hidden_size=128, intermediate_size=256,
+        num_hidden_layers=2, num_attention_heads=4, num_kv_heads=2,
+        max_position_embeddings=256, sliding_window=128, rope_theta=10000.0,
     )
 
 

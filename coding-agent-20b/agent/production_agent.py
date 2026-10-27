@@ -22,10 +22,26 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass, field
 from enum import Enum
-import docker
-import git
+try:
+    import docker  # noqa: F401  (kept for backwards-compat introspection)
+except ImportError:
+    docker = None  # type: ignore
+try:
+    import git  # noqa: F401
+except ImportError:
+    git = None  # type: ignore
+
+from .sandbox import DockerSandbox, HardenedSandbox, SandboxConfig, SandboxUnavailable  # noqa: E402
+from .tools import ToolExecutor  # noqa: E402
+from .parser import parse_tool_call, repair_prompt  # noqa: E402
+from .safety import sanitize_observation  # noqa: E402
 
 logger = logging.getLogger(__name__)
+
+try:
+    import torch
+except ImportError:
+    torch = None  # type: ignore
 
 
 # ============================================================
@@ -136,18 +152,50 @@ TOOL_SCHEMAS = {
         "parameters": {
             "type": "object",
             "properties": {
-                "pattern": {
-                    "type": "string",
-                    "description": "Search pattern (regex or literal)"
-                },
-                "file_pattern": {
-                    "type": "string",
-                    "description": "File glob pattern (e.g., '*.py')",
-                    "default": "*"
-                }
+                "pattern": {"type": "string", "description": "Search pattern (regex or literal)"},
+                "file_pattern": {"type": "string", "description": "File glob pattern (e.g., '*.py')", "default": "*"}
             },
             "required": ["pattern"]
         }
+    },
+    "list_files": {
+        "name": "list_files", "description": "List files in the workspace",
+        "parameters": {"type": "object", "properties": {
+            "path": {"type": "string", "default": "."},
+            "pattern": {"type": "string", "default": "*"}}}
+    },
+    "apply_patch": {
+        "name": "apply_patch", "description": "Apply a unified-diff patch (multi-file, atomic)",
+        "parameters": {"type": "object", "properties": {
+            "patch": {"type": "string", "description": "Unified diff text"}}, "required": ["patch"]}
+    },
+    "edit_function": {
+        "name": "edit_function", "description": "Replace one Python function/class by name (AST-aware)",
+        "parameters": {"type": "object", "properties": {
+            "path": {"type": "string"}, "function": {"type": "string"},
+            "new_source": {"type": "string"}}, "required": ["path", "function", "new_source"]}
+    },
+    "git_log": {
+        "name": "git_log", "description": "Show recent commit history",
+        "parameters": {"type": "object", "properties": {"n": {"type": "integer", "default": 10}}}
+    },
+    "git_commit": {
+        "name": "git_commit", "description": "Stage and commit changes",
+        "parameters": {"type": "object", "properties": {
+            "message": {"type": "string"}, "add_all": {"type": "boolean", "default": True}}, "required": ["message"]}
+    },
+    "git_branch": {
+        "name": "git_branch", "description": "List branches, or create (optionally checkout) one",
+        "parameters": {"type": "object", "properties": {
+            "name": {"type": "string"}, "checkout": {"type": "boolean", "default": False}}}
+    },
+    "git_checkout": {
+        "name": "git_checkout", "description": "Check out a branch/commit",
+        "parameters": {"type": "object", "properties": {"ref": {"type": "string"}}, "required": ["ref"]}
+    },
+    "git_show": {
+        "name": "git_show", "description": "Show a commit summary",
+        "parameters": {"type": "object", "properties": {"ref": {"type": "string", "default": "HEAD"}}}
     }
 }
 
@@ -156,297 +204,8 @@ TOOL_SCHEMAS = {
 # DOCKER SANDBOX
 # ============================================================
 
-class DockerSandbox:
-    """Secure code execution in Docker container."""
-    
-    def __init__(
-        self,
-        image: str = "python:3.11-slim",
-        memory_limit: str = "512m",
-        cpu_quota: int = 50000,  # 50% of one CPU
-        network_disabled: bool = True,
-    ):
-        self.image = image
-        self.memory_limit = memory_limit
-        self.cpu_quota = cpu_quota
-        self.network_disabled = network_disabled
-        
-        try:
-            self.client = docker.from_env()
-            self.available = True
-        except Exception as e:
-            logger.warning(f"Docker not available: {e}")
-            self.available = False
-    
-    def execute(
-        self,
-        code: str,
-        workspace_path: str,
-        timeout: int = 30,
-        install_packages: List[str] = None,
-    ) -> Dict[str, Any]:
-        """
-        Execute code in Docker container.
-        
-        Args:
-            code: Python code to execute
-            workspace_path: Path to mount as workspace
-            timeout: Execution timeout in seconds
-            install_packages: Packages to pip install
-            
-        Returns:
-            Dict with stdout, stderr, exit_code, timed_out
-        """
-        if not self.available:
-            return self._fallback_execute(code, workspace_path, timeout)
-        
-        try:
-            # Create temporary script
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-                f.write(code)
-                script_path = f.name
-            
-            # Build pip install command
-            install_cmd = ""
-            if install_packages:
-                packages = " ".join(install_packages)
-                install_cmd = f"pip install -q {packages} && "
-            
-            # Run container
-            container = self.client.containers.run(
-                self.image,
-                command=f"/bin/bash -c '{install_cmd}python /script.py'",
-                volumes={
-                    workspace_path: {'bind': '/workspace', 'mode': 'rw'},
-                    script_path: {'bind': '/script.py', 'mode': 'ro'},
-                },
-                working_dir='/workspace',
-                mem_limit=self.memory_limit,
-                cpu_quota=self.cpu_quota,
-                network_disabled=self.network_disabled,
-                detach=True,
-            )
-            
-            # Wait for completion with timeout
-            try:
-                result = container.wait(timeout=timeout)
-                stdout = container.logs(stdout=True, stderr=False).decode('utf-8')
-                stderr = container.logs(stdout=False, stderr=True).decode('utf-8')
-                
-                return {
-                    'stdout': stdout,
-                    'stderr': stderr,
-                    'exit_code': result['StatusCode'],
-                    'timed_out': False,
-                }
-            except Exception as e:
-                # Timeout
-                container.kill()
-                return {
-                    'stdout': '',
-                    'stderr': f'Execution timed out after {timeout}s',
-                    'exit_code': -1,
-                    'timed_out': True,
-                }
-            finally:
-                container.remove(force=True)
-                os.unlink(script_path)
-        
-        except Exception as e:
-            logger.error(f"Docker execution error: {e}")
-            return {
-                'stdout': '',
-                'stderr': f'Execution error: {str(e)}',
-                'exit_code': -1,
-                'timed_out': False,
-            }
-    
-    def _fallback_execute(self, code: str, workspace_path: str, timeout: int) -> Dict:
-        """Fallback execution without Docker (less secure)."""
-        try:
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-                f.write(code)
-                script_path = f.name
-            
-            result = subprocess.run(
-                ['python3', script_path],
-                cwd=workspace_path,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-            
-            os.unlink(script_path)
-            
-            return {
-                'stdout': result.stdout,
-                'stderr': result.stderr,
-                'exit_code': result.returncode,
-                'timed_out': False,
-            }
-        except subprocess.TimeoutExpired:
-            return {
-                'stdout': '',
-                'stderr': f'Execution timed out after {timeout}s',
-                'exit_code': -1,
-                'timed_out': True,
-            }
-        except Exception as e:
-            return {
-                'stdout': '',
-                'stderr': f'Execution error: {str(e)}',
-                'exit_code': -1,
-                'timed_out': False,
-            }
-
-
-# ============================================================
-# TOOL IMPLEMENTATIONS
-# ============================================================
-
-class ToolExecutor:
-    """Execute tools with validation and error handling."""
-    
-    def __init__(self, workspace_path: str, sandbox: DockerSandbox):
-        self.workspace_path = Path(workspace_path)
-        self.workspace_path.mkdir(parents=True, exist_ok=True)
-        self.sandbox = sandbox
-        
-        # Initialize git repo if not exists
-        try:
-            self.repo = git.Repo(self.workspace_path)
-        except git.InvalidGitRepositoryError:
-            self.repo = git.Repo.init(self.workspace_path)
-    
-    def execute_code(self, code: str, timeout: int = 30, install_packages: List[str] = None) -> Dict:
-        """Execute Python code in sandbox."""
-        return self.sandbox.execute(
-            code=code,
-            workspace_path=str(self.workspace_path),
-            timeout=timeout,
-            install_packages=install_packages,
-        )
-    
-    def read_file(self, path: str) -> Dict:
-        """Read file contents."""
-        try:
-            file_path = self.workspace_path / path
-            if not file_path.exists():
-                return {'error': f'File not found: {path}'}
-            
-            content = file_path.read_text(encoding='utf-8')
-            return {'content': content, 'size': len(content)}
-        except Exception as e:
-            return {'error': str(e)}
-    
-    def write_file(self, path: str, content: str) -> Dict:
-        """Write file contents."""
-        try:
-            file_path = self.workspace_path / path
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            file_path.write_text(content, encoding='utf-8')
-            return {'success': True, 'path': path, 'size': len(content)}
-        except Exception as e:
-            return {'error': str(e)}
-    
-    def run_tests(self, test_path: str = ".", verbose: bool = False) -> Dict:
-        """Run pytest."""
-        cmd = ['python', '-m', 'pytest', test_path]
-        if verbose:
-            cmd.append('-v')
-        
-        code = f"""
-import subprocess
-import sys
-
-result = subprocess.run(
-    {cmd},
-    capture_output=True,
-    text=True,
-    cwd='/workspace'
-)
-
-print(result.stdout)
-if result.stderr:
-    print(result.stderr, file=sys.stderr)
-sys.exit(result.returncode)
-"""
-        return self.sandbox.execute(
-            code=code,
-            workspace_path=str(self.workspace_path),
-            timeout=60,
-            install_packages=['pytest'],
-        )
-    
-    def git_status(self) -> Dict:
-        """Get git status."""
-        try:
-            status = []
-            for item in self.repo.index.diff(None):
-                status.append(f"Modified: {item.a_path}")
-            for item in self.repo.untracked_files:
-                status.append(f"Untracked: {item}")
-            
-            return {'status': status if status else ['Clean working tree']}
-        except Exception as e:
-            return {'error': str(e)}
-    
-    def git_diff(self, staged: bool = False) -> Dict:
-        """Get git diff."""
-        try:
-            if staged:
-                diff = self.repo.index.diff(self.repo.head.commit)
-            else:
-                diff = self.repo.index.diff(None)
-            
-            diff_text = []
-            for item in diff:
-                diff_text.append(f"--- {item.a_path}\n+++ {item.b_path}")
-                diff_text.append(item.diff.decode('utf-8'))
-            
-            return {'diff': '\n'.join(diff_text) if diff_text else 'No changes'}
-        except Exception as e:
-            return {'error': str(e)}
-    
-    def search_code(self, pattern: str, file_pattern: str = "*") -> Dict:
-        """Search for pattern in code."""
-        try:
-            cmd = ['grep', '-r', '-n', pattern, '--include', file_pattern, '.']
-            result = subprocess.run(
-                cmd,
-                cwd=self.workspace_path,
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            
-            matches = result.stdout.strip().split('\n') if result.stdout else []
-            return {
-                'matches': matches[:50],  # Limit to 50 matches
-                'total': len(matches),
-            }
-        except Exception as e:
-            return {'error': str(e)}
-    
-    def execute_tool(self, tool_name: str, arguments: Dict) -> Dict:
-        """Execute a tool by name with arguments."""
-        tool_map = {
-            'execute_code': self.execute_code,
-            'read_file': self.read_file,
-            'write_file': self.write_file,
-            'run_tests': self.run_tests,
-            'git_status': self.git_status,
-            'git_diff': self.git_diff,
-            'search_code': self.search_code,
-        }
-        
-        if tool_name not in tool_map:
-            return {'error': f'Unknown tool: {tool_name}'}
-        
-        try:
-            return tool_map[tool_name](**arguments)
-        except Exception as e:
-            return {'error': f'Tool execution failed: {str(e)}'}
+# DockerSandbox / ToolExecutor live in agent.sandbox / agent.tools
+# (re-exported above for backwards compatibility).
 
 
 # ============================================================
@@ -462,13 +221,14 @@ class ProductionAgent:
         tokenizer,
         workspace_path: str = "./workspace",
         max_steps: int = 20,
+        sandbox=None,
+        max_parse_retries: int = 3,
     ):
         self.model = model
         self.tokenizer = tokenizer
         self.max_steps = max_steps
-        
-        # Initialize sandbox and executor
-        self.sandbox = DockerSandbox()
+        self.max_parse_retries = max_parse_retries
+        self.sandbox = sandbox if sandbox is not None else HardenedSandbox()
         self.executor = ToolExecutor(workspace_path, self.sandbox)
     
     def _build_system_prompt(self) -> str:
@@ -480,47 +240,22 @@ class ProductionAgent:
 Available tools (JSON Schema):
 {tools_json}
 
-Use this format for tool calls:
-```json
-{{
-  "tool": "tool_name",
-  "arguments": {{...}}
-}}
-```
+Emit tool calls in the native format (no prose inside the call):
+<|tool_call|>
+{{"tool": "tool_name", "arguments": {{...}}}}
 
 Example:
-```json
-{{
-  "tool": "execute_code",
-  "arguments": {{
-    "code": "print('Hello')",
-    "timeout": 30
-  }}
-}}
-```
+<|tool_call|>
+{{"tool": "execute_code", "arguments": {{"code": "print('Hello')", "timeout": 30}}}}
 
 Always think step-by-step and explain your reasoning before calling tools.
 When the task is complete, respond with FINAL ANSWER: followed by your answer.
 """
     
-    def _parse_tool_call(self, text: str) -> Optional[Dict]:
-        """Parse tool call from model output."""
-        import re
-        
-        # Find JSON in code blocks
-        json_match = re.search(r'```json\s*(\{.*?\})\s*```', text, re.DOTALL)
-        if not json_match:
-            return None
-        
-        try:
-            tool_call = json.loads(json_match.group(1))
-            if 'tool' in tool_call and 'arguments' in tool_call:
-                return tool_call
-        except json.JSONDecodeError:
-            pass
-        
-        return None
-    
+    def _parse_tool_call(self, text: str):
+        """Parse + schema-validate a tool call. Returns (call, error)."""
+        return parse_tool_call(text, TOOL_SCHEMAS)
+
     def run(self, task: str, verbose: bool = True) -> Dict[str, Any]:
         """
         Run agent on a task.
@@ -578,8 +313,14 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
                     'success': True,
                 }
             
-            # Parse and execute tool call
-            tool_call = self._parse_tool_call(response)
+            # Parse and execute tool call (with bounded repair loop)
+            tool_call, parse_error = self._parse_tool_call(response)
+            if tool_call is None and parse_error and "no tool call found" not in parse_error:
+                # Model attempted a call but it was malformed/invalid: ask for a fix.
+                messages.append({"role": "assistant", "content": response})
+                messages.append({"role": "user", "content": repair_prompt(parse_error, response)})
+                steps.append({'tool': None, 'arguments': {}, 'result': {'error': parse_error}, 'repaired': False})
+                continue
             if tool_call:
                 tool_name = tool_call['tool']
                 arguments = tool_call['arguments']
@@ -598,8 +339,8 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
                 # Add to conversation
                 messages.append({"role": "assistant", "content": response})
                 messages.append({
-                    "role": "user",
-                    "content": f"Tool result:\n```json\n{json.dumps(result, indent=2)}\n```"
+                    "role": "tool",
+                    "content": sanitize_observation(json.dumps(result, indent=2)),
                 })
                 
                 steps.append({
@@ -631,6 +372,8 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
                 parts.append(f"<|user|>\n{content}\n<eos>")
             elif role == 'assistant':
                 parts.append(f"<|assistant|>\n{content}\n<eos>")
+            elif role == 'tool':
+                parts.append(f"<|tool_result|>\n{content}\n<eos>")
         
         return "\n".join(parts)
 

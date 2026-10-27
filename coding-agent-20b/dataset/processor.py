@@ -434,3 +434,24 @@ class DatasetProcessor:
 
         logger.info(f"Processing complete: {json.dumps(stats, indent=2)}")
         return stats
+
+
+class StreamingDataset(MemoryMappedDataset):
+    """Backwards-compatible name used by training/train_production.py.
+
+    Extra rank/world_size args are accepted (sharding is handled by the
+    sampler); the underlying storage is the memory-mapped shards.
+    """
+
+    def __init__(self, data_dir: str, split: str = "train", seq_length: int = 8192,
+                 rank: int = 0, world_size: int = 1, **kwargs):
+        super().__init__(data_dir=data_dir, split=split, seq_length=seq_length)
+        self.rank = rank
+        self.world_size = world_size
+
+    def __iter__(self):
+        n = len(self)
+        idxs = [i for i in range(n) if i % max(self.world_size, 1) == self.rank]
+        for i in idxs:
+            tokens = self[i]
+            yield {"input_ids": tokens[:-1], "labels": tokens[1:]}
