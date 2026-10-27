@@ -27,7 +27,7 @@ try:
     import docker
     HAS_DOCKER = True
 except ImportError:
-    HAS_DOCK = False
+    HAS_DOCKER = False
 
 logger = logging.getLogger(__name__)
 
@@ -324,7 +324,8 @@ class CodeGenerator:
         
         for _ in range(num_samples):
             input_ids = self.tokenizer.encode(prompt, add_special_tokens=True)
-            input_tensor = torch.tensor([input_ids], device=self.model.device)
+            _dev = next(self.model.parameters()).device if hasattr(self.model, "parameters") else "cpu"
+            input_tensor = torch.tensor([input_ids], device=_dev)
             
             with torch.no_grad():
                 output_ids = self.model.generate(
@@ -420,45 +421,50 @@ def evaluate_benchmark(
     
     logger.info(f"Evaluating {len(problems)} problems with {num_samples} samples each")
     
-    # Check cache
+    # Check cache (legacy single-file + sharded per-problem files)
+    cached = {}
     if cache_dir:
-        cache_path = Path(cache_dir) / "eval_cache.json"
-        if cache_path.exists():
-            with open(cache_path) as f:
+        cdir = Path(cache_dir)
+        legacy = cdir / "eval_cache.json"
+        if legacy.exists():
+            with open(legacy) as f:
                 cached = json.load(f)
-                logger.info(f"Loaded {len(cached)} cached results")
-        else:
-            cached = {}
-    else:
-        cached = {}
+        if cdir.exists():
+            for f in cdir.glob("*.json"):
+                if f.name == "eval_cache.json":
+                    continue
+                try:
+                    r = json.loads(f.read_text())
+                    cached.setdefault(r["id"], r)
+                except Exception:
+                    continue
+        logger.info(f"Loaded {len(cached)} cached results")
     
-    # Evaluate problems
-    for i, problem in enumerate(problems, 1):
-        # Check cache
+    # Evaluate problems (parallel; generation is the bottleneck, execution
+    # is sandboxed per call). Cache is sharded one file per problem so
+    # concurrent writers never corrupt a shared JSON blob.
+    def _one(problem):
+        return evaluate_problem(problem, generator, executor,
+                                num_samples=num_samples, temperature=temperature)
+
+    pending = []
+    for problem in problems:
         if problem.id in cached:
             results.append(cached[problem.id])
-            if i % 10 == 0:
-                logger.info(f"  [{i}/{len(problems)}] Cached: {problem.id}")
-            continue
-        
-        # Evaluate
-        result = evaluate_problem(
-            problem, generator, executor,
-            num_samples=num_samples,
-            temperature=temperature,
-        )
-        results.append(result)
-        
-        # Cache result
-        if cache_dir:
-            cached[problem.id] = result
-            cache_path = Path(cache_dir) / "eval_cache.json"
-            cache_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(cache_path, 'w') as f:
-                json.dump(cached, f)
-        
-        if i % 10 == 0:
-            logger.info(f"  [{i}/{len(problems)}] Evaluated: {problem.id}")
+        else:
+            pending.append(problem)
+    if pending:
+        from concurrent.futures import ThreadPoolExecutor as _TPE
+        with _TPE(max_workers=max(1, num_workers)) as pool:
+            for problem, result in zip(pending, pool.map(_one, pending)):
+                results.append(result)
+                if cache_dir:
+                    cdir = Path(cache_dir)
+                    cdir.mkdir(parents=True, exist_ok=True)
+                    (cdir / f"{problem.id.replace('/', '_')}.json").write_text(json.dumps(result))
+        # Order results to match input problem order.
+        by_id = {r["id"]: r for r in results}
+        results = [by_id[p.id] for p in problems if p.id in by_id]
     
     # Aggregate metrics
     pass_at_1_scores = [r["pass_at_1"] for r in results]
@@ -488,6 +494,166 @@ def evaluate_benchmark(
     return metrics
 
 
+
+
+# ============================================================
+# SWE-BENCH (repo-level) + CONTAMINATION + AGENT TRAJECTORIES
+# ============================================================
+
+@dataclass
+class SweBenchProblem:
+    """One SWE-bench instance: fix `base_commit` so FAIL_TO_PASS tests pass
+    without breaking PASS_TO_PASS tests."""
+    instance_id: str
+    repo: str
+    base_commit: str
+    problem_statement: str
+    fail_to_pass: List[str]
+    pass_to_pass: List[str]
+    patch: str = ""        # gold patch (never shown to the model)
+    test_patch: str = ""
+
+
+def load_swebench(split: str = "test") -> List[SweBenchProblem]:
+    """Load SWE-bench Lite from HF (`princeton-nlp/SWE-bench_Lite`)."""
+    try:
+        from datasets import load_dataset
+        import json as _json
+        ds = load_dataset("princeton-nlp/SWE-bench_Lite", split=split)
+        out = []
+        for item in ds:
+            def _lst(v):
+                if isinstance(v, list):
+                    return v
+                try:
+                    return _json.loads(v)
+                except Exception:
+                    return [v] if v else []
+            out.append(SweBenchProblem(
+                instance_id=item["instance_id"], repo=item["repo"],
+                base_commit=item["base_commit"],
+                problem_statement=item["problem_statement"],
+                fail_to_pass=_lst(item.get("FAIL_TO_PASS", [])),
+                pass_to_pass=_lst(item.get("PASS_TO_PASS", [])),
+                patch=item.get("patch", ""), test_patch=item.get("test_patch", "")))
+        logger.info(f"Loaded {len(out)} SWE-bench problems")
+        return out
+    except Exception as e:
+        logger.error(f"Error loading SWE-bench: {e}")
+        return []
+
+
+class SweBenchHarness:
+    """Run a candidate patch in a disposable clone and check test outcomes.
+
+    Requires git + the repo's own test runner in the eval image; returns
+    resolved=True only when every FAIL_TO_PASS passes and no PASS_TO_PASS breaks.
+    """
+
+    def __init__(self, work_dir: str, timeout: int = 600):
+        self.work_dir = Path(work_dir)
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+        self.timeout = timeout
+
+    def evaluate(self, problem: SweBenchProblem, candidate_patch: str, run_tests_fn=None) -> Dict[str, Any]:
+        import shutil as _shutil
+        import subprocess as _sp
+        repo_dir = self.work_dir / problem.instance_id
+        try:
+            if repo_dir.exists():
+                _shutil.rmtree(repo_dir)
+            clone = _sp.run(["git", "clone", "--quiet", f"https://github.com/{problem.repo}.git", str(repo_dir)],
+                            capture_output=True, text=True, timeout=self.timeout)
+            if clone.returncode != 0:
+                return {"instance_id": problem.instance_id, "resolved": False, "error": f"clone failed: {clone.stderr[:500]}"}
+            _sp.run(["git", "checkout", "--quiet", problem.base_commit], cwd=repo_dir, capture_output=True, timeout=120)
+            if problem.test_patch:
+                _sp.run(["git", "apply", "-"], cwd=repo_dir, input=problem.test_patch,
+                        capture_output=True, text=True, timeout=60)
+            applied = _sp.run(["git", "apply", "-"], cwd=repo_dir, input=candidate_patch,
+                              capture_output=True, text=True, timeout=60)
+            if applied.returncode != 0:
+                return {"instance_id": problem.instance_id, "resolved": False,
+                        "error": f"patch does not apply: {applied.stderr[:500]}"}
+            runner = run_tests_fn or (lambda d, tests: {"passed": [], "failed": list(tests), "error": "no test runner configured"})
+            results = runner(str(repo_dir), problem.fail_to_pass + problem.pass_to_pass)
+            passed = set(results.get("passed", []))
+            resolved = all(t in passed for t in problem.fail_to_pass) and all(t in passed for t in problem.pass_to_pass)
+            return {"instance_id": problem.instance_id, "resolved": resolved, "test_results": results}
+        except Exception as e:
+            return {"instance_id": problem.instance_id, "resolved": False, "error": str(e)}
+        finally:
+            _shutil.rmtree(repo_dir, ignore_errors=True)
+
+
+class ContaminationChecker:
+    """n-gram overlap of eval prompts/solutions against a training corpus index.
+
+    Builds a set of hashed token 13-grams from training text once, then flags
+    any eval item sharing a 13-gram (the GPT-3/Llama decontamination standard).
+    """
+
+    def __init__(self, n: int = 13):
+        self.n = n
+        self.index = set()
+
+    @staticmethod
+    def _ngrams(text: str, n: int):
+        toks = text.lower().split()
+        return {" ".join(toks[i:i + n]) for i in range(max(len(toks) - n + 1, 0))} if len(toks) >= n else {" ".join(toks)} if toks else set()
+
+    def add_training_text(self, text: str):
+        self.index |= self._ngrams(text, self.n)
+
+    def check(self, text: str) -> Dict[str, Any]:
+        grams = self._ngrams(text, self.n)
+        hit = grams & self.index
+        return {"contaminated": bool(hit), "overlap": len(hit) / max(len(grams), 1), "shared_ngrams": len(hit)}
+
+
+@dataclass
+class Trajectory:
+    task: str
+    steps: List[Dict]          # [{tool, arguments, result, expected_tool?}]
+    success: bool
+    error: Optional[str] = None
+
+
+def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
+    """Agent-trajectory metrics: task success, tool-choice correctness,
+    malformed-call rate and error-recovery rate (succeed after a failed step)."""
+    if not trajectories:
+        return {"num_trajectories": 0, "success_rate": 0.0}
+    tool_total = tool_correct = malformed = 0
+    recovered = recoverable = 0
+    for tr in trajectories:
+        had_error = False
+        for step in tr.steps:
+            if step.get("tool") is None:
+                malformed += 1
+                had_error = True
+                continue
+            tool_total += 1
+            if step.get("expected_tool") is None or step["expected_tool"] == step.get("tool"):
+                tool_correct += 1
+            result = step.get("result") or {}
+            if isinstance(result, dict) and result.get("error"):
+                had_error = True
+        if had_error:
+            recoverable += 1
+            if tr.success:
+                recovered += 1
+    total_calls = tool_total + malformed
+    return {
+        "num_trajectories": len(trajectories),
+        "success_rate": sum(1 for t in trajectories if t.success) / len(trajectories),
+        "tool_accuracy": tool_correct / max(tool_total, 1),
+        "malformed_rate": malformed / max(total_calls, 1),
+        "recovery_rate": recovered / max(recoverable, 1),
+        "avg_steps": sum(len(t.steps) for t in trajectories) / len(trajectories),
+    }
+
+
 # ============================================================
 # MAIN
 # ============================================================
@@ -499,7 +665,7 @@ def main():
     
     parser = argparse.ArgumentParser(description="Evaluate code generation model")
     parser.add_argument("--benchmark", type=str, required=True,
-                       choices=["humaneval", "mbpp", "livecodebench", "all"])
+                       choices=["humaneval", "mbpp", "livecodebench", "swebench", "all"])
     parser.add_argument("--model_path", type=str, required=True)
     parser.add_argument("--tokenizer_path", type=str, default=None)
     parser.add_argument("--num_samples", type=int, default=10)
@@ -567,7 +733,7 @@ def main():
     if args.benchmark in ["livecodebench", "all"]:
         logger.info("\n" + "="*60)
         logger.info("Evaluating LiveCodeBench")
-        logger("="*60)
+        logger.info("="*60)
         problems = load_livecodebench()
         if problems:
             metrics = evaluate_benchmark(

@@ -19,6 +19,11 @@ from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 
+try:
+    import torch
+except ImportError:
+    torch = None  # type: ignore
+
 
 class AgentState(Enum):
     THINKING = "thinking"

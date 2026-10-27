@@ -35,8 +35,10 @@ from model.config import CodingAgentConfig
 from model.model import CodingAgentModel
 from dataset.processor import StreamingDataset
 from training.monitor import (
-    TrainingMonitor, TrainingMetrics, RecoveryManager
+    TrainingMonitor, TrainingMetrics, RecoveryManager, RecoveryPolicy
 )
+from training.checkpoint import save_checkpoint_atomic, latest_valid_checkpoint
+from training.schedules import seq_length_at, wsd_lr
 
 try:
     import deepspeed
@@ -175,6 +177,7 @@ def train(args: argparse.Namespace):
             use_tensorboard=True,
         )
     
+    recovery_policy = RecoveryPolicy()
     # Initialize recovery manager
     recovery = RecoveryManager(
         checkpoint_dir=args.output_dir,
@@ -249,6 +252,21 @@ def train(args: argparse.Namespace):
                 
                 recommendations = monitor.log_step(metrics)
                 
+                action = recovery_policy.decide(global_step, loss.item(), recommendations)
+                if action == "skip_batch":
+                    logger.warning(f"Skipping batch at step {global_step} (policy: {action})")
+                    continue
+                if action == "rollback":
+                    latest = latest_valid_checkpoint(args.output_dir)
+                    logger.warning(f"Rolling back to verified checkpoint: {latest}")
+                    if latest:
+                        from training.checkpoint import load_verified
+                        state = load_verified(latest)
+                        model_engine.load_state_dict(state['model_state_dict'])
+                if action == "reduce_lr":
+                    for param_group in optimizer.param_groups:
+                        param_group['lr'] *= 0.5
+
                 # Handle recommendations
                 if recommendations['should_checkpoint']:
                     logger.info("Loss spike detected - saving checkpoint")
@@ -321,11 +339,12 @@ def save_checkpoint(
     if HAS_DEEPSPEED and hasattr(model_engine, 'save_checkpoint'):
         model_engine.save_checkpoint(str(checkpoint_dir), tag=f"step_{step}")
     else:
-        torch.save({
+        save_checkpoint_atomic({
             'step': step,
             'model_state_dict': model_engine.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
-        }, checkpoint_path)
+        }, str(checkpoint_dir), step, keep_last=5)
+        return
     
     logger.info(f"Saved checkpoint: {checkpoint_path}")
     

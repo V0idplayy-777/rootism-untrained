@@ -1,0 +1,10 @@
+{
+  "stages": [
+    {"name": "pretrain", "kind": "pretrain", "learning_rate": 0.0003, "min_lr": 0.00003, "warmup_steps": 2000, "total_steps": 100000, "seq_length": 8192, "weight_decay": 0.1, "data": {"mixture": "dataset/mixture.DEFAULT_MIXTURE", "packing": "attention-aware", "seq_curriculum": [[0, 2048], [2000, 4096], [6000, 8192]]}},
+    {"name": "midtrain", "kind": "midtrain", "learning_rate": 0.00015, "min_lr": 0.000015, "warmup_steps": 500, "total_steps": 20000, "seq_length": 8192, "weight_decay": 0.1, "data": {"upsample": ["tests", "issues", "prs", "docs"]}},
+    {"name": "sft", "kind": "sft", "learning_rate": 0.00002, "min_lr": 0.000002, "warmup_steps": 200, "total_steps": 6000, "seq_length": 8192, "weight_decay": 0.1, "data": {"mask_prompt_loss": true}},
+    {"name": "dpo", "kind": "dpo", "learning_rate": 5e-07, "min_lr": 5e-08, "warmup_steps": 50, "total_steps": 1500, "seq_length": 4096, "weight_decay": 0.0, "extra": {"beta": 0.1, "reference_model": "sft"}}
+  ],
+  "checkpointing": {"atomic": true, "sha256_manifest": true, "keep_last": 5},
+  "recovery": {"on_spike": ["reduce_lr", "skip_batch", "rollback"], "max_lr_reductions": 3}
+}

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coding-agent-20b"
+version = "1.0.0"
+description = "20B coding agent: model, tokenizer, data pipeline, agent tools, eval and serving"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "torch==2.3.1",
+  "numpy==1.26.4",
+  "sentencepiece==0.2.0",
+  "datasets==2.20.0",
+  "datasketch==1.6.5",
+  "pyarrow==16.1.0",
+  "pygments==2.18.0",
+  "docker==7.1.0",
+  "GitPython==3.1.43",
+  "jsonschema==4.22.0",
+  "tqdm==4.66.4",
+  "safetensors==0.4.3",
+]
+
+[project.optional-dependencies]
+train = ["deepspeed==0.14.4", "accelerate==0.30.1", "tensorboard==2.17.0", "wandb==0.17.3"]
+serve = ["fastapi==0.111.0", "uvicorn==0.30.1", "pydantic==2.7.4"]
+dev = ["pytest==8.2.2", "pytest-cov==5.0.0", "ruff==0.5.1"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120

@@ -33,14 +33,29 @@ class RotaryEmbedding(nn.Module):
     Uses the NTK-aware scaling for extended context lengths.
     """
 
-    def __init__(self, dim: int, max_position_embeddings: int = 8192, theta: float = 500000.0):
+    def __init__(self, dim: int, max_position_embeddings: int = 8192, theta: float = 500000.0,
+                 scaling_type=None, scaling_factor: float = 1.0,
+                 original_max_position_embeddings: int = 8192):
         super().__init__()
         self.dim = dim
         self.max_position_embeddings = max_position_embeddings
         self.theta = theta
-
-        # Compute frequency bands
-        inv_freq = 1.0 / (self.theta ** (torch.arange(0, self.dim, 2, dtype=torch.float32) / self.dim))
+        self.scaling_type = scaling_type
+        self.scaling_factor = scaling_factor
+        self.attention_scaling = 1.0
+        inv_freq = 1.0 / (theta ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
+        if scaling_type == "ntk" and scaling_factor > 1.0:
+            ntk_theta = theta * scaling_factor ** (dim / max(dim - 2, 1))
+            inv_freq = 1.0 / (ntk_theta ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
+        elif scaling_type == "yarn" and scaling_factor > 1.0:
+            # YaRN NTK-by-parts: interpolate low freqs, keep high freqs, log-temperature.
+            n = dim // 2
+            wavelen = 2 * math.pi / inv_freq
+            low = (original_max_position_embeddings / wavelen / 32).floor()
+            high = (original_max_position_embeddings / wavelen / 2).floor()
+            ramp = torch.clamp((torch.arange(n, dtype=torch.float32) - low) / (high - low).clamp(min=1e-6), 0, 1)
+            inv_freq = inv_freq * (1 - ramp) + (inv_freq / scaling_factor) * ramp
+            self.attention_scaling = 0.1 * math.log(scaling_factor) + 1.0
         self.register_buffer("inv_freq", inv_freq, persistent=False)
 
         # Build cos/sin cache
@@ -165,11 +180,14 @@ class GroupedQueryAttention(nn.Module):
         self.v_proj = nn.Linear(self.hidden_size, self.num_kv_heads * self.head_dim, bias=config.attention_bias)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias)
 
-        # RoPE
+        # RoPE (with optional NTK/YaRN long-context scaling)
         self.rotary_emb = RotaryEmbedding(
             dim=self.head_dim,
             max_position_embeddings=config.max_position_embeddings,
             theta=config.rope_theta,
+            scaling_type=getattr(config, "rope_scaling_type", None),
+            scaling_factor=getattr(config, "rope_scaling_factor", 1.0),
+            original_max_position_embeddings=getattr(config, "original_max_position_embeddings", 8192),
         )
 
         # Sliding window
@@ -387,6 +405,39 @@ class ModelOutput:
     loss: Optional[torch.Tensor] = None
 
 
+class PagedKVCache:
+    """Bounded KV cache for long agent trajectories.
+
+    Keeps the most recent `max_tokens` positions per layer; when the budget
+    is exceeded the oldest middle span is evicted (keeping `sink_tokens`
+    attention-sink tokens), so generation never OOMs on 32k trajectories.
+    Works on the model's list-of-(K,V) cache format.
+    """
+
+    def __init__(self, max_tokens: int = 32768, sink_tokens: int = 4):
+        self.max_tokens = max_tokens
+        self.sink_tokens = sink_tokens
+
+    def trim(self, past_key_values):
+        if not past_key_values:
+            return past_key_values
+        out = []
+        for k, v in past_key_values:
+            if k.shape[2] <= self.max_tokens:
+                out.append((k, v))
+            else:
+                excess = k.shape[2] - self.max_tokens
+                ks = torch.cat([k[:, :, : self.sink_tokens], k[:, :, self.sink_tokens + excess :]], dim=2)
+                vs = torch.cat([v[:, :, : self.sink_tokens], v[:, :, self.sink_tokens + excess :]], dim=2)
+                out.append((ks, vs))
+        return out
+
+    @staticmethod
+    def num_tokens(past_key_values) -> int:
+        return int(past_key_values[0][0].shape[2]) if past_key_values else 0
+
+
+
 class CodingAgentModel(nn.Module):
     """
     Complete 20B Parameter Coding Agent Model.
@@ -567,6 +618,7 @@ class CodingAgentModel(nn.Module):
             loss=loss,
         )
 
+
     @torch.no_grad()
     def generate(
         self,
@@ -578,89 +630,56 @@ class CodingAgentModel(nn.Module):
         repetition_penalty: float = 1.1,
         do_sample: bool = True,
         eos_token_id: Optional[int] = None,
+        generation_config=None,
+        tokenizer=None,
+        **kwargs,
     ) -> torch.Tensor:
+        """Autoregressive generation with modern sampling + bounded KV cache.
+
+        Backwards compatible: legacy kwargs map onto GenerationConfig.
+        Pass generation_config=model.generation.GenerationConfig for min_p /
+        typical / frequency penalties / stop strings / JSON mode / seed.
+        Stop strings require `tokenizer` (decode is checked incrementally).
         """
-        Generate text autoregressively with various decoding strategies.
-        
-        Args:
-            input_ids: Prompt token IDs [1, seq_length]
-            max_new_tokens: Maximum tokens to generate
-            temperature: Sampling temperature (lower = more deterministic)
-            top_p: Nucleus sampling threshold
-            top_k: Top-k sampling threshold
-            repetition_penalty: Penalty for repeating tokens
-            do_sample: Whether to sample or use greedy decoding
-            eos_token_id: End of sequence token ID
-            
-        Returns:
-            Generated token IDs
-        """
+        from .generation import GenerationConfig, sample_next, find_stop
+
+        if generation_config is None:
+            generation_config = GenerationConfig(
+                max_new_tokens=max_new_tokens, temperature=temperature, top_p=top_p,
+                top_k=top_k, repetition_penalty=repetition_penalty, do_sample=do_sample,
+                stop_strings=list(kwargs.pop("stop_strings", []) or []),
+                stop_token_ids=list(kwargs.pop("stop_token_ids", []) or []),
+                json_mode=bool(kwargs.pop("json_mode", False)),
+                seed=kwargs.pop("seed", None),
+            )
+        # else: caller-supplied GenerationConfig is authoritative.
         if eos_token_id is None:
             eos_token_id = self.config.eos_token_id
+        stop_ids = set(generation_config.stop_token_ids) | ({eos_token_id} if eos_token_id is not None else set())
+        gen = None
+        if generation_config.seed is not None:
+            gen = torch.Generator(device=input_ids.device).manual_seed(generation_config.seed)
 
         self.eval()
+        cache = PagedKVCache(max_tokens=getattr(self.config, "kv_cache_max_tokens", 32768))
         generated = input_ids.clone()
         past_key_values = None
-
-        for _ in range(max_new_tokens):
-            # Forward pass (use KV cache after first step)
-            if past_key_values is not None:
-                model_input = generated[:, -1:]
-            else:
-                model_input = generated
-
-            output = self.forward(
-                input_ids=model_input,
-                past_key_values=past_key_values,
-                use_cache=True,
-            )
-
-            past_key_values = output.past_key_values
+        prompt_len = input_ids.shape[1]
+        for _ in range(generation_config.max_new_tokens):
+            model_input = generated[:, -1:] if past_key_values is not None else generated
+            output = self.forward(input_ids=model_input, past_key_values=past_key_values, use_cache=True)
+            past_key_values = cache.trim(output.past_key_values)
             next_logits = output.logits[:, -1, :]
-
-            # Apply repetition penalty
-            if repetition_penalty != 1.0:
-                for token_id in set(generated[0].tolist()):
-                    if next_logits[0, token_id] > 0:
-                        next_logits[0, token_id] /= repetition_penalty
-                    else:
-                        next_logits[0, token_id] *= repetition_penalty
-
-            # Apply temperature
-            if temperature != 1.0:
-                next_logits = next_logits / temperature
-
-            if do_sample:
-                # Top-k filtering
-                if top_k > 0:
-                    indices_to_remove = next_logits < torch.topk(next_logits, top_k)[0][..., -1, None]
-                    next_logits[indices_to_remove] = float('-inf')
-
-                # Top-p (nucleus) filtering
-                if top_p < 1.0:
-                    sorted_logits, sorted_indices = torch.sort(next_logits, descending=True)
-                    cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
-                    sorted_indices_to_remove = cumulative_probs > top_p
-                    sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
-                    sorted_indices_to_remove[..., 0] = 0
-                    indices_to_remove = sorted_indices_to_remove.scatter(
-                        1, sorted_indices, sorted_indices_to_remove
-                    )
-                    next_logits[indices_to_remove] = float('-inf')
-
-                # Sample
-                probs = F.softmax(next_logits, dim=-1)
-                next_token = torch.multinomial(probs, num_samples=1)
-            else:
-                # Greedy decoding
-                next_token = next_logits.argmax(dim=-1, keepdim=True)
-
+            next_id = sample_next(next_logits[0], generated[0].tolist(), generation_config, generator=gen)
+            next_token = torch.tensor([[next_id]], device=generated.device, dtype=generated.dtype)
             generated = torch.cat([generated, next_token], dim=-1)
-
-            # Check for EOS
-            if eos_token_id is not None and next_token.item() == eos_token_id:
+            if next_id in stop_ids:
                 break
-
+            if tokenizer is not None and generation_config.stop_strings:
+                text = tokenizer.decode(generated[0][prompt_len:].tolist(), skip_special_tokens=True)
+                cut = find_stop(text, generation_config.stop_strings)
+                if cut is not None:
+                    break
         return generated
 
     def enable_gradient_checkpointing(self, ratio: float = 1.0):
@@ -671,6 +690,17 @@ class CodingAgentModel(nn.Module):
     def disable_gradient_checkpointing(self):
         """Disable gradient checkpointing."""
         self.gradient_checkpointing = False
+
+    # HF-style aliases used by training scripts
+    def gradient_checkpointing_enable(self, **kwargs):
+        self.enable_gradient_checkpointing(**kwargs)
+
+    def gradient_checkpointing_disable(self, **kwargs):
+        self.disable_gradient_checkpointing()
+
+    @property
+    def device(self):
+        return next(self.parameters()).device
 
     def num_parameters(self, trainable_only: bool = False) -> int:
         """Count model parameters."""
