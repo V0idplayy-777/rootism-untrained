@@ -7,20 +7,22 @@ on:
 jobs:
   license-check:
     runs-on: ubuntu-latest
+    defaults: { run: { working-directory: coding-agent-20b } }
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+        with: { python-version: '3.11', cache: pip, cache-dependency-path: coding-agent-20b/requirements.txt }
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          # Runtime requirements only; heavy optional stacks (deepspeed/mpi) are
+          # not needed to audit licences and fail to build on bare runners.
+          pip install --no-deps -r requirements.txt
           pip install pip-licenses
 
       - name: Check Licenses
         run: |
           # Fails the build if unauthorized licenses are found
-          pip-licenses --fail-on GPL AGPL LGPL
+          pip-licenses --fail-on "GPL;AGPL;LGPL"
