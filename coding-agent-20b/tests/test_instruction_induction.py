@@ -93,20 +93,17 @@ def corpus(tmp_path):
     rows = [
         {"path": "pkg/eventlog.py", "content": GOOD_MODULE, "license": "MIT"},
         {"path": "tests/test_retry.py", "content": TEST_FILE, "license": "Apache-2.0"},
-        # rejected: non-permissive licence never reaches induction
         {
             "path": "pkg/proprietary.py",
             "content": '"""A module with a docstring long enough to pass filters."""\n\ndef x():\n    pass\n',
             "license": "GPL-3.0",
         },
-        # rejected: no docstring -> most shapes skip it anyway
         {"path": "pkg/undocumented.py", "content": "a = 1\n", "license": "MIT"},
     ]
     write_shard(tmp_path, "python-0", rows)
     write_shard(tmp_path, "python-1", [
         {"path": "pkg/other.py", "content": GOOD_MODULE, "license": "BSD-3-Clause"}
     ])
-    # non-python shard is ignored for language="python"
     write_shard(tmp_path, "go-0", [
         {"path": "x.go", "content": "package x\n", "license": "MIT"}
     ])
@@ -117,7 +114,7 @@ def test_iter_corpus_files_filters_by_language_and_licence(corpus):
     files = list(iter_corpus_files(corpus, "python", max_files=100))
     paths = {f["path"] for f in files}
     assert "pkg/eventlog.py" in paths
-    assert "pkg/proprietary.py" not in paths  # licence gate is fail-closed
+    assert "pkg/proprietary.py" not in paths
     assert all("x.go" != p for p in paths)
 
 
@@ -136,11 +133,11 @@ def test_signature_to_body_shape(corpus):
     rows = InstructionInduction(corpus, max_files=10).signature_to_body()
     assert rows
     fns = {r["metadata"]["function"] for r in rows}
-    assert "append" in fns  # public, documented
+    assert "append" in fns
     assert "flush" in fns
-    assert not any(f.startswith("_") for f in fns)  # private excluded
+    assert not any(f.startswith("_") for f in fns)
     body = next(r for r in rows if r["metadata"]["function"] == "flush")["output"]
-    assert "open(" in body  # the answer is the real implementation
+    assert "open(" in body
 
 
 def test_code_to_explanation_is_extractive(corpus):
@@ -148,7 +145,6 @@ def test_code_to_explanation_is_extractive(corpus):
     assert rows
     row = rows[0]
     assert row["category"] == "induced_code_to_explanation"
-    # only facts checkable in the source appear
     assert "EventLog" in row["output"] or "append" in row["output"]
     assert "verifiable" in row["output"]
 
@@ -164,9 +160,9 @@ def test_generate_mixed_and_deterministic(corpus):
     ind = InstructionInduction(corpus, max_files=10)
     a = ind.generate(count=12)
     b = InstructionInduction(corpus, max_files=10).generate(count=12)
-    assert a == b  # deterministic given the same corpus
+    assert a == b
     cats = {r["category"] for r in a}
-    assert cats  # at least one induction shape fires on this tiny corpus
+    assert cats
     for row in a:
         assert row["metadata"]["license"] in {
             "MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC",

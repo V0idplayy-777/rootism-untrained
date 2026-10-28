@@ -457,9 +457,6 @@ def extract_calls(path: str, text: str, language: str) -> set[str]:
     return set(re.findall(r"(?:\.|\b)([A-Za-z_][A-Za-z0-9_]{2,})\s*\(", text))
 
 
-# Domain synonyms: a task says "logging in", the code says "login" or
-# "authenticate". Lexical-only multi-query misses these; a synonym-expanded
-# variant closes the most common paraphrase gap.
 _QUERY_SYNONYMS = {
     "logging in": "login authenticate session",
     "log in": "login authenticate",
@@ -741,7 +738,6 @@ class RepoIndex:
 
             self._df.update(counts.keys())
 
-        # Sublinear TF-IDF vectors for hybrid (semantic-ish lexical) ranking.
 
         n = max(len(self.chunks), 1)
 
@@ -765,7 +761,6 @@ class RepoIndex:
 
             self._tfidf.append({t: w / norm for t, w in vec.items()})
 
-        # Inverted index term -> chunk ids, so cosine only touches postings.
 
         self._postings: dict[str, list[int]] = defaultdict(list)
 
@@ -1406,8 +1401,6 @@ class ContextAssembler:
 
                         related.append(rel)
 
-            # Call-graph expansion: files that call (or are called by) the
-            # retrieved code, up to two hops, before falling back to imports.
 
             call_graph = self.index.related_by_calls(
                 [c.path for c in used_chunks[:4]], depth=2, max_files=4
@@ -1483,9 +1476,6 @@ class ContextAssembler:
         )
 
 
-# ---------------------------------------------------------------------------
-# Hierarchical summarization: repo -> directory -> file -> signature
-# ---------------------------------------------------------------------------
 
 
 @dataclass

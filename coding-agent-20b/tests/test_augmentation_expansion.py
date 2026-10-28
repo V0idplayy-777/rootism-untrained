@@ -25,7 +25,7 @@ def test_every_cross_domain_skeleton_compiles():
     tasks = ConceptCombiner(seed=7).combine(len(DOMAIN_PAIRS))
     assert len(tasks) == len(DOMAIN_PAIRS)
     for task in tasks:
-        ast.parse(task["input_context"])  # would raise on a broken skeleton
+        ast.parse(task["input_context"])
         assert task["category"] == "cross_domain_synthesis"
 
 
@@ -35,7 +35,6 @@ def test_constraint_conflict_rows_name_the_tension():
     for row in rows:
         assert row["category"] == "constraint_conflict"
         assert len(row["metadata"]["conflicts"]) == 2
-        # the resolution must surface the tension, not silently pick a side
         lowered = row["output"].lower()
         assert any(w in lowered for w in ("conflict", "contradict", "tension"))
         assert row["output"].rstrip().endswith("?")
@@ -49,7 +48,6 @@ def test_clarification_dialogue_rows_are_multi_turn():
         assert row["metadata"]["turns"] >= 4
         assert row["output"].count("user:") >= 2
         assert row["output"].count("assistant:") >= 2
-        # the assistant asks before implementing
         first_assistant = row["output"].split("assistant:")[1]
         assert "?" in first_assistant.split("user:")[0]
 
@@ -61,7 +59,6 @@ def test_recovery_rows_preach_changed_approach():
         assert row["category"] == "error_recovery"
         assert row["metadata"]["failure_class"]
         assert row["metadata"]["anti_pattern"]
-        # the trained response must not be the anti-pattern
         assert row["metadata"]["anti_pattern"].split()[0].lower() not in (
             row["output"].split()[0].lower()
         )

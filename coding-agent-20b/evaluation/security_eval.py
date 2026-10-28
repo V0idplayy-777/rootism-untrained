@@ -545,9 +545,6 @@ class SecurityBenchmark:
 
         self.scanner = scanner or SecurityScanner()
 
-        # The case table is the full catalog (id -> category/required); which
-        # samples to *evaluate on* is the caller's choice — the held-out
-        # split is what `cases_from_dataset()` returns by default.
 
         self.cases = {
             c.case_id: c

@@ -63,7 +63,6 @@ class MemoryStore:
         self.entries: dict[str, MemoryEntry] = {}
         self.load()
 
-    # -- persistence ------------------------------------------------------
 
     def load(self) -> "MemoryStore":
         if self.path.is_file():
@@ -79,7 +78,6 @@ class MemoryStore:
                     )
                     self.entries[entry.key] = entry
             except (json.JSONDecodeError, OSError, KeyError, ValueError):
-                # corrupt memory must never brick the agent
                 self.entries = {}
         return self
 
@@ -96,7 +94,6 @@ class MemoryStore:
         os.replace(tmp, self.path)
         return self
 
-    # -- API ---------------------------------------------------------------
 
     def remember(self, key: str, value: str, kind: str = "fact") -> MemoryEntry:
         key = key.strip()
@@ -114,7 +111,6 @@ class MemoryStore:
         entry = MemoryEntry(key=key, value=value, kind=kind)
         self.entries[key] = entry
         if len(self.entries) > MAX_MEMORIES:
-            # evict least-useful: fewest uses, then oldest
             worst = min(
                 self.entries.values(), key=lambda e: (e.uses, e.updated)
             )

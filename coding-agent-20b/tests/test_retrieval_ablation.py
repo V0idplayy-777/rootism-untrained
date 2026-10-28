@@ -66,7 +66,6 @@ def test_run_records_features_and_gates(repo):
     report = run(repo, budget=800)
     assert report["tasks"] >= 3
     assert report["flat_recall"] >= 0.0
-    # every row carries the feature provenance of its hierarchical pack
     for row in report["rows"]:
         assert isinstance(row["hierarchical"]["features"], dict)
         assert row["hierarchical"]["features"].get("hybrid") in (True, False)

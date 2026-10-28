@@ -53,7 +53,6 @@ class ScratchWorkspace:
         self.index_path = self.root / "index.json"
         self.index: dict = self._load_index()
 
-    # -- index -------------------------------------------------------------
 
     def _load_index(self) -> dict:
         if self.index_path.is_file():
@@ -74,7 +73,6 @@ class ScratchWorkspace:
     def _topic_path(self, topic: str) -> Path:
         return self.root / f"{_slug(topic)}.md"
 
-    # -- API ----------------------------------------------------------------
 
     def write(self, topic: str, text: str, mode: str = "append") -> dict:
         """Append (default) or replace a scratch entry. Returns a receipt."""
@@ -95,7 +93,6 @@ class ScratchWorkspace:
             body = f"# {topic}\n\n{text}\n"
 
         if len(body) > MAX_TOPIC_CHARS:
-            # keep the newest 3/4 of the budget (scratch grows downward)
             cut = len(body) - (MAX_TOPIC_CHARS * 3) // 4
             body = body[cut:]
             body = "# …older entries pruned\n" + body[body.find("\n##"):]
@@ -133,7 +130,6 @@ class ScratchWorkspace:
             raise KeyError(f"no scratch topic named {topic!r}")
         text = path.read_text(encoding="utf-8")
         if len(text) > max_chars:
-            # newest entries are at the end; keep those
             text = "…earlier entries omitted…\n" + text[-max_chars:]
         return text
 

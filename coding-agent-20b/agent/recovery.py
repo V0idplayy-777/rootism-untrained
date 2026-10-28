@@ -59,8 +59,6 @@ TOOL_FALLBACKS: dict[str, list[str]] = {
 }
 
 
-# Failure classes -> first ladder rung. Guessing wrong wastes steps; the
-# classifier picks the cheapest intervention that can actually work.
 _FAILURE_PATTERNS = (
     ("environment", (
         "modulenotfounderror", "importerror", "command not found",
@@ -206,7 +204,7 @@ class RecoveryPolicy:
 
             else:
 
-                self._tool_streak.clear()  # parse errors are not tool-specific
+                self._tool_streak.clear()
 
             if consecutive >= self.max_consecutive_failures:
 
@@ -234,8 +232,6 @@ class RecoveryPolicy:
                     signature=signature,
                 )
 
-            # Environment failures cannot be retried into existence: the tool
-            # or its dependencies are simply absent. Jump straight to SWITCH.
 
             if failure_class == "environment" and tool in TOOL_FALLBACKS:
 
@@ -259,8 +255,6 @@ class RecoveryPolicy:
                         next_tool=chain[used],
                     )
 
-            # A tool that failed several times in a row is the wrong tool,
-            # whatever the signatures say (cooldown).
 
             tool_hot = tool is not None and self._tool_streak.get(tool, 0) >= 3
 
@@ -290,8 +284,6 @@ class RecoveryPolicy:
                             next_tool=chain[used],
                         )
 
-                # Code failures mean the *hypothesis* is wrong, not the tool:
-                # first change the fix, and only then roll back.
 
                 if (failure_class == "code" and repeats >= 3) or consecutive >= 4:
 

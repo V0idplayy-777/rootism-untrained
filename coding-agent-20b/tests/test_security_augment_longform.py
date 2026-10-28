@@ -187,9 +187,6 @@ def test_scanner_ast_checks_and_required_pattern_absence():
 
     from dataset.security_data import heldout_split, train_split
 
-    # The benchmark defaults to the held-out split; it must be non-empty,
-    # fully required-patterned, and disjoint from what the SFT/DPO
-    # generators train on.
 
     assert 0 < len(cases) < len(all_cases)
 
@@ -218,7 +215,6 @@ def test_security_generator_shapes_match_training_schema():
 
     pairs = gen.dpo_pairs()
 
-    # The generator trains on the train split only (held-out stays unseen).
 
     from dataset.security_data import train_split
 
@@ -256,7 +252,6 @@ def test_security_generator_shapes_match_training_schema():
 
     assert len(stats["cwes"]) >= 8
 
-    # The held-out split is also generator-accessible (for eval-side ablations)
 
     assert len(SecurityDataGenerator(heldout=True).samples) == len(SECURITY_SAMPLES) - len(train_split())
 

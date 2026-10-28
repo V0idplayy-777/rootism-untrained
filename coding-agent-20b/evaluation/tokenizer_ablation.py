@@ -102,11 +102,6 @@ def run(docs: list[str], heldout: list[str], quiet: bool = False) -> dict:
     }
 
     c, g = report["code_aware"], report["gpt2_generic"]
-    # The generic pattern groups punctuation runs and word-leading spaces,
-    # which compresses mixed prose/code ~20% better at ANY vocabulary - a
-    # structural cost we accept in exchange for literal atomicity (whole
-    # strings/comments/numbers), which is what a code model actually needs.
-    # Measured ratio holds at 1.19-1.20 across 16k/32k vocab.
     FERTILITY_TOLERANCE = 1.25
     report["fertility_ratio"] = c["fertility"] / g["fertility"]
     report["gate"] = {

@@ -35,7 +35,6 @@ def test_byte_alphabets_are_exact_bijections():
     assert len(set(GPT2_BYTES_TO_UNICODE.values())) == 256
     assert len(REPO_BYTES_TO_CHARS) == 256
     assert len(set(REPO_BYTES_TO_CHARS.values())) == 256
-    # round trip through both alphabets preserves bytes
     for b in range(256):
         gpt2 = GPT2_BYTES_TO_UNICODE[b]
         repo = gpt2_token_to_repo(gpt2)
@@ -73,28 +72,23 @@ def test_train_produces_exact_vocab_and_roundtrips():
     trainer = FastBPETrainer(vocab_size=target, min_frequency=2)
     tok = trainer.train(corpus, verbose=False)
     assert len(tok) == target
-    # vocab = specials + byte alphabet + merges (may saturate below target
-    # merges on a tiny corpus; padding tokens fill the rest)
     assert len(tok.merges) == min(150, len(tok.merges))
     assert len(tok) == len(SPECIAL_TOKENS) + 256 + len(tok.merges) + (
         target - len(SPECIAL_TOKENS) - 256 - len(tok.merges)
     )
-    # byte-exact round trip incl. exotic whitespace
     for sample in ADVERSARIAL:
         ids = tok.encode(sample, add_special_tokens=False)
         assert tok.decode(ids) == sample
-    # parity with the Rust tokenizer that produced the merges
     report = verify_parity(trainer.rust_tokenizer, tok, corpus[:5] + ADVERSARIAL)
     assert report["parity"]
 
 
 def test_train_pads_when_corpus_cannot_fill_vocab():
-    corpus = ["def f():\n    return 1\n"]  # one unique word cannot merge
+    corpus = ["def f():\n    return 1\n"]
     target = len(SPECIAL_TOKENS) + 256 + 500
     trainer = FastBPETrainer(vocab_size=target, min_frequency=2)
     tok = trainer.train(corpus, verbose=False)
-    assert len(tok) == target  # deterministic reserved padding
-    # padding is deterministic across runs
+    assert len(tok) == target
     tok2 = FastBPETrainer(vocab_size=target, min_frequency=2).train(corpus, verbose=False)
     assert tok.token_to_id == tok2.token_to_id
 

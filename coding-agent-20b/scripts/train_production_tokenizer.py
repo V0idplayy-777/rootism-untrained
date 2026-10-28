@@ -182,10 +182,6 @@ def iter_corpus(
 
         return True
 
-    # Group shards by language and stream them round-robin. Without this,
-    # an alphabetical shard walk plus a char cap would cut the corpus off
-    # partway through the alphabet (python after php) and silently bias the
-    # vocabulary toward whichever languages sort first.
 
     by_lang: dict[str, list[Path]] = defaultdict(list)
 
@@ -392,8 +388,6 @@ class ProductionTokenizerTrainer:
         parity = None
 
         if self._engine_name == "rust" and held_out:
-            # Prove the GPT-2-alphabet -> repo-alphabet conversion survived:
-            # both tokenizers must segment held-out documents identically.
             parity = verify_parity(
                 self._trainer.rust_tokenizer, tokenizer, held_out[:100]
             )

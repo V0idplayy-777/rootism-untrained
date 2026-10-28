@@ -154,14 +154,6 @@ class CodePreTokenizer:
     """
 
     # NOTE: every class here is EXPLICIT - no \w, \s, \S or bare `.`.
-    # Python `re` and the Rust regex crate (used by the training engine in
-    # model/fast_bpe.py) disagree on exactly those: `.` matches newline only
-    # in Rust; \s differs on \x1c-\x1f; \w differs on combining marks (Rust)
-    # vs numeral letters (Python). Explicit classes keep both engines
-    # character-identical, which the training-time parity gate depends on.
-    # Consequences: string bodies may span a backslash-newline continuation
-    # (one token per literal, matching how the source lexer sees it), and
-    # non-ASCII identifiers fall through to the single-char fallback.
     CODE_PATTERN = re.compile(
         r"""
         (?:^@@\ -[^\n]*) |

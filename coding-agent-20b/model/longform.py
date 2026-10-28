@@ -696,7 +696,7 @@ class LongFormSynthesizer:
                     )
 
                 except Exception:
-                    pass  # scratch is an optimisation, never a dependency
+                    pass
 
             candidates.append({"raw": raw, "answer": answer})
 

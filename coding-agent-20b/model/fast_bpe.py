@@ -41,9 +41,6 @@ except ImportError:  # pragma: no cover - optional dependency
     HAS_TOKENIZERS = False
 
 
-# ---------------------------------------------------------------------------
-# Byte alphabets
-# ---------------------------------------------------------------------------
 
 
 def _repo_byte_to_char(byte_val: int) -> str:
@@ -89,15 +86,7 @@ def gpt2_token_to_repo(token: str) -> str:
     return "".join(REPO_BYTES_TO_CHARS[GPT2_UNICODE_TO_BYTES[ch]] for ch in token)
 
 
-# ---------------------------------------------------------------------------
-# Pre-tokenizer: Rust-regex twin of CodePreTokenizer.CODE_PATTERN
-# ---------------------------------------------------------------------------
 
-# Whitespace as an EXPLICIT class of literal characters: the union of Python
-# `re` `\s` and the Rust regex crate's `\s` (the two engines disagree on
-# \x1c-\x1f). Must stay character-identical to the whitespace alternatives in
-# CodePreTokenizer.CODE_PATTERN (model/tokenizer.py) - the training parity
-# gate depends on both engines splitting identically.
 _WS_CHARS = (
     "\t\n\x0b\x0c\r\x1c-\x1f\x20\x85\u00a0\u1680"
     "\u2000-\u200a\u2028\u2029\u202f\u205f\u3000"
@@ -124,9 +113,6 @@ RUST_SPLIT_PATTERN = (
 )
 
 
-# Generic GPT-2 pre-tokenization (ASCII-range re-expression of the original
-# pattern; used ONLY as the ablation baseline that shows what the code-aware
-# pattern buys). Not used for production training.
 GPT2_SPLIT_PATTERN = (
     r"'s|'t|'re|'ve|'m|'ll|'d"
     r"| ?[A-Za-z]+"
@@ -170,9 +156,6 @@ def pre_tokenize_rust(text: str) -> list[str]:
     return [token for token, _span in splitter.pre_tokenize_str(text)]
 
 
-# ---------------------------------------------------------------------------
-# Trainer
-# ---------------------------------------------------------------------------
 
 
 class FastBPETrainer:
@@ -205,7 +188,6 @@ class FastBPETrainer:
         self.split_pattern = split_pattern or RUST_SPLIT_PATTERN
 
     def train_from_iterator(self, texts, verbose: bool = True) -> CodeTokenizer:
-        # The Rust trainer counts: initial alphabet (256) + merges.
         rust_vocab = self.vocab_size - len(self.special_tokens)
         if rust_vocab <= 256:
             raise ValueError(
@@ -233,10 +215,9 @@ class FastBPETrainer:
             special_tokens=[],
         )
         tok.train_from_iterator(texts, trainer=trainer)
-        self.rust_tokenizer = tok  # kept for verify_parity() by callers
+        self.rust_tokenizer = tok
 
         with tempfile.TemporaryDirectory() as tmp:
-            # BPE.save writes vocab.json + merges.txt (ordered merge list).
             _vocab_path, merges_path = tok.model.save(tmp)
             merges: list[tuple[str, str]] = []
             for line in Path(merges_path).read_text(encoding="utf-8").splitlines():
@@ -293,7 +274,6 @@ def verify_parity(
         if rust_count != repo_count:
             mismatched += 1
             if len(diagnostics) < 3:
-                # attribute the cause: pre-tokenizer drift vs BPE conversion
                 try:
                     py_pretoks = code_tokenizer.pre_tokenizer.pre_tokenize(sample)
                     rust_pretoks = pre_tokenize_rust(sample)

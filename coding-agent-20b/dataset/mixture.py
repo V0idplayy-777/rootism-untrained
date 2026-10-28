@@ -29,12 +29,7 @@ DEFAULT_MIXTURE: list[SourceSpec] = [
     # Security-critical code is rare in public corpora but must not be rare in
     SourceSpec("security-sft", 0.03, 3.0, "security"),
     SourceSpec("creative-sft", 0.04, 2.0, "creative"),
-    # Real-code-grounded instruction data (docstring->code, signature->body,
-    # code->extractive explanation, test->contract) - the antidote to
-    # template-only distribution coverage.
     SourceSpec("instruction-induction", 0.03, 1.5, "instruction"),
-    # Error-recovery behaviour (changed approach after a failed tool call),
-    # the offline twin of agent/recovery.py.
     SourceSpec("recovery-sft", 0.02, 2.0, "instruction"),
 ]
 

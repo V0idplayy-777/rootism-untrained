@@ -62,9 +62,6 @@ USER_AGENT = "coding-agent-20b-tokenizer-corpus/1.0 (+local build)"
 TIMEOUT = 120
 RETRIES = 3
 
-# ---------------------------------------------------------------------------
-# Language map: file extension -> language (superset of the trainer's map).
-# ---------------------------------------------------------------------------
 
 EXTENSIONS = {
     ".py": "python",
@@ -124,7 +121,6 @@ PERMISSIVE_LICENSES = {
     "Unlicense", "CC0-1.0", "0BSD", "Zlib",
 }
 
-# Per-language character budgets (chars of accepted documents). ~200M total.
 LANGUAGE_BUDGETS = {
     "python": 40_000_000,
     "javascript": 20_000_000,
@@ -145,18 +141,11 @@ LANGUAGE_BUDGETS = {
     "toml": 1_500_000,
 }
 
-# No single source may contribute more than this fraction of a language budget.
 PER_SOURCE_FRACTION = 0.30
 
-# ---------------------------------------------------------------------------
-# Curated sources. GitHub repos are fetched as default-branch tarballs from
-# codeload (no API calls, no rate limits). Licences below are *expectations*;
 # the actual archive licence is classified from its LICENSE text and the
-# source is dropped if they disagree with the allowlist.
-# ---------------------------------------------------------------------------
 
 GITHUB_REPOS: list[tuple[str, str]] = [
-    # python
     ("psf/requests", "python"), ("psf/black", "python"),
     ("encode/httpx", "python"), ("encode/starlette", "python"),
     ("tiangolo/fastapi", "python"), ("pallets/werkzeug", "python"),
@@ -167,7 +156,6 @@ GITHUB_REPOS: list[tuple[str, str]] = [
     ("httpie/cli", "python"), ("jd/tenacity", "python"),
     ("pytest-dev/pytest", "python"), ("pydantic/pydantic", "python"),
     ("python-poetry/poetry", "python"), ("scanny/pathlib2", "python"),
-    # javascript
     ("jquery/jquery", "javascript"), ("d3/d3", "javascript"),
     ("axios/axios", "javascript"), ("facebook/react", "javascript"),
     ("moment/moment", "javascript"), ("expressjs/express", "javascript"),
@@ -175,7 +163,6 @@ GITHUB_REPOS: list[tuple[str, str]] = [
     ("chartjs/Chart.js", "javascript"), ("caolan/async", "javascript"),
     ("socketio/socket.io", "javascript"), ("jashkenas/underscore", "javascript"),
     ("ramda/ramda", "javascript"), ("ml5js/ml5-library", "javascript"),
-    # typescript
     ("microsoft/TypeScript", "typescript"), ("rollup/rollup", "typescript"),
     ("evanw/esbuild", "typescript"), ("vitejs/vite", "typescript"),
     ("vercel/swr", "typescript"), ("TanStack/query", "typescript"),
@@ -183,58 +170,47 @@ GITHUB_REPOS: list[tuple[str, str]] = [
     ("pmndrs/zustand", "typescript"), ("reduxjs/redux-toolkit", "typescript"),
     ("typeorm/typeorm", "typescript"), ("nestjs/nest", "typescript"),
     ("colinhacks/zod", "typescript"), ("Effect-TS/effect", "typescript"),
-    # java
     ("google/guava", "java"), ("google/auto", "java"),
     ("google/gson", "java"), ("brettwooldridge/HikariCP", "java"),
     ("redis/jedis", "java"), ("mockito/mockito", "java"),
     ("apache/commons-lang", "java"), ("apache/commons-io", "java"),
     ("apache/commons-codec", "java"), ("square/okhttp", "java"),
     ("square/retrofit", "java"), ("spring-projects/spring-framework", "java"),
-    # c
     ("redis/redis@7.4.1", "c"), ("libuv/libuv", "c"), ("lua/lua@v5.4.7", "c"),
     ("jqlang/jq", "c"), ("antirez/sds", "c"), ("memcached/memcached", "c"),
     ("redis/hiredis", "c"), ("nginx/nginx", "c"), ("tmux/tmux", "c"),
 
-    # cpp
     ("nlohmann/json", "cpp"), ("fmtlib/fmt", "cpp"), ("google/re2", "cpp"),
     ("Tencent/rapidjson", "cpp"), ("gulrak/filesystem", "cpp"),
     ("protocolbuffers/protobuf", "cpp"), ("abseil/abseil-cpp", "cpp"),
-    # go
     ("spf13/cobra", "go"), ("spf13/viper", "go"), ("gin-gonic/gin", "go"),
     ("gorilla/mux", "go"), ("go-kit/kit", "go"), ("golang/crypto", "go"),
     ("golang/net", "go"), ("BurntSushi/toml", "go"), ("golang/sync", "go"),
     ("grpc/grpc-go", "go"), ("Masterminds/sprig", "go"), ("golang/go", "go"),
-    # rust
     ("serde-rs/serde", "rust"), ("serde-rs/json", "rust"),
     ("tokio-rs/tokio", "rust"), ("BurntSushi/ripgrep", "rust"),
     ("clap-rs/clap", "rust"), ("rayon-rs/rayon", "rust"),
     ("seanmonstar/reqwest", "rust"), ("dtolnay/anyhow", "rust"),
     ("dtolnay/thiserror", "rust"), ("hyperium/hyper", "rust"),
     ("rust-lang/regex", "rust"), ("rust-random/rand", "rust"),
-    # ruby
     ("rails/rails", "ruby"), ("sinatra/sinatra", "ruby"),
     ("jekyll/jekyll", "ruby"), ("puma/puma", "ruby"),
     ("rubygems/rubygems", "ruby"), ("lostisland/faraday", "ruby"),
     ("redis/redis-rb", "ruby"),
-    # php
     ("laravel/framework", "php"), ("symfony/symfony", "php"),
     ("composer/composer", "php"), ("guzzle/guzzle", "php"),
     ("doctrine/orm", "php"), ("doctrine/inflector", "php"),
-    # csharp
     ("JamesNK/Newtonsoft.Json", "csharp"), ("dotnet/efcore", "csharp"),
     ("dotnet/orleans", "csharp"), ("autofac/Autofac", "csharp"),
     ("serilog/serilog", "csharp"), ("dotnet/command-line-api", "csharp"),
     ("moq/moq", "csharp"),
-    # kotlin
     ("JetBrains/Exposed", "kotlin"), ("cashapp/sqldelight", "kotlin"),
     ("ktorio/ktor", "kotlin"), ("square/okio", "kotlin"),
     ("square/moshi", "kotlin"),
-    # swift
     ("apple/swift-log", "swift"), ("apple/swift-argument-parser", "swift"),
     ("apple/swift-nio", "swift"), ("apple/swift-collections", "swift"),
     ("Alamofire/Alamofire", "swift"), ("vapor/vapor", "swift"),
     ("pointfreeco/swift-snapshot-testing", "swift"),
-    # sql (test suites of analytic databases are the largest clean .sql sets)
     ("duckdb/duckdb", "sql"),
 ]
 
@@ -269,9 +245,6 @@ NPM_PACKAGES = [
     "jest-mock", "espree",
 ]
 
-# ---------------------------------------------------------------------------
-# Licence classification (text + metadata), fail-closed.
-# ---------------------------------------------------------------------------
 
 _LICENSE_SIGNATURES: list[tuple[str, re.Pattern]] = [
     ("Apache-2.0", re.compile(r"apache license\b.{0,80}version 2\.0|"
@@ -316,7 +289,7 @@ def classify_spdx_expression(expr: str) -> str | None:
                 return got
         return None
     if " AND " in expr.upper() or " WITH " in expr.upper():
-        return None  # every AND term must hold; conservative
+        return None
     token = expr.strip("()").strip()
     return _CANONICAL_LICENSES.get(token.upper())
 
@@ -341,9 +314,6 @@ def classify_pypi_metadata(pkg_info: str) -> str | None:
     return None
 
 
-# ---------------------------------------------------------------------------
-# Fetch helpers
-# ---------------------------------------------------------------------------
 
 
 def _download(url: str, timeout: int = TIMEOUT) -> bytes | None:
@@ -411,9 +381,6 @@ def fetch_npm_tarball(name: str) -> tuple[bytes, str] | None:
     return blob, str(version)
 
 
-# ---------------------------------------------------------------------------
-# Corpus builder
-# ---------------------------------------------------------------------------
 
 
 class CorpusWriter:
@@ -585,7 +552,7 @@ def _extract_pypi_sdist(blob: bytes, source_id: str) -> tuple[list[dict], str | 
                         "content": content,
                         "language": language,
                         "path": f"{source_id}:{name.split('/', 1)[-1]}",
-                        "license": "",  # filled once classified
+                        "license": "",
                         "source": source_id,
                     }
                 )
@@ -747,14 +714,10 @@ def main() -> int:
     if args.only:
         jobs = [j for j in jobs if args.only in j["id"]]
 
-    # Deterministic interleave: without this, GitHub repos listed first would
-    # exhaust a language budget before any PyPI/npm package is considered.
     import random as _random
 
     _random.Random(1337).shuffle(jobs)
 
-    # Phase 1: download concurrently (I/O bound) to a disk cache; RAM stays flat.
-    # Phase 2 (single-threaded, manifest order): classify licence, budget, emit.
     cache_dir = out_dir / ".download_cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -817,7 +780,6 @@ def main() -> int:
             meta["path"].unlink(missing_ok=True)
             version = meta["version"]
 
-            # --- licence classification (fail-closed) ---
             if job["kind"] == "github":
                 license_texts: list[str] = []
                 docs = _extract_docs_from_tar(
@@ -839,7 +801,6 @@ def main() -> int:
 
             archive_sha = hashlib.sha256(blob).hexdigest()[:16]
 
-            # --- budgeted emission (deterministic order) ---
             source_chars: Counter = Counter()
             kept = 0
             per_source_cap = {
@@ -858,7 +819,7 @@ def main() -> int:
                     continue
                 if i % args.heldout_every == 0:
                     _write_heldout(heldout_dir, doc)
-                    continue  # held-out docs never enter training shards
+                    continue
                 writer.add(lang, doc)
                 totals[lang] += len(doc["content"])
                 source_chars[lang] += len(doc["content"])

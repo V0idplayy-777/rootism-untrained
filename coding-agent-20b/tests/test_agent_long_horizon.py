@@ -44,7 +44,6 @@ def _schema(name):
     return TOOL_SCHEMAS[name]
 
 
-# ------------------------------------------------------------------ schemas
 
 
 def test_control_tool_schemas_exist():
@@ -60,7 +59,6 @@ def test_control_tool_schemas_exist():
         assert schema.get("description")
 
 
-# ------------------------------------------------------------------ scratch
 
 
 def test_scratch_tools_persist_and_read(tmp_path):
@@ -75,7 +73,6 @@ def test_scratch_tools_persist_and_read(tmp_path):
     agent = _agent(tmp_path, script)
     result = agent.run("trace the bug", verbose=False)
     assert result["success"]
-    # files exist under .agent/scratch and the run exposed them
     scratch_dir = tmp_path / ".agent" / "scratch"
     assert (scratch_dir / "trace.md").exists()
     body = (scratch_dir / "trace.md").read_text()
@@ -103,11 +100,9 @@ def test_scratch_index_is_injected_into_prompt(tmp_path):
         max_steps=4,
     )
     agent.run("investigate auth", verbose=False)
-    # after the first write, later prompts include the scratch index
     assert any("findings" in p for p in seen_prompts[1:])
 
 
-# ------------------------------------------------------------------ assumptions
 
 
 def test_assumption_tools_and_ledger_in_prompt(tmp_path):
@@ -132,7 +127,6 @@ def test_assumption_tools_and_ledger_in_prompt(tmp_path):
     )
     result = agent.run("consume the API", verbose=False)
     assert result["success"]
-    # refuted assumptions force a replan note into the next prompt
     assert any("Refuted" in p or "refuted" in p.lower() for p in seen_prompts[1:])
     extras = _read_extras(agent)
     assert extras.get("assumptions", {}).get("assumptions"), (
@@ -140,7 +134,6 @@ def test_assumption_tools_and_ledger_in_prompt(tmp_path):
     )
 
 
-# ------------------------------------------------------------------ plan DAG
 
 
 def test_update_plan_parses_dependency_markers(tmp_path):
@@ -178,24 +171,20 @@ def test_verified_steps_checkpoint_milestones(tmp_path):
     assert milestones["milestones"][0]["label"].startswith("read calc")
 
 
-# ------------------------------------------------------------------ wrap-up
 
 
 def test_wrap_up_injected_when_budget_exhausted(tmp_path):
     _workspace(tmp_path)
-    # model never finishes; wrap-up must fire near the step budget
     script = [_tool("read_file", path="calc.py")] * 12
     agent = _agent(tmp_path, script, max_steps=6)
     result = agent.run("never finishes", verbose=False)
     assert not result["success"]
-    # the wrap-up injection asked for a final summary
     recoveries = result.get("recoveries") or []
     assert any(r.get("action") == "wrap_up" for r in recoveries) or "WRAP" in (
         result.get("answer") or ""
     )
 
 
-# ------------------------------------------------------------------ memory
 
 
 def test_memory_learning_and_prompt_injection(tmp_path):
@@ -226,7 +215,6 @@ def test_memory_learning_and_prompt_injection(tmp_path):
     assert result["success"]
     assert mem_path.exists()
 
-    # a fresh agent in the same workspace sees the learned hint
     prompts2 = []
 
     def generate2(prompt):
@@ -244,7 +232,6 @@ def test_memory_learning_and_prompt_injection(tmp_path):
     assert any("pytest" in p for p in prompts2), "memory did not reach the prompt"
 
 
-# ------------------------------------------------------------------ extras
 
 
 def test_extras_json_saved_on_success(tmp_path):
@@ -256,7 +243,6 @@ def test_extras_json_saved_on_success(tmp_path):
     agent = _agent(tmp_path, script)
     result = agent.run("task", verbose=False)
     assert result["success"]
-    # state directory carries the serialised long-horizon state
     state_dir = tmp_path / ".agent"
     assert (state_dir / "memory.json").exists() or (state_dir / "scratch").exists()
     extras = _read_extras(agent)

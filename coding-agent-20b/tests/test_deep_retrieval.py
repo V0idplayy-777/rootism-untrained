@@ -63,23 +63,19 @@ def index(tmp_path) -> RepoIndex:
     return RepoIndex.build(str(root))
 
 
-# ------------------------------------------------------------------ query
 
 
 def test_expand_query_produces_variants():
     variants = expand_query("fix the login bug where sessions expire")
     assert len(variants) >= 2
     assert any("session" in v for v in variants)
-    # synonym layer maps prose ("logging in") to code identifiers
     variants = expand_query("make logging in safe")
     assert any("login" in v for v in variants)
 
 
-# ------------------------------------------------------------------ search
 
 
 def test_hybrid_search_beats_lexical_on_paraphrase(index):
-    # "auth" never appears in the file, but session/token/sign do
     hits = index.search_hybrid("authenticate a user and give them a token", k=4)
     assert hits, "hybrid returned nothing"
     assert any("auth/session.py" in h.path for h in hits)
@@ -97,21 +93,18 @@ def test_bm25_search_is_still_available(index):
     assert any(h.path == "auth/session.py" for h in hits)
 
 
-# ------------------------------------------------------------------ call graph
 
 
 def test_callers_and_callees(index):
     callers = index.callers_of("create_session")
     assert "api/login.py" in callers
-    # callees_of resolves called names to the files that define them
     callees = index.callees_of("api/login.py")
     assert callees == {"auth/session.py"}
-    assert "storage/db.py" not in callees  # not directly called by login.py
+    assert "storage/db.py" not in callees
 
 
 def test_related_by_calls_expands_transitively(index):
     related = index.related_by_calls(["api/login.py"], depth=2)
-    # login -> session -> db, but billing is unrelated
     assert "auth/session.py" in related
     assert "storage/db.py" in related
     assert "billing/charge.py" not in related
@@ -129,7 +122,6 @@ def test_related_files_via_imports_and_calls(index):
     assert "storage/db.py" in related
 
 
-# ------------------------------------------------------------------ updates
 
 
 def test_update_file_keeps_index_fresh(index, tmp_path):
@@ -142,11 +134,9 @@ def test_update_file_keeps_index_fresh(index, tmp_path):
     index.update_file("new_module.py")
     hits = index.search_hybrid("frobnicate a widget", k=3)
     assert hits and "new_module.py" in hits[0].path
-    # existing content still searchable
     assert index.search("create_session", k=3)
 
 
-# ------------------------------------------------------------------ hierarchy
 
 
 def test_hierarchical_summaries(index):
@@ -168,7 +158,7 @@ def test_context_assembler_hierarchical(index):
     )
     assert pack.text
     assert "create_session" in pack.text or "login" in pack.text
-    assert pack.features  # retrieval provenance is recorded
+    assert pack.features
     assert pack.features.get("hybrid") is True
     assert pack.features.get("queries", 0) >= 1
     assert pack.mode == "hierarchical"
@@ -182,7 +172,6 @@ def test_context_assembler_pulls_call_graph_neighbors(index):
         focus_paths=["api/login.py"],
     )
     assert "auth/session.py" in pack.text or "create_session" in pack.text
-    # the call-graph neighbour was pulled in and billed as such
     assert pack.features.get("call_graph_files", 0) >= 1
 
 

@@ -430,7 +430,6 @@ class ProductionAgent:
 
         self.executor = ToolExecutor(workspace_path, self.sandbox)
 
-        # --- long-horizon machinery ------------------------------------
 
         self.scratch = scratch if scratch is not None else ScratchWorkspace(
             Path(workspace_path) / ".agent" / "scratch"
@@ -558,9 +557,7 @@ Example:
 
                     state.todos.update(current - 1, "done", evidence)
 
-                    # A verified step is a milestone: snapshot it so a later
 
-                    # backtrack returns here instead of to zero.
 
                     self._checkpoint_milestone(state, current - 1, evidence)
 
@@ -690,7 +687,7 @@ Example:
                 executor=self.executor,
             )
 
-        except Exception as e:  # a checkpoint failure must never kill the loop
+        except Exception as e:
 
             logger.warning(f"milestone checkpoint failed: {e}")
 
@@ -762,11 +759,8 @@ Example:
 
         system_prompt = self._build_system_prompt(pack.text if pack else "")
 
-        # Pinned context extras: cross-session memory, scratch index, and
 
-        # unverified assumptions. Small by construction; they must survive
 
-        # every compaction because they are what "coherent state" means.
 
         task_block = task
 
@@ -1000,9 +994,7 @@ Example:
 
                 if decision.action == RecoveryAction.BACKTRACK:
 
-                    # Roll back only files changed since the last verified
 
-                    # milestone; a full stash is the no-milestone fallback.
 
                     milestone = self.milestones.last_verified()
 
@@ -1027,9 +1019,7 @@ Example:
 
                     window.add_observation("revert", {}, revert)
 
-                    # A failed edit invalidates its step's downstream subgraph
 
-                    # only — verified sibling work stays verified.
 
                     current = state.todos.next_pending()
 

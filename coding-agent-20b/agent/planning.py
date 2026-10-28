@@ -29,8 +29,6 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# "[after 1,2] task" declares deps; bare "[after]" or "[after ]" declares an
-# explicit root (no deps, no implicit chaining to the previous step).
 _DEP_MARKER = re.compile(r"^\[after\s*([0-9,\s]*)\]\s*")
 
 
@@ -39,7 +37,7 @@ class PlanStep:
     id: int
     description: str
     depends_on: list[int] = field(default_factory=list)
-    status: str = "pending"  # pending | in_progress | done | blocked | failed
+    status: str = "pending"
     evidence: str = ""
     attempts: int = 0
 
@@ -102,7 +100,6 @@ class PlanGraph:
 
                     text = text[m.end():].strip()
 
-                # No marker: implicit chain to the previous step.
 
                 elif i > 1 and steps:
 
@@ -248,7 +245,7 @@ class Milestone:
     timestamp: float
     files: list[str]
     tests_passed: list[str]
-    kind: str = "git"  # git | snapshot
+    kind: str = "git"
 
     def to_dict(self) -> dict:
         return {

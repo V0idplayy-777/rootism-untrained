@@ -93,7 +93,6 @@ def run(
     flat_recall = sum(r["flat"]["recall"] for r in rows) / n
     hier_recall = sum(r["hierarchical"]["recall"] for r in rows) / n
 
-    # aggregate the recorded feature provenance for the hierarchical packs
     feature_totals: dict[str, float] = {}
     feature_fires: dict[str, int] = {}
     for r in rows:

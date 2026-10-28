@@ -14,7 +14,6 @@ from agent.planning import (
 from agent.scratch import ScratchWorkspace
 
 
-# ---------------------------------------------------------------- PlanGraph
 
 
 def test_plan_graph_parses_explicit_and_implicit_dependencies():
@@ -29,15 +28,12 @@ def test_plan_graph_parses_explicit_and_implicit_dependencies():
     assert [s.id for s in graph.steps] == [1, 2, 3, 4]
     assert graph.steps[0].depends_on == []
     assert graph.steps[1].depends_on == [1]
-    assert graph.steps[2].depends_on == [2]  # implicit chain
+    assert graph.steps[2].depends_on == [2]
     assert graph.steps[3].depends_on == [1, 2]
-    # dependency markers are stripped from descriptions
     assert graph.steps[3].description == "wire CLI to parser and test end to end"
 
 
 def test_plan_graph_ready_respects_dependencies():
-    # plain items chain to their predecessor; "[after]" with an empty list
-    # declares an explicit root, as does the dict form
     graph = PlanGraph.parse(
         ["a", "[after 1] b", "[after 2] c", "[after] independent d"]
     )
@@ -55,7 +51,6 @@ def test_plan_graph_downstream_and_local_replan():
     graph = PlanGraph.parse(
         ["a", "b", "[after 1,2] c", "[after 3] d", "e"]
     )
-    # e chains onto d, so 1 transitively feeds everything
     assert graph.downstream(1) == {2, 3, 4, 5}
     assert graph.downstream(4) == {5}
     graph2 = PlanGraph.parse(
@@ -78,7 +73,6 @@ def test_plan_graph_downstream_and_local_replan():
     assert graph.steps[2].status == "pending"
     assert graph.steps[3].status == "pending"
     assert graph.steps[4].status == "pending"
-    # verified sibling work is untouched
     assert graph.steps[0].status == "done"
     assert graph.steps[1].status == "done"
 
@@ -93,7 +87,6 @@ def test_plan_graph_serialisation_roundtrip():
     assert restored.steps[1].depends_on == [1]
 
 
-# ---------------------------------------------------------------- milestones
 
 
 def test_milestone_snapshot_and_rollback_scope(tmp_path):
@@ -106,12 +99,10 @@ def test_milestone_snapshot_and_rollback_scope(tmp_path):
     cp.checkpoint("parser works", step=3, files_touched=["src/a.py"], tests_passed=["test_a"])
     assert len(cp.milestones) == 1
 
-    # files touched after the milestone are the rollback scope
     files, milestone = cp.rollback_files(["src/a.py", "src/b.py"])
     assert files == ["src/b.py"]
     assert milestone.label == "parser works"
 
-    # snapshot backend copies the recorded files
     cp.checkpoint("second", step=5, files_touched=["src/a.py", "src/b.py"], tests_passed=[])
     restored = cp.restore_snapshot(cp.milestones[0])
     assert "src/a.py" in restored
@@ -125,14 +116,13 @@ def test_milestone_serialisation(tmp_path):
     assert restored.last_verified().label == "label one"
 
 
-# ---------------------------------------------------------------- assumptions
 
 
 def test_assumption_ledger_lifecycle_and_render():
     ledger = AssumptionLedger()
     a1 = ledger.add("the API returns JSON", step=2)
     a2 = ledger.add("tests run with pytest", step=3)
-    assert ledger.add("the API returns JSON") is a1  # dedupe
+    assert ledger.add("the API returns JSON") is a1
     ledger.record(a1.id, "confirmed", "read the openapi spec")
     assert ledger.unverified() == [a2]
     ledger.record(a2.id, "refuted", "repo uses unittest")
@@ -143,7 +133,6 @@ def test_assumption_ledger_lifecycle_and_render():
         ledger.record(a2.id, "invalid-status")
 
 
-# ---------------------------------------------------------------- memory
 
 
 def test_memory_store_remember_recall_render(tmp_path):
@@ -155,11 +144,9 @@ def test_memory_store_remember_recall_render(tmp_path):
     assert hits and hits[0].key == "test command"
     text = mem.render()
     assert "test command" in text and "hints with history" in text
-    # persistence
     mem.save()
     mem2 = MemoryStore(tmp_path / "memory.json")
     assert mem2.get("test command").value == "pytest -q tests/unit"
-    # recall bumps uses (survives save)
     assert mem2.get("test command").uses == 1
 
 
@@ -184,7 +171,6 @@ def test_memory_store_learn_from_session(tmp_path):
     assert stored >= 3
     assert mem.get("fact:the-suite-is-pytest-q-tests").value == "the suite is pytest -q tests/"
     assert "lesson:" in mem.get("lesson:run_tests|err").key
-    # second learn is idempotent
     assert mem.learn_from_session(state) == 0
 
 
@@ -196,7 +182,6 @@ def test_memory_eviction_is_bounded(tmp_path):
     assert len(mem) <= MAX_MEMORIES
 
 
-# ---------------------------------------------------------------- scratch
 
 
 def test_scratch_write_read_index_and_search(tmp_path):
@@ -221,7 +206,6 @@ def test_scratch_replace_and_prune(tmp_path):
     body = scratch.read("notes")
     assert "corrected version" in body
     assert "first version" not in body
-    # pruning keeps the newest tail under the cap
     from agent.scratch import MAX_TOPIC_CHARS
     big = "x" * (MAX_TOPIC_CHARS + 10)
     scratch.write("big", big, mode="append")
