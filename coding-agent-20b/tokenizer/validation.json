@@ -1,0 +1,40 @@
+{
+  "num_samples": 100,
+  "chars_per_token": 3.9495362074417626,
+  "bytes_per_token": 3.9614538315589756,
+  "unk_rate": 0.0,
+  "roundtrip_ok": true,
+  "vocab_size": 128256,
+  "per_language": {
+    "python": 6.433664356064102,
+    "other": 3.2880940701271277,
+    "go": 3.92706781793985,
+    "typescript": 4.860995933016254,
+    "yaml": 3.1814557332039293,
+    "rust": 3.01593351775467,
+    "sql": 2.378457317755963
+  },
+  "identifiers": {
+    "identifiers": 41793,
+    "chars_per_token": 6.1928702696620785,
+    "whole_identifier_rate": 0.832890675471969
+  },
+  "whitespace": {
+    "failures": 0,
+    "tabs_roundtrip": true,
+    "blank_line_roundtrip": true
+  },
+  "diff": {
+    "chars_per_token": 2.8875,
+    "tokens": 80,
+    "per_line_chars_per_token": [
+      0.2857142857142857,
+      0.3333333333333333,
+      0.38461538461538464,
+      0.35,
+      0.3958333333333333,
+      0.47368421052631576,
+      0.23255813953488372
+    ]
+  }
+}

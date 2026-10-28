@@ -1,0 +1,351 @@
+{
+  "tokenizer": "candidate",
+  "vocab_size": 128256,
+  "candidate": {
+    "python": {
+      "corpus": "python",
+      "chars": 594,
+      "tokens": 244,
+      "chars_per_token": 2.4344262295081966,
+      "context_bytes_at": {
+        "8192": 19942,
+        "32768": 79771
+      }
+    },
+    "typescript": {
+      "corpus": "typescript",
+      "chars": 584,
+      "tokens": 259,
+      "chars_per_token": 2.2548262548262548,
+      "context_bytes_at": {
+        "8192": 18471,
+        "32768": 73886
+      }
+    },
+    "rust": {
+      "corpus": "rust",
+      "chars": 354,
+      "tokens": 174,
+      "chars_per_token": 2.0344827586206895,
+      "context_bytes_at": {
+        "8192": 16666,
+        "32768": 66665
+      }
+    },
+    "go": {
+      "corpus": "go",
+      "chars": 391,
+      "tokens": 187,
+      "chars_per_token": 2.090909090909091,
+      "context_bytes_at": {
+        "8192": 17128,
+        "32768": 68514
+      }
+    },
+    "sql": {
+      "corpus": "sql",
+      "chars": 238,
+      "tokens": 115,
+      "chars_per_token": 2.0695652173913044,
+      "context_bytes_at": {
+        "8192": 16953,
+        "32768": 67815
+      }
+    },
+    "yaml": {
+      "corpus": "yaml",
+      "chars": 258,
+      "tokens": 91,
+      "chars_per_token": 2.8351648351648353,
+      "context_bytes_at": {
+        "8192": 23225,
+        "32768": 92902
+      }
+    },
+    "diff": {
+      "corpus": "diff",
+      "chars": 450,
+      "tokens": 142,
+      "chars_per_token": 3.1690140845070425,
+      "context_bytes_at": {
+        "8192": 25960,
+        "32768": 103842
+      }
+    },
+    "identifiers": {
+      "corpus": "identifiers",
+      "chars": 215,
+      "tokens": 34,
+      "chars_per_token": 6.323529411764706,
+      "context_bytes_at": {
+        "8192": 51802,
+        "32768": 207209
+      }
+    },
+    "prose": {
+      "corpus": "prose",
+      "chars": 266,
+      "tokens": 80,
+      "chars_per_token": 3.325,
+      "context_bytes_at": {
+        "8192": 27238,
+        "32768": 108953
+      }
+    }
+  },
+  "baselines": {
+    "bytes": {
+      "python": {
+        "corpus": "python",
+        "chars": 594,
+        "tokens": 594,
+        "chars_per_token": 1.0,
+        "context_bytes_at": {
+          "8192": 8192,
+          "32768": 32768
+        }
+      },
+      "typescript": {
+        "corpus": "typescript",
+        "chars": 584,
+        "tokens": 584,
+        "chars_per_token": 1.0,
+        "context_bytes_at": {
+          "8192": 8192,
+          "32768": 32768
+        }
+      },
+      "rust": {
+        "corpus": "rust",
+        "chars": 354,
+        "tokens": 354,
+        "chars_per_token": 1.0,
+        "context_bytes_at": {
+          "8192": 8192,
+          "32768": 32768
+        }
+      },
+      "go": {
+        "corpus": "go",
+        "chars": 391,
+        "tokens": 391,
+        "chars_per_token": 1.0,
+        "context_bytes_at": {
+          "8192": 8192,
+          "32768": 32768
+        }
+      },
+      "sql": {
+        "corpus": "sql",
+        "chars": 238,
+        "tokens": 238,
+        "chars_per_token": 1.0,
+        "context_bytes_at": {
+          "8192": 8192,
+          "32768": 32768
+        }
+      },
+      "yaml": {
+        "corpus": "yaml",
+        "chars": 258,
+        "tokens": 258,
+        "chars_per_token": 1.0,
+        "context_bytes_at": {
+          "8192": 8192,
+          "32768": 32768
+        }
+      },
+      "diff": {
+        "corpus": "diff",
+        "chars": 450,
+        "tokens": 450,
+        "chars_per_token": 1.0,
+        "context_bytes_at": {
+          "8192": 8192,
+          "32768": 32768
+        }
+      },
+      "identifiers": {
+        "corpus": "identifiers",
+        "chars": 215,
+        "tokens": 215,
+        "chars_per_token": 1.0,
+        "context_bytes_at": {
+          "8192": 8192,
+          "32768": 32768
+        }
+      },
+      "prose": {
+        "corpus": "prose",
+        "chars": 266,
+        "tokens": 266,
+        "chars_per_token": 1.0,
+        "context_bytes_at": {
+          "8192": 8192,
+          "32768": 32768
+        }
+      }
+    },
+    "word-punct": {
+      "python": {
+        "corpus": "python",
+        "chars": 594,
+        "tokens": 231,
+        "chars_per_token": 2.5714285714285716,
+        "context_bytes_at": {
+          "8192": 21065,
+          "32768": 84260
+        }
+      },
+      "typescript": {
+        "corpus": "typescript",
+        "chars": 584,
+        "tokens": 262,
+        "chars_per_token": 2.2290076335877864,
+        "context_bytes_at": {
+          "8192": 18260,
+          "32768": 73040
+        }
+      },
+      "rust": {
+        "corpus": "rust",
+        "chars": 354,
+        "tokens": 167,
+        "chars_per_token": 2.1197604790419162,
+        "context_bytes_at": {
+          "8192": 17365,
+          "32768": 69460
+        }
+      },
+      "go": {
+        "corpus": "go",
+        "chars": 391,
+        "tokens": 178,
+        "chars_per_token": 2.196629213483146,
+        "context_bytes_at": {
+          "8192": 17994,
+          "32768": 71979
+        }
+      },
+      "sql": {
+        "corpus": "sql",
+        "chars": 238,
+        "tokens": 115,
+        "chars_per_token": 2.0695652173913044,
+        "context_bytes_at": {
+          "8192": 16953,
+          "32768": 67815
+        }
+      },
+      "yaml": {
+        "corpus": "yaml",
+        "chars": 258,
+        "tokens": 93,
+        "chars_per_token": 2.774193548387097,
+        "context_bytes_at": {
+          "8192": 22726,
+          "32768": 90904
+        }
+      },
+      "diff": {
+        "corpus": "diff",
+        "chars": 450,
+        "tokens": 195,
+        "chars_per_token": 2.3076923076923075,
+        "context_bytes_at": {
+          "8192": 18904,
+          "32768": 75618
+        }
+      },
+      "identifiers": {
+        "corpus": "identifiers",
+        "chars": 215,
+        "tokens": 6,
+        "chars_per_token": 35.833333333333336,
+        "context_bytes_at": {
+          "8192": 293546,
+          "32768": 1174186
+        }
+      },
+      "prose": {
+        "corpus": "prose",
+        "chars": 266,
+        "tokens": 79,
+        "chars_per_token": 3.367088607594937,
+        "context_bytes_at": {
+          "8192": 27583,
+          "32768": 110332
+        }
+      }
+    }
+  },
+  "gate_baselines": [
+    "bytes"
+  ],
+  "reference_baselines": [
+    "word-punct"
+  ],
+  "delta": {
+    "python": {
+      "baseline": "bytes",
+      "candidate_cpt": 2.4344262295081966,
+      "baseline_cpt": 1.0,
+      "relative": 2.4344262295081966
+    },
+    "typescript": {
+      "baseline": "bytes",
+      "candidate_cpt": 2.2548262548262548,
+      "baseline_cpt": 1.0,
+      "relative": 2.2548262548262548
+    },
+    "rust": {
+      "baseline": "bytes",
+      "candidate_cpt": 2.0344827586206895,
+      "baseline_cpt": 1.0,
+      "relative": 2.0344827586206895
+    },
+    "go": {
+      "baseline": "bytes",
+      "candidate_cpt": 2.090909090909091,
+      "baseline_cpt": 1.0,
+      "relative": 2.090909090909091
+    },
+    "sql": {
+      "baseline": "bytes",
+      "candidate_cpt": 2.0695652173913044,
+      "baseline_cpt": 1.0,
+      "relative": 2.0695652173913044
+    },
+    "yaml": {
+      "baseline": "bytes",
+      "candidate_cpt": 2.8351648351648353,
+      "baseline_cpt": 1.0,
+      "relative": 2.8351648351648353
+    },
+    "diff": {
+      "baseline": "bytes",
+      "candidate_cpt": 3.1690140845070425,
+      "baseline_cpt": 1.0,
+      "relative": 3.1690140845070425
+    },
+    "identifiers": {
+      "baseline": "bytes",
+      "candidate_cpt": 6.323529411764706,
+      "baseline_cpt": 1.0,
+      "relative": 6.323529411764706
+    },
+    "prose": {
+      "baseline": "bytes",
+      "candidate_cpt": 3.325,
+      "baseline_cpt": 1.0,
+      "relative": 3.325
+    }
+  },
+  "gate": {
+    "corpora": 6,
+    "wins": 6,
+    "win_rate": 1.0,
+    "failures": [],
+    "passed": true
+  }
+}
