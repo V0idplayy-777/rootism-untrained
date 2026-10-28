@@ -554,7 +554,7 @@ class CodingAgentConfig:
 
 
 
-        assert self.hidden_size % self.num_attention_heads == 0,
+        assert self.hidden_size % self.num_attention_heads == 0
 
 
 
