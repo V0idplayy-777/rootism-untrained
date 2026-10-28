@@ -1075,6 +1075,8 @@ class Trajectory:
 
     context: dict | None = None
 
+    milestones: list[dict] = field(default_factory=list)
+
 
 def _longest_failure_streak(steps: list[dict]) -> int:
     """Longest run of consecutive failed/malformed steps."""
@@ -1138,7 +1140,12 @@ def evaluate_trajectories(trajectories: list[Trajectory]) -> dict[str, Any]:
     - `loop_rate`: identical call repeated more than twice,
     - `plan_completion` and `state_coherence` from the serialised session state
       (a "done" todo without evidence is not coherent),
-    - `escalations`/`backtracks` from the recovery policy trace.
+    - `escalations`/`backtracks`/`wrap_ups` from the recovery policy trace,
+    - `milestones`: verified-progress checkpoints actually taken (progress
+      that survives a later rollback),
+    - `recovery_class_accuracy`: whether the intervention matched the failure
+      class (environment failures switched, code failures reflected/backtracked
+      instead of re-argued).
     """
 
     if not trajectories:
@@ -1157,7 +1164,11 @@ def evaluate_trajectories(trajectories: list[Trajectory]) -> dict[str, Any]:
 
     coherent = 0
 
-    escalations = backtracks = 0
+    escalations = backtracks = wrap_ups = 0
+
+    milestones = 0
+
+    class_total = class_correct = 0
 
     for tr in trajectories:
 
@@ -1217,6 +1228,30 @@ def evaluate_trajectories(trajectories: list[Trajectory]) -> dict[str, Any]:
 
                 backtracks += 1
 
+            elif action == "wrap_up":
+
+                wrap_ups += 1
+
+            reason = str(record.get("reason", ""))
+
+            if "environment failure" in reason:
+
+                class_total += 1
+
+                if action in {"switch", "escalate"}:
+
+                    class_correct += 1
+
+            elif "hypothesis is wrong" in reason or "the change itself is wrong" in reason:
+
+                class_total += 1
+
+                if action in {"backtrack", "reflect", "escalate"}:
+
+                    class_correct += 1
+
+        milestones += len(tr.milestones) if getattr(tr, "milestones", None) else 0
+
         if tr.state:
 
             completion = tr.state.get("todos", {}).get("completion")
@@ -1246,6 +1281,9 @@ def evaluate_trajectories(trajectories: list[Trajectory]) -> dict[str, Any]:
         "state_coherence": coherent / len(trajectories),
         "escalations": escalations,
         "backtracks": backtracks,
+        "wrap_ups": wrap_ups,
+        "milestones": milestones,
+        "recovery_class_accuracy": class_correct / max(class_total, 1),
         "avg_steps": sum(len(t.steps) for t in trajectories) / len(trajectories),
     }
 

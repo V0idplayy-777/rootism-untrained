@@ -42,6 +42,7 @@ class RecoveryAction(str, Enum):
     SWITCH = "switch"
     REFLECT = "reflect"
     BACKTRACK = "backtrack"
+    WRAP_UP = "wrap_up"
     ESCALATE = "escalate"
 
 
@@ -56,6 +57,55 @@ TOOL_FALLBACKS: dict[str, list[str]] = {
     "git_diff": ["git_status"],
     "git_status": ["git_diff"],
 }
+
+
+# Failure classes -> first ladder rung. Guessing wrong wastes steps; the
+# classifier picks the cheapest intervention that can actually work.
+_FAILURE_PATTERNS = (
+    ("environment", (
+        "modulenotfounderror", "importerror", "command not found",
+        "enoent", "no such file or directory", "eacces", "permission denied",
+        "docker", "container", "sandbox", "connection refused", "enameknown",
+        "not installed", "unsupported python",
+    )),
+    ("transient", (
+        "timeout", "timed out", "temporarily unavailable", "rate limit",
+        "econnreset", "connection reset", "503", "502", "deadlock",
+        "resource temporarily unavailable",
+    )),
+    ("arguments", (
+        "unexpected keyword argument", "positional argument",
+        "invalid argument", "schema", "validation", "jsondecodeerror",
+        "expected", "malformed", "bad request", "400",
+    )),
+    ("code", (
+        "assertionerror", "assert", "test failed", "tests failed",
+        "syntaxerror", "nameerror", "undefined", "typeerror", "valueerror",
+        "exception:", "traceback",
+    )),
+)
+
+
+def classify_failure(error: str | None) -> str:
+    """environment | transient | arguments | code | unknown.
+
+    Environment problems are not fixable by retrying the same call; code
+    problems are not fixable by changing arguments; the ladder entry point
+    depends on getting this roughly right.
+    """
+
+    err = (error or "").lower()
+
+    if not err:
+        return "unknown"
+
+    for klass, needles in _FAILURE_PATTERNS:
+
+        if any(n in err for n in needles):
+
+            return klass
+
+    return "unknown"
 
 
 @dataclass
@@ -89,13 +139,16 @@ class RecoveryPolicy:
     """
 
     max_retries: int = 1
+    max_transient_retries: int = 2
     max_consecutive_failures: int = 6
     stall_window: int = 6
     max_backtracks: int = 1
+    wrap_up_reserve: int = 3
 
     _history: list[str] = field(default_factory=list)
     _retries: dict[str, int] = field(default_factory=dict)
     _switches: dict[str, int] = field(default_factory=dict)
+    _tool_streak: dict[str, int] = field(default_factory=dict)
     _backtracks: int = 0
 
     def reset(self) -> None:
@@ -105,6 +158,8 @@ class RecoveryPolicy:
         self._retries.clear()
 
         self._switches.clear()
+
+        self._tool_streak.clear()
 
         self._backtracks = 0
 
@@ -143,6 +198,16 @@ class RecoveryPolicy:
 
             consecutive = state.consecutive_failures() + 1
 
+            failure_class = classify_failure(error)
+
+            if tool:
+
+                self._tool_streak[tool] = self._tool_streak.get(tool, 0) + 1
+
+            else:
+
+                self._tool_streak.clear()  # parse errors are not tool-specific
+
             if consecutive >= self.max_consecutive_failures:
 
                 return RecoveryDecision(
@@ -169,9 +234,41 @@ class RecoveryPolicy:
                     signature=signature,
                 )
 
-            if repeats >= 2 or attempt > self.max_retries:
+            # Environment failures cannot be retried into existence: the tool
+            # or its dependencies are simply absent. Jump straight to SWITCH.
 
-                if tool and tool in TOOL_FALLBACKS:
+            if failure_class == "environment" and tool in TOOL_FALLBACKS:
+
+                used = self._switches.get(tool, 0)
+
+                chain = TOOL_FALLBACKS[tool]
+
+                if used < len(chain):
+
+                    self._switches[tool] = used + 1
+
+                    return RecoveryDecision(
+                        RecoveryAction.SWITCH,
+                        f"environment failure ({failure_class}) for {tool}",
+                        hint=(
+                            f"`{tool}` cannot work in this environment "
+                            f"({(error or '')[:120]}). Use `{chain[used]}` instead."
+                        ),
+                        attempt=attempt,
+                        signature=signature,
+                        next_tool=chain[used],
+                    )
+
+            # A tool that failed several times in a row is the wrong tool,
+            # whatever the signatures say (cooldown).
+
+            tool_hot = tool is not None and self._tool_streak.get(tool, 0) >= 3
+
+            transient_ok = failure_class == "transient" and attempt <= self.max_transient_retries
+
+            if repeats >= 2 or attempt > self.max_retries or tool_hot and not transient_ok:
+
+                if tool and tool in TOOL_FALLBACKS and not (failure_class == "code"):
 
                     used = self._switches.get(tool, 0)
 
@@ -193,17 +290,34 @@ class RecoveryPolicy:
                             next_tool=chain[used],
                         )
 
-                if consecutive >= 3 and self._backtracks < self.max_backtracks:
+                # Code failures mean the *hypothesis* is wrong, not the tool:
+                # first change the fix, and only then roll back.
 
-                    self._backtracks += 1
+                if (failure_class == "code" and repeats >= 3) or consecutive >= 4:
+
+                    if self._backtracks < self.max_backtracks:
+
+                        self._backtracks += 1
+
+                        return RecoveryDecision(
+                            RecoveryAction.BACKTRACK,
+                            "the change itself is wrong; roll back unverified edits",
+                            hint=(
+                                "Restore the last verified milestone (revert / git "
+                                "checkout -- <files>), re-read the failing test, and "
+                                "form a new hypothesis before editing again."
+                            ),
+                            attempt=attempt,
+                            signature=signature,
+                        )
 
                     return RecoveryDecision(
-                        RecoveryAction.BACKTRACK,
-                        "no progress after repeated failures; roll back unverified edits",
+                        RecoveryAction.REFLECT,
+                        "repeated code failures; the hypothesis is wrong",
                         hint=(
-                            "Restore the last known-good state (git stash / "
-                            "git checkout -- <files>), re-read the failing test, "
-                            "and form a new hypothesis before editing again."
+                            "Stop editing. Write a post-mortem: what you believed, "
+                            "what the evidence says, the smallest next verifiable "
+                            "step. Update the plan before the next tool call."
                         ),
                         attempt=attempt,
                         signature=signature,
@@ -222,8 +336,12 @@ class RecoveryPolicy:
 
             return RecoveryDecision(
                 RecoveryAction.RETRY,
-                f"first failure for {signature}",
-                hint="Retry once; if it fails again you must change approach.",
+                f"failure class {failure_class!r} for {signature}",
+                hint=(
+                    "Transient-looking failure: retry once"
+                    if transient_ok
+                    else "Retry once; if it fails again you must change approach."
+                ),
                 attempt=attempt,
                 signature=signature,
             )
@@ -260,6 +378,42 @@ class RecoveryPolicy:
             )
 
         return RecoveryDecision(RecoveryAction.PROCEED, "no intervention needed")
+
+    def note_success(self, tool: str | None) -> None:
+        """A successful call clears the tool cooldown (call after every success)."""
+
+        if tool:
+
+            self._tool_streak.pop(tool, None)
+
+    def wrap_up_needed(self, state: SessionState) -> RecoveryDecision | None:
+        """Near the step budget with an incomplete plan: switch to verifying.
+
+        Without this, agents spend their last steps mid-edit and never run
+        the final test suite. Three steps of reserve is enough to run tests
+        and write an honest summary — not enough to start anything new.
+        """
+
+        remaining = state.max_steps - state.step
+
+        if remaining > max(self.wrap_up_reserve, 1):
+
+            return None
+
+        if state.todos.completion >= 1.0:
+
+            return None
+
+        return RecoveryDecision(
+            RecoveryAction.WRAP_UP,
+            f"only {remaining} steps left and the plan is "
+            f"{state.todos.completion:.0%} complete",
+            hint=(
+                "Stop starting new work. Run the test suite once, mark what is "
+                "verified with evidence, and write the final answer stating "
+                "exactly what is done and what is not."
+            ),
+        )
 
     @staticmethod
     def reflect_prompt(state: SessionState, decision: RecoveryDecision) -> str:

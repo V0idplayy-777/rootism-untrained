@@ -9,10 +9,10 @@ training data, training/eval harnesses and agent-side machinery.
 | # | Gap | Mechanism | Measured by |
 |---|-----|-----------|-------------|
 | 1 | Tokenizer: 320-token placeholder, code-aware pre-tok but not competitive | Streaming BPE on a real corpus + exact vocab alignment + competitive gate | `scripts/evaluate_tokenizer.py`, `validation.json`, `benchmark.json` |
-| 2 | 8k/32k context vs real repos | AST+block chunking, BM25 retrieval, repo maps, token-budgeted assembly, 64k YaRN profile | `RetrievalAblation` (gold-file/symbol recall, context tokens) |
+| 2 | 8k/32k context vs real repos | AST+block chunking, hybrid multi-query retrieval + call graph, hierarchical summaries, token-budgeted assembly, 64k YaRN profile | `evaluation/retrieval_ablation.py` (gold-file recall, per-task feature provenance) |
 | 3 | Multi-step tool use: recovery, 15–20 call planning, session state | `SessionState`, `ContextWindow` compaction, `RecoveryPolicy` ladder, `StallDetector`, resumable state | `evaluate_trajectories` (`recovery_after_3`, `loop_rate`, `plan_completion`, `state_coherence`) |
 | 4 | Security-critical generation lags general coding | Curated safe/vulnerable pairs (CWE-tagged), review rubric, security SFT/DPO, mixture upsampling | `evaluation/security_eval.py` (`overall_vuln_rate`, per-CWE counts) |
-| 5 | Training distribution: unusual phrasing, distant concepts | Phrasing styles, cross-domain synthesis, spec/design/implement ladders, clarification tasks | `dataset/augmentation.py` tests + SFT mixture composition |
+| 5 | Training distribution: unusual phrasing, distant concepts | Phrasing styles, 19 cross-domain families, constraint conflicts, multi-turn clarification, error recovery, real-code induction | `dataset/augmentation.py` + `dataset/instruction_induction.py` tests + SFT mixture composition |
 | 6 | Long functions / deep reasoning need scratch space | Plan → skeleton → per-unit fill, explicit scratch budget, execution-checked self-consistency | `model/longform.py` traces + `ReasoningBudget` |
 
 ---
@@ -46,21 +46,44 @@ requested also produces a vocab smaller than the model's embedding table.
   word/punct, and `tiktoken` when installed) with absolute fertility floors, so
   an untrained vocabulary cannot pass.
 
+**What changed since (real corpus + Rust engine + exact parity).**
+
+- `scripts/fetch_real_corpus.py` builds the corpus from pinned GitHub
+  `repo@tag` sources (270 accepted, 16 correctly rejected by the fail-closed
+  SPDX gate): **281M characters / 41,972 documents / 17 languages**, plus 947
+  held-out raw files. No HuggingFace datasets dependency.
+- `model/fast_bpe.py` `FastBPETrainer` trains with the Rust `tokenizers`
+  engine (128k merges in ~20 CPU-minutes), converts the learned merges
+  GPT-2-alphabet -> repo-alphabet losslessly, and pads to exactly
+  `vocab_size`. `verify_parity` refuses to return a tokenizer whose Python
+  port disagrees with the Rust original on held-out documents.
+- The shared pre-tokenizer is **engine-independent**: Python `re` and the
+  Rust regex crate disagree on `.` vs newline, `\s` on `\x1c-\x1f`, and `\w`
+  on combining marks vs numeral letters - the first parity run failed on
+  exactly this (Rust string continuations). Both patterns now use explicit
+  character classes only; parity is bit-exact on all 947 held-out files.
+- `iter_corpus` round-robins languages so a `--max_corpus_chars` cap keeps
+  the language mix balanced (the 281M-char run OOMs at ~3.6G RAM; 150M fits).
+- `evaluation/tokenizer_ablation.py`: code-aware vs generic GPT-2
+  pre-tokenization at equal vocab. Atomicity wins on strings (-11%), comments
+  (-7%), numbers (-24%), identifiers; fertility within a documented 1.25x
+  bound (measured structural cost ~1.19-1.20x at 16k/32k vocab - the generic
+  pattern groups punctuation runs and word-leading spaces, which compresses
+  mixed prose/code better at any vocab; we pay that for whole literals).
+
 **Verification.**
 
 ```bash
-python scripts/sample_tokenizer_corpus.py --dataset bigcode/the-stack-smol \
-    --output_dir data/tokenizer_corpus --per_language_docs 2000
-python scripts/train_production_tokenizer.py --data_dir data/tokenizer_corpus \
-    --output_dir tokenizer --vocab_size 128256 --benchmark_gate
-python scripts/evaluate_tokenizer.py --tokenizer tokenizer --corpus_dir <heldout> \
-    --json tokenizer/benchmark.json
+python scripts/fetch_real_corpus.py --output_dir <corpus> --heldout_dir <heldout>
+python scripts/train_production_tokenizer.py --data_dir <corpus> \
+    --output_dir tokenizer --vocab_size 128256 --max_corpus_chars 150000000 \
+    --benchmark_gate          # parity + validation + baseline gates
+python evaluation/tokenizer_ablation.py     # code-aware vs generic pretok
 ```
 
-**Still open.** No published 128k vocabulary is checked in (it requires a real
-corpus run); the gate is only as strong as the baselines installed (`tiktoken` is
-optional). Absolute floors are calibrated on the built-in samples and must be
-re-derived from the real held-out corpus.
+**Still open.** tiktoken baselines are unreachable in this environment
+(encoding files blocked), so the gate compares against bytes / word-punct
+floors; the ablation documents the fertility cost explicitly.
 
 ## 2. Context: repositories larger than the window
 
@@ -78,23 +101,37 @@ hold a repository, so fixes stay local and architectural changes lose.
   (repo → file → signatures, focused on retrieved files).
 - `ContextAssembler` packs map + chunks + neighbours into a hard token budget
   with provenance, in three ablation modes: `none`, `flat`, `hierarchical`.
-- `build_swebench_prompt` and `RetrievalAblation` compute gold-file and
-  gold-symbol recall plus context cost per mode. Gold files come from the patch
-  and are used **only for measurement**, never in the prompt.
+- **Hybrid multi-query retrieval**: `search_hybrid` fuses BM25 and
+  character-ngram cosine via reciprocal rank fusion; `search_task` expands a
+  task into complementary queries (prose, identifiers, paths, pasted error
+  text, domain synonyms - "logging in" -> login/authenticate/session) and
+  merges rankings. Paraphrase recall is where plain BM25 loses.
+- **Call graph**: `callers_of` / `callees_of` / `related_by_calls`
+  (import + call resolution, bounded depth), so opening one file pulls in the
+  code it actually talks to - and not the unrelated subtree.
+- `HierarchicalSummarizer` (file -> directory -> repo, extractive and
+  deterministic, optional LLM seam) and `ContextPack.features` record *which*
+  ingredients fired (queries, hybrid, call_graph_files, file_summaries,
+  repo_summary) for every assembled pack.
+- `evaluation/retrieval_ablation.py` computes gold-file recall per mode at
+  equal budgets and records per-task feature provenance (the report shows
+  which retrieval ingredient stopped firing, not just aggregate recall).
+  Gold files are used **only for measurement**, never in the prompt.
 - `model/config.py`: `get_20b_64k_config()` (YaRN ×8) as headroom for a few
   large files, documented as extrapolation, not native long context.
 
 **Verification.**
 
-```python
-from evaluation.production_evaluate import RetrievalAblation, load_swebench
-ablation = RetrievalAblation(budget_tokens=6000).evaluate(problems, repo_dirs)
-# none: recall 0 | flat: recall R | hierarchical: recall R + map + neighbours
+```bash
+python evaluation/retrieval_ablation.py
+# on this repository (60 symbol-anchored tasks, 3k-token budget):
+# flat recall 0.967 | hierarchical 0.983, hybrid fired 60/60,
+# call-graph neighbours 1.47/task - gate: hierarchical >= flat
 ```
 
-**Still open.** Lexical retrieval misses paraphrase-heavy issues; no embeddings
-or call-graph depth > 1; repo maps are signature-level, not semantic. Long-context
-quality beyond 32k remains unproven without long-context training.
+**Still open.** No embeddings (character-ngram cosine is the fuzzy side);
+repo maps are signature-level, not semantic. Long-context quality beyond 32k
+remains unproven without long-context training.
 
 ## 3. Long-horizon tool use
 
@@ -124,13 +161,48 @@ already tracked recovery rate because this was expected to be weak.
   `loop_rate`, `plan_completion`, `state_coherence`, `escalations`,
   `backtracks`.
 
-**Verification.** `tests/test_agent_loop.py` runs scripted trajectories end to
-end: plan/fact/verify flow, 8 consecutive failures → escalation, malformed call
-repair, resume from state, retrieval injection, revert semantics.
+**What changed since (plan DAGs, milestones, memory, scratch).**
+
+- `agent/planning.py` `PlanGraph`: plans are dependency DAGs, not lists -
+  `[after 1,3]` markers declare deps, plain steps chain, bare `[after]`
+  declares an explicit root. `ready()` gates execution, `downstream()` +
+  `reset_subtree()` scope a *local* replan to the invalidated subgraph
+  (verified sibling work survives), and `MilestoneCheckpointer` snapshots
+  verified steps (files + tests + git) so `BACKTRACK` returns to the last
+  verified milestone, not to zero.
+- `AssumptionLedger`: unverified assumptions are injected into **every**
+  prompt until confirmed/refuted; a refutation forces a replan note naming
+  the wrong assumption.
+- `agent/memory.py` `MemoryStore`: cross-session hints (facts, failure
+  lessons, test commands) with usage-bounded recall, `render()` into the
+  pinned task block, and `learn_from_session()` over the finished session.
+- `agent/scratch.py` `ScratchWorkspace`: disk-backed reasoning topics
+  (append/replace, per-topic cap with newest-tail pruning, search + index).
+  The **index**, not the content, stays in the prompt - intermediate work
+  survives context compaction.
+- `ProductionAgent` gained the control tools `record_assumption` /
+  `verify_assumption` / `scratch_write` / `scratch_read` / `scratch_list`;
+  `update_plan` now builds the PlanGraph and checkpoints milestones on
+  evidence-verified todos; memory + scratch index + assumption ledger are
+  injected each step; WRAP_UP fires near the step budget; and plan graph,
+  assumptions and milestones persist to `<state>.extras.json` on both exits.
+- `agent/recovery.py` hardening: environment failures switch immediately,
+  code failures walk CHANGE at 2 repeats and BACKTRACK at 3 (consecutive 4),
+  with cooldowns; `evaluate_trajectories` gained `wrap_ups`, `milestones`,
+  and `recovery_class_accuracy` (did the intervention match the failure
+  class).
+
+**Verification.** `tests/test_agent_loop.py` (scripted trajectories end to
+end) plus `tests/test_agent_long_horizon.py` (scratch tools persist and
+inject, assumption refutation forces a replan note, dependency markers parse,
+verified todos checkpoint milestones, wrap-up at budget exhaustion, memory
+learn/recall across agent instances, extras round-trip) and
+`tests/test_planning_memory_scratch.py` (module contracts).
 
 **Still open.** Recovery is policy-driven, not learned; it bounds damage but
-cannot invent a correct hypothesis. Long-session coherence still depends on the
-model using `update_plan`/`note_fact`.
+cannot invent a correct hypothesis. Milestone rollback assumes
+`files_touched` is accurate - a step that edits untracked files it never
+reports cannot be reverted precisely.
 
 ## 4. Security-critical generation
 
@@ -154,10 +226,27 @@ code; public corpora are full of `md5`, `verify=False`, `shell=True`.
   rate per CWE and fails a threshold.
 - `security_review_rubric()` is both training text and the scoring checklist.
 
-**Verification.** Self-test over the curated set: all 18 vulnerable samples are
-flagged, all 18 safe samples pass (`tests/test_security_augment_longform.py`).
-`SecurityBenchmark.assert_threshold` gates a release (default ≤10% vulnerable,
-0 critical).
+**What changed since (held-out split + adversarial requests).**
+
+- The curated set is now **38 CWE-tagged samples** (adds regex DoS, crypto
+  modes, CSRF, unbounded allocation, auth fail-open, zip-slip depth, and 4
+  `adversarial_request` cases where the correct behaviour is a **refusal
+  with a safe alternative** - "disable TLS verification to unblock the
+  release" must not be obeyed).
+- A **sha256-deterministic split** yields 32 train / 6 held-out (held-out:
+  zip-slip, crypto-mode, csrf-missing, redos-nested, unbounded-alloc,
+  auth-fail-open). `SecurityDataGenerator(heldout=False)` trains on the
+  train split only; `SecurityBenchmark.cases_from_dataset(heldout=True)` is
+  the held-out default, so training data can never leak into the gate.
+- Scanner extended to 25 regex + 11 guard rules across the new categories,
+  with **required safe patterns** per task and explicit overrides - "did not
+  use md5" is not "used Argon2". Contract is verified in **both directions**
+  on all 38 samples (safe passes, vulnerable flags).
+
+**Verification.** `tests/test_security_augment_longform.py` asserts the split
+contract (disjoint, generator = train-only) and both-direction scanner
+behaviour. `SecurityBenchmark.assert_threshold` gates a release (default
+≤10% vulnerable, 0 critical).
 
 **Still open.** Static rules cannot prove absence of vulnerabilities (SSRF needs
 taint analysis); the benchmark is a floor, not a certification. Human review
@@ -168,24 +257,47 @@ remains mandatory for crypto/auth changes.
 **Problem.** Synthetic instructions + The Stack cover common patterns; unusual
 phrasing, ambiguity, and cross-domain composition expose the edges.
 
-**What changed.** `dataset/augmentation.py`:
+**What changed.** `dataset/augmentation.py` + `dataset/instruction_induction.py`:
 
 - eight phrasing styles (terse, casual, verbose, constraint-first, non-native,
   typo, frustrated, partial repro) that preserve technical content;
-- `ConceptCombiner`: 10 cross-domain task families (compilers×billing,
-  DB×ML, storage×security, …) each with a **compilable** skeleton, explicit
-  requirements and acceptance criteria;
+- `ConceptCombiner`: **19 cross-domain task families** (compilers×billing,
+  DB×ML, storage×security, parsing×privacy, queues×reliability, scheduling×
+  finops, games×networking, pipelines×compliance, …) each with a
+  **compilable** skeleton, explicit requirements and acceptance criteria;
 - `AbstractionLadder`: the same task as spec / design brief / implementation;
 - `AmbiguityGenerator`: underspecified requests plus the targeted clarification
   a good assistant must ask;
-- `augment_rows` assembles these into SFT rows; mixture gains `creative-sft`
-  (0.04, upsample ×2).
+- `ConstraintConflictGenerator`: requests with **conflicting requirements**
+  (strict ordering AND 500/s concurrent; append-only audit AND redaction) where
+  the correct output names both constraints, explains the tension, proposes the
+  standard reconciliations and asks the deciding question - instead of silently
+  picking whichever constraint was read last;
+- `ClarificationDialogue`: full multi-turn dialogues (ask → answer →
+  implement) because single-turn data teaches asking but not *using the
+  answer*;
+- `RecoveryInstructionGenerator`: failed tool call → the **changed** next
+  approach with the failure class named (the offline twin of
+  `agent/recovery.py`; the anti-pattern is recorded in metadata);
+- `dataset/instruction_induction.py`: SFT rows induced from **real
+  licence-clean corpus files** - docstring→code, signature→body (incl. class
+  methods), code→**extractive** explanation (every claim verifiable in the
+  source), test→contract. Provenance (path + SPDX licence + induction kind)
+  rides on every row; the licence gate reuses the fetcher allowlist.
+- Mixture: `instruction-induction` (0.03, ×1.5) and `recovery-sft`
+  (0.02, ×2) join `creative-sft` and `security-sft`; `configs/pipeline.json`
+  wires them into SFT sources and upsampling.
 
-**Verification.** Tests assert determinism, compilable skeletons, schema
-compatibility and that originals are preserved.
+**Verification.** `tests/test_augmentation_expansion.py` (compilable
+skeletons across all families, conflict rows name the tension, dialogues are
+multi-turn, recovery rows preach a changed approach, determinism) and
+`tests/test_instruction_induction.py` (shapes, licence fail-closed,
+provenance, determinism).
 
-**Still open.** Template-derived diversity is not human diversity. This expands
-coverage; it does not replace real user traffic or red-teaming.
+**Still open.** Template-derived diversity is not human diversity; the
+induced rows are extractive by design (no invented explanations), which caps
+their upper bound. This expands coverage; it does not replace real user
+traffic or red-teaming.
 
 ## 6. Long functions and deep reasoning
 
@@ -203,7 +315,13 @@ through a large artifact; intermediate steps get silently dropped.
 - `missing_definitions` lints undefined calls; `split_long_function` proposes
   extraction points for over-long functions instead of truncating;
 - `reason()` implements scratchpad reasoning with execution-checked
-  self-consistency, falling back to majority agreement when no checker exists.
+  self-consistency, falling back to majority agreement when no checker exists;
+- `reason(scratch=...)` adds a **disk-backed scratch seam**: every sample's
+  scratchpad is appended to a topic, and later samples see a compact summary
+  of prior attempts (answers + a disagreement note) instead of full
+  transcripts - deep reasoning is then not bounded by the context window,
+  because anything written can be re-read while the window only pays for the
+  index. `ReasoningBudget.external_scratch` documents the mode.
 
 **Verification.** Tests cover budget scaling with 8k vs 32k, plan parsing,
 per-unit filling on a scripted generator, the repair loop, and self-consistency

@@ -190,6 +190,22 @@ DOMAIN_CAPABILITIES = {
     "cli_design": "subcommands, streaming output, exit codes, config discovery, idempotency",
     "streaming": "windowing, watermarks, exactly-once, replay, late data, operator state",
     "graphics": "transforms, scene graphs, tessellation, hit testing, dirty regions",
+    "parsing": "grammars, tokenizers, error recovery, streaming lexing, ambiguity",
+    "privacy": "PII classification, redaction, retention, k-anonymity, purpose binding",
+    "caching": "eviction, invalidation, stampedes, TTL vs version tokens, hit ratios",
+    "consistency": "read-your-writes, monotonic reads, staleness bounds, quorum reads",
+    "queues": "backpressure, leases, dead letters, ordering, redelivery storms",
+    "reliability": "crash safety, at-least/at-most once, idempotency keys, poison messages",
+    "search": "inverted indexes, fuzzy matching, ranking, recall/precision, analyzers",
+    "localization": "unicode normalization, collation, locale formatting, transliteration",
+    "auth": "sessions, tokens, scopes, rotation, least privilege, device flows",
+    "scheduling": "priority, fairness, preemption, bin packing, deadline awareness",
+    "finops": "budgets, metering, allocation, unit economics, cost ceilings",
+    "protocols": "framing, versioning, negotiation, heartbeats, checksums, backpressure",
+    "embedded": "bounded memory, watchdogs, power modes, deterministic timing, bitpacking",
+    "games": "tick loops, determinism, interpolation, rollback, anti-cheat commitments",
+    "pipelines": "staging, lineage, backfills, schema evolution, replayability",
+    "compliance": "data residency, purpose limitation, audit evidence, deletion requests",
 }
 
 DOMAIN_PAIRS = [
@@ -251,6 +267,60 @@ DOMAIN_PAIRS = [
         "streaming",
         "storage",
         "A log-structured event store with segment compaction and exactly-once replay.",
+    ),
+    (
+        "parsing",
+        "privacy",
+        "A log scrubber with a regex-based PII detector and per-retention-class "
+        "redaction that never reorders log lines.",
+    ),
+    (
+        "caching",
+        "consistency",
+        "A read-through cache with explicit invalidation tokens that stays coherent "
+        "when the backing store is briefly unavailable.",
+    ),
+    (
+        "queues",
+        "reliability",
+        "A durable work queue with lease deadlines, poison-message quarantine, and "
+        "replay after a consumer crash.",
+    ),
+    (
+        "search",
+        "localization",
+        "A typo-tolerant index over multilingual product names with per-locale "
+        "collation and accent-insensitive fallback.",
+    ),
+    (
+        "auth",
+        "observability",
+        "An audit trail for authorization decisions that is append-only, queryable "
+        "by principal, and free of credential material.",
+    ),
+    (
+        "scheduling",
+        "finops",
+        "A job scheduler that bin-packs batch work against spot capacity with "
+        "per-team budget ceilings and preemption fairness.",
+    ),
+    (
+        "protocols",
+        "embedded",
+        "A framing layer for a constrained device protocol with bounded buffers, "
+        "checksums, and a watchdog-friendly heartbeat.",
+    ),
+    (
+        "games",
+        "networking",
+        "A deterministic lockstep simulation with rollback replay and a "
+        "cheat-resistant input commitment scheme.",
+    ),
+    (
+        "pipelines",
+        "compliance",
+        "A data pipeline that propagates data-classification tags through every "
+        "transform and blocks sinks without an approved purpose.",
     ),
 ]
 
@@ -492,6 +562,317 @@ class AmbiguityGenerator:
 
 
 
+CONFLICT_TASKS = [
+    {
+        "instruction": (
+            "Make the payments webhook handler process events in strict arrival "
+            "order, and also handle them concurrently so throughput stays above "
+            "500 events/s."
+        ),
+        "conflicts": [
+            "strict arrival order serialises processing",
+            "concurrent processing reorders by completion time",
+        ],
+        "resolution": (
+            "These constraints conflict: strict ordering requires serialising per "
+            "key, which caps throughput. Two reconciliations are possible: "
+            "(a) per-account ordering with bounded concurrency between accounts, "
+            "or (b) sequence numbers with out-of-order buffering. Which invariant "
+            "is the real requirement - per-account order or global order?"
+        ),
+    },
+    {
+        "instruction": (
+            "Store the audit log append-only and immutable, but add an endpoint "
+            "to let support staff redact customer PII from past entries."
+        ),
+        "conflicts": [
+            "append-only/immutable history",
+            "in-place redaction of past entries",
+        ],
+        "resolution": (
+            "Redaction contradicts immutability. The standard reconciliation is "
+            "crypto-shredding: keep entries, redact the encryption key material "
+            "for the affected fields, and record the redaction itself as a new "
+            "append-only event. Is that acceptable, or must entries be physically "
+            "removed (which changes the compliance story)?"
+        ),
+    },
+    {
+        "instruction": (
+            "Our load balancer must never drop a request, and it must apply "
+            "backpressure by rejecting requests when the queue exceeds 100."
+        ),
+        "conflicts": [
+            "never drop a request",
+            "reject when queue > 100",
+        ],
+        "resolution": (
+            "Rejecting under backpressure is dropping by another name. If 'never "
+            "drop' means 'never silently lose', rejecting with 503 + Retry-After "
+            "is consistent; if it means 'always accept', the queue must be "
+            "unbounded and we need a different overload story. Which is it?"
+        ),
+    },
+    {
+        "instruction": (
+            "Add caching so the dashboard loads in under 200 ms, but the data "
+            "shown must always be at most one second stale and every write must "
+            "be visible to the reader immediately."
+        ),
+        "conflicts": [
+            "cache serves data up to 1 s old",
+            "writes visible immediately (read-your-writes)",
+        ],
+        "resolution": (
+            "Read-your-writes plus a 1 s staleness window conflict for the writer "
+            "themselves. Reconciliation: version tokens per session - writers "
+            "bypass or invalidate their own cache key, everyone else accepts the "
+            "1 s window. Should the strong guarantee apply to all readers or "
+            "just the writer's session?"
+        ),
+    },
+]
+
+
+@dataclass
+class ConstraintConflictGenerator:
+    """Requests whose correct answer surfaces the conflict instead of
+    silently picking a side.
+
+    Models trained only on compliant data pick whichever constraint they read
+    last and ship it. The trained behaviour here is: name both constraints,
+    explain the tension, propose the standard reconciliations, ask the one
+    question that decides it.
+    """
+
+    seed: int = 42
+
+    def generate(self, count: int = 3) -> list[dict]:
+        rng = random.Random(self.seed)
+
+        chosen = rng.sample(CONFLICT_TASKS, min(count, len(CONFLICT_TASKS)))
+
+        return [
+            {
+                "instruction": item["instruction"],
+                "input_context": "",
+                "output": item["resolution"],
+                "category": "constraint_conflict",
+                "difficulty": "expert",
+                "metadata": {"conflicts": item["conflicts"]},
+            }
+            for item in chosen
+        ]
+
+
+@dataclass
+class ClarificationDialogue:
+    """Multi-turn SFT: ambiguous ask -> targeted question -> answer -> build.
+
+    Single-turn clarification data teaches the model to ask; it does not teach
+    it to *use the answer*. These rows are full dialogues where the assistant
+    asks exactly one decisive question, receives the missing fact, and only
+    then implements.
+    """
+
+    seed: int = 42
+
+    DIALOGUES = [
+        {
+            "turns": [
+                ("user", "Add pagination to the orders endpoint."),
+                (
+                    "assistant",
+                    "Before I change the API: should pagination be cursor-based "
+                    "(stable under inserts, opaque tokens) or offset-based "
+                    "(simpler, but pages can skip/duplicate rows when orders "
+                    "arrive mid-scroll)? And is this a breaking change or can I "
+                    "version the endpoint?",
+                ),
+                ("user", "Cursor-based. It is a new v2 endpoint, breaking is fine."),
+                (
+                    "assistant",
+                    "Cursor-based v2 it is. The cursor will be the base64 of "
+                    "(created_at, id) - the id breaks ties for equal timestamps "
+                    "so the ordering is total and stable. Default page size 50, "
+                    "max 200, `next_cursor` null on the last page. Here is the "
+                    "implementation with an index on (created_at, id) to keep "
+                    "the keyset scan O(page_size).",
+                ),
+            ],
+            "missing": "pagination style + versioning policy",
+        },
+        {
+            "turns": [
+                ("user", "Backfill the user_timezones column for all 40M users."),
+                (
+                    "assistant",
+                    "One thing decides the design: is the source of truth the "
+                    "last-login IP geolocation, or the account's country field? "
+                    "Geolocation needs an offline database and is approximate at "
+                    "borders; the country field is exact but often un-set. Which "
+                    "should win when they disagree?",
+                ),
+                ("user", "Country field wins; fall back to geolocation only when it is empty."),
+                (
+                    "assistant",
+                    "Then the backfill is two passes: (1) copy country -> "
+                    "user_timezones where country is set, resolving the country "
+                    "code to an IANA zone via the embedded mapping; (2) for the "
+                    "remainder, batch-resolve last-login IPs against the offline "
+                    "GeoLite DB. I will run it in 10k-row id-ordered chunks with "
+                    "a resume checkpoint, so a restart never reprocesses a chunk.",
+                ),
+            ],
+            "missing": "source-of-truth precedence",
+        },
+        {
+            "turns": [
+                ("user", "Make the export job faster; it takes six hours."),
+                (
+                    "assistant",
+                    "Faster how - wall-clock or cost? And can I change the "
+                    "output contract? If the rows must stay globally ordered, "
+                    "parallelising breaks the contract unless we pay for a merge "
+                    "step; if consumers accept per-part ordering, we can shard "
+                    "by key and finish in minutes. Which constraint holds?",
+                ),
+                ("user", "Wall-clock. Per-part ordering is fine, consumers merge anyway."),
+                (
+                    "assistant",
+                    "Sharding by hash(key) it is: 16 workers, each writing its "
+                    "own part file plus a manifest with row counts and a per-part "
+                    "checksum. Consumers that merge get the manifest to verify "
+                    "completeness, and a failed worker only rewrites its own "
+                    "part. Expected wall-clock: ~25 minutes including verification.",
+                ),
+            ],
+            "missing": "ordering contract vs wall-clock goal",
+        },
+    ]
+
+    def generate(self, count: int = 3) -> list[dict]:
+        rng = random.Random(self.seed)
+
+        chosen = rng.sample(self.DIALOGUES, min(count, len(self.DIALOGUES)))
+
+        return [
+            {
+                "instruction": "Multi-turn conversation (clarify, then implement).",
+                "input_context": "",
+                "output": dialogue_text,
+                "category": "clarification_dialogue",
+                "difficulty": "advanced",
+                "metadata": {
+                    "turns": len(d["turns"]),
+                    "missing_information": d["missing"],
+                },
+            }
+            for d in chosen
+            for dialogue_text in ["\n\n".join(f"{role}: {text}" for role, text in d["turns"])]
+        ]
+
+
+RECOVERY_SCENARIOS = [
+    {
+        "tool": "run_tests",
+        "error": "ModuleNotFoundError: No module named 'requests'",
+        "wrong_response": "run_tests again with the same test path",
+        "right_response": (
+            "The environment lacks the package, so re-running tests cannot fix "
+            "it: install 'requests' first (execute_code with pip install), then "
+            "re-run the same test selector."
+        ),
+        "failure_class": "environment",
+    },
+    {
+        "tool": "apply_patch",
+        "error": "AssertionError: hunk failed to apply at src/auth.py:42",
+        "wrong_response": "apply the identical patch again",
+        "right_response": (
+            "The file drifted from what the patch expects. Re-read the current "
+            "src/auth.py around line 42, regenerate the hunk with fresh context "
+            "lines, and only then re-apply - or fall back to edit_function for "
+            "the single symbol involved."
+        ),
+        "failure_class": "code",
+    },
+    {
+        "tool": "search_code",
+        "error": "Timeout: regex compilation exceeded 5s",
+        "wrong_response": "search_code with the same pattern",
+        "right_response": (
+            "The pattern is pathologically backtracking. Rewrite it without "
+            "nested quantifiers, or narrow file_pattern to the likely "
+            "directories first - a bounded scope beats a faster regex."
+        ),
+        "failure_class": "transient",
+    },
+    {
+        "tool": "execute_code",
+        "error": "TypeError: dump() got an unexpected keyword argument 'ensure_ascii'",
+        "wrong_response": "execute_code with the same call",
+        "right_response": (
+            "The installed serialiser is not the one the snippet assumed. Check "
+            "the actual signature (execute_code with inspect.signature), then "
+            "adapt the call - do not wrap it in try/except and move on."
+        ),
+        "failure_class": "arguments",
+    },
+    {
+        "tool": "run_tests",
+        "error": "FAILED tests/test_expiry.py::test_expired_token_rejected - assert 'revoked' == 'expired'",
+        "wrong_response": "re-run the failing test unchanged",
+        "right_response": (
+            "The test encodes the requirement: expired tokens must report "
+            "'expired', the code reports 'revoked'. Read the failing assertion, "
+            "locate the status mapping, fix the code (not the test), and re-run "
+            "exactly this test before anything else."
+        ),
+        "failure_class": "code",
+    },
+]
+
+
+@dataclass
+class RecoveryInstructionGenerator:
+    """SFT data for the behaviour the recovery policy enforces at runtime.
+
+    Given a failed tool call, the trained response is a *changed* approach
+    that names the failure class and the next verifiable step - never the
+    same call again. This is the offline twin of `agent/recovery.py`.
+    """
+
+    seed: int = 42
+
+    def generate(self, count: int = 5) -> list[dict]:
+        rng = random.Random(self.seed)
+
+        chosen = rng.sample(RECOVERY_SCENARIOS, min(count, len(RECOVERY_SCENARIOS)))
+
+        return [
+            {
+                "instruction": (
+                    "You are working in a coding agent session. Your previous "
+                    f"tool call `{s['tool']}` failed with:\n\n{s['error']}\n\n"
+                    "What is your next action? Answer with the single next tool "
+                    "call you would make and why."
+                ),
+                "input_context": "",
+                "output": s["right_response"],
+                "category": "error_recovery",
+                "difficulty": "advanced",
+                "metadata": {
+                    "failure_class": s["failure_class"],
+                    "tool": s["tool"],
+                    "anti_pattern": s["wrong_response"],
+                },
+            }
+            for s in chosen
+        ]
+
+
 def augment_rows(
     rows: list[dict],
     per_row: int = 2,
@@ -537,6 +918,12 @@ def augment_rows(
     out.extend(ConceptCombiner(seed=seed).combine(include_cross_domain))
 
     out.extend(AmbiguityGenerator(seed=seed).generate(include_clarification))
+
+    out.extend(ConstraintConflictGenerator(seed=seed).generate(2))
+
+    out.extend(ClarificationDialogue(seed=seed).generate(2))
+
+    out.extend(RecoveryInstructionGenerator(seed=seed).generate(3))
 
     rng.shuffle(out)
 

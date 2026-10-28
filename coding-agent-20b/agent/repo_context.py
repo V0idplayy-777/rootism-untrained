@@ -416,6 +416,127 @@ def extract_imports(path: str, text: str, language: str) -> set[str]:
     return imports
 
 
+def extract_calls(path: str, text: str, language: str) -> set[str]:
+    """Names invoked/constructed in a file (Python AST; regex fallback).
+
+    The call graph is what makes retrieval *transitive*: a bug report that
+    names a symptom function drags in its callers and callees even when their
+    text shares no keywords with the query.
+    """
+
+    if language == "python":
+
+        try:
+
+            tree = ast.parse(text)
+
+        except SyntaxError:
+
+            tree = None
+
+        if tree is not None:
+
+            names: set[str] = set()
+
+            for node in ast.walk(tree):
+
+                if isinstance(node, ast.Call):
+
+                    func = node.func
+
+                    if isinstance(func, ast.Name):
+
+                        names.add(func.id)
+
+                    elif isinstance(func, ast.Attribute):
+
+                        names.add(func.attr)
+
+            return names
+
+    return set(re.findall(r"(?:\.|\b)([A-Za-z_][A-Za-z0-9_]{2,})\s*\(", text))
+
+
+# Domain synonyms: a task says "logging in", the code says "login" or
+# "authenticate". Lexical-only multi-query misses these; a synonym-expanded
+# variant closes the most common paraphrase gap.
+_QUERY_SYNONYMS = {
+    "logging in": "login authenticate session",
+    "log in": "login authenticate",
+    "sign in": "login authenticate session",
+    "sign-in": "login authenticate",
+    "auth": "authentication token session",
+    "session": "token cookie session",
+    "log out": "logout invalidate session",
+    "expiry": "expires expiration ttl",
+    "retry": "retries backoff attempt",
+    "authz": "authorization permissions rbac",
+    "permission": "authorization rbac allowed",
+    "bug": "fix failure broken",
+    "crash": "error exception failure",
+    "slow": "latency performance timeout",
+    "bill": "billing charge invoice payment",
+    "charge": "billing payment invoice",
+    "store": "storage save persist write",
+    "fetch": "get retrieve read lookup",
+    "delete": "remove destroy drop",
+    "create": "new add insert make",
+    "validate": "check verify schema parse",
+}
+
+
+def _synonym_query(task: str) -> str:
+    lowered = task.lower()
+    words = set()
+    for phrase, expansion in _QUERY_SYNONYMS.items():
+        if phrase in lowered:
+            words.update(expansion.split())
+    return " ".join(sorted(words))
+
+
+def expand_query(task: str) -> list[str]:
+    """Split a task into complementary retrieval queries.
+
+    Lexical retrieval over identifier tokens handles natural language poorly
+    when the task mentions file paths, code identifiers or a pasted error. One
+    query per signal type (prose, identifiers, paths, error text) with merged
+    rankings is strictly more robust than any single query.
+    """
+
+    queries = [task]
+
+    idents = re.findall(r"[A-Za-z_][A-Za-z0-9_]{3,}", task)
+
+    if idents:
+
+        queries.append(" ".join(idents))
+
+    paths = re.findall(r"[\w./\\-]+\.[A-Za-z]{1,5}", task)
+
+    if paths:
+
+        queries.append(" ".join(p.replace("/", " ").replace("\\", " ") for p in paths))
+
+    err = re.search(
+        r"(?:error|exception|failed|failing|traceback|stack ?trace)\b[:\s-]*([^\n]+)",
+        task,
+        re.IGNORECASE,
+    )
+
+    if err:
+
+        queries.append(err.group(1)[:200])
+
+    synonyms = _synonym_query(task)
+
+    if synonyms:
+
+        queries.append(synonyms)
+
+    return queries[:4]
+
+
+
 class RepoIndex:
     """In-memory BM25 index over repository chunks + symbol/import graph."""
 
@@ -441,6 +562,10 @@ class RepoIndex:
 
         self.imports: dict[str, set[str]] = {}
 
+        self.calls: dict[str, set[str]] = {}
+
+        self.defines: dict[str, set[str]] = {}
+
         self.file_language: dict[str, str] = {}
 
         self.stats = RepoStats()
@@ -448,6 +573,12 @@ class RepoIndex:
         self._doc_tokens: list[Counter] = []
 
         self._df: Counter = Counter()
+
+        self._tfidf: list[dict[str, float]] = []
+
+        self._postings: dict[str, list[int]] = defaultdict(list)
+
+        self._symbol_defs: dict[str, list[str]] = defaultdict(list)
 
         self._built = False
 
@@ -548,12 +679,55 @@ class RepoIndex:
 
         self.imports[rel_path] = extract_imports(rel_path, text, language)
 
+        self.calls[rel_path] = extract_calls(rel_path, text, language)
+
+        self.defines[rel_path] = {s.name.split(".")[-1] for s in self.symbols
+                                  if s.path == rel_path}
+
         self._built = False
 
         return self
 
+    def update_file(self, rel_path: str) -> "RepoIndex":
+        """Re-index one file after the agent edited it (long sessions).
+
+        Without this, every retrieval after the first edit returns stale
+        chunks — the model reads its own outdated code and "fixes" it back.
+        """
+
+        self.chunks = [c for c in self.chunks if c.path != rel_path]
+
+        self.symbols = [s for s in self.symbols if s.path != rel_path]
+
+        self.imports.pop(rel_path, None)
+
+        self.calls.pop(rel_path, None)
+
+        self.defines.pop(rel_path, None)
+
+        if rel_path in self.file_language:
+
+            self.stats.files -= 1
+
+            lang = self.file_language.pop(rel_path)
+
+            if self.stats.languages.get(lang):
+
+                self.stats.languages[lang] -= 1
+
+        self._built = False
+
+        full = self.root / rel_path
+
+        if full.exists():
+            self.add_file(rel_path)
+
+        self.finalise()
+
+        return self
+
     def finalise(self) -> "RepoIndex":
-        """Build BM25 statistics (idempotent)."""
+        """Build BM25 + TF-IDF statistics (idempotent)."""
 
         if self._built:
 
@@ -566,6 +740,48 @@ class RepoIndex:
         for counts in self._doc_tokens:
 
             self._df.update(counts.keys())
+
+        # Sublinear TF-IDF vectors for hybrid (semantic-ish lexical) ranking.
+
+        n = max(len(self.chunks), 1)
+
+        self._tfidf: list[dict[str, float]] = []
+
+        for counts in self._doc_tokens:
+
+            total = sum(counts.values()) or 1
+
+            vec = {}
+
+            for term, tf in counts.items():
+
+                df = self._df[term]
+
+                if df:
+
+                    vec[term] = (1.0 + math.log(tf)) * math.log(1.0 + n / df)
+
+            norm = math.sqrt(sum(w * w for w in vec.values())) or 1.0
+
+            self._tfidf.append({t: w / norm for t, w in vec.items()})
+
+        # Inverted index term -> chunk ids, so cosine only touches postings.
+
+        self._postings: dict[str, list[int]] = defaultdict(list)
+
+        for i, counts in enumerate(self._doc_tokens):
+
+            for term in counts:
+
+                self._postings[term].append(i)
+
+        self._symbol_defs: dict[str, list[str]] = defaultdict(list)
+
+        for path, names in self.defines.items():
+
+            for name in names:
+
+                self._symbol_defs[name].append(path)
 
         self.stats.chunks = len(self.chunks)
 
@@ -663,6 +879,176 @@ class RepoIndex:
                 break
 
         return results
+
+    def _cosine(self, query: str, k: int) -> list[tuple[float, int]]:
+        """Cosine similarity over sublinear TF-IDF vectors (postings-driven)."""
+
+        self.finalise()
+
+        q_counts = Counter(tokenize_for_index(query))
+
+        if not q_counts or not self.chunks:
+
+            return []
+
+        n = max(len(self.chunks), 1)
+
+        q_vec: dict[str, float] = {}
+
+        for term, tf in q_counts.items():
+
+            df = self._df.get(term, 0)
+
+            if df:
+
+                q_vec[term] = (1.0 + math.log(tf)) * math.log(1.0 + n / df)
+
+        q_norm = math.sqrt(sum(w * w for w in q_vec.values())) or 1.0
+
+        scores: dict[int, float] = defaultdict(float)
+
+        for term, qw in q_vec.items():
+
+            for i in self._postings.get(term, ()):
+
+                dw = self._tfidf[i].get(term)
+
+                if dw is not None:
+
+                    scores[i] += (qw / q_norm) * dw
+
+        ranked = sorted(scores.items(), key=lambda kv: (-kv[1], kv[0]))
+
+        return [(score, i) for i, score in ranked[:k]]
+
+    def _hybrid_ids(self, query: str, k: int, rrf_k: int = 60) -> list[int]:
+        """Reciprocal-rank fusion of BM25 and TF-IDF cosine rank lists.
+
+        BM25 favours exact rare-token hits; cosine tolerates term distribution
+        drift (paraphrased issues, different naming). Fusing their *rankings*
+        is robust to either one failing, and needs no score normalisation.
+        """
+
+        bm25 = [i for _s, i in self._bm25(query, k * 3)]
+
+        cos = [i for _s, i in self._cosine(query, k * 3)]
+
+        fused: dict[int, float] = defaultdict(float)
+
+        for rank, i in enumerate(bm25):
+
+            fused[i] += 1.0 / (rrf_k + rank + 1)
+
+        for rank, i in enumerate(cos):
+
+            fused[i] += 1.0 / (rrf_k + rank + 1)
+
+        order = sorted(fused.items(), key=lambda kv: (-kv[1], kv[0]))
+
+        return [i for i, _score in order[:k]]
+
+    def search_hybrid(self, query: str, k: int = 8) -> list[Chunk]:
+        """RRF-fused BM25 + cosine retrieval."""
+
+        return [self.chunks[i] for i in self._hybrid_ids(query, k)]
+
+    def search_task(self, task: str, k: int = 8) -> list[Chunk]:
+        """Multi-query hybrid retrieval over an expanded task description."""
+
+        seen: set[int] = set()
+
+        out: list[Chunk] = []
+
+        for query in expand_query(task):
+
+            for i in self._hybrid_ids(query, k=k):
+
+                if i not in seen:
+
+                    seen.add(i)
+
+                    out.append(self.chunks[i])
+
+            if len(out) >= k:
+
+                break
+
+        return out[:k]
+
+    def callers_of(self, name: str) -> list[str]:
+        """Files that call a function/method with this name."""
+
+        self.finalise()
+
+        return [
+
+            path
+
+            for path, called in self.calls.items()
+
+            if name in called
+
+        ]
+
+    def callees_of(self, path: str) -> set[str]:
+        """Names invoked by `path` that are defined somewhere in the repo."""
+
+        self.finalise()
+
+        out: set[str] = set()
+
+        for name in self.calls.get(path, set()):
+
+            for defin in self._symbol_defs.get(name, ()):
+
+                if defin != path:
+
+                    out.add(defin)
+
+        return out
+
+    def related_by_calls(self, paths: list[str], depth: int = 2, max_files: int = 6) -> list[str]:
+        """Breadth-first call-graph expansion around `paths` (both directions)."""
+
+        self.finalise()
+
+        frontier = set(paths)
+
+        visited = set(paths)
+
+        out: set[str] = set()
+
+        for _ in range(depth):
+
+            nxt: set[str] = set()
+
+            for path in frontier:
+
+                for related in self.callees_of(path):
+
+                    if related not in visited:
+
+                        nxt.add(related)
+
+                for name in self.calls.get(path, set()):
+
+                    for caller in self._symbol_defs.get(name, ()):
+
+                        if caller not in visited:
+
+                            nxt.add(caller)
+
+            visited |= nxt
+
+            out |= nxt
+
+            frontier = nxt
+
+            if len(out) >= max_files:
+
+                break
+
+        return sorted(out)[:max_files]
 
     def symbol_lookup(self, name: str, limit: int = 10) -> list[Symbol]:
         """Exact then suffix match on symbol names."""
@@ -839,6 +1225,7 @@ class ContextPack:
     chunks: list[Chunk] = field(default_factory=list)
     map_included: bool = False
     truncated: bool = False
+    features: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
@@ -846,6 +1233,7 @@ class ContextPack:
             "tokens": self.tokens,
             "map_included": self.map_included,
             "truncated": self.truncated,
+            "features": dict(self.features),
             "provenance": [c.header for c in self.chunks],
         }
 
@@ -857,14 +1245,21 @@ class ContextAssembler:
 
     - ``none``: no repository context at all (the "local change" baseline),
     - ``flat``: BM25 chunks only, no repo map,
-    - ``hierarchical``: repo map + chunks + graph expansion (default).
+    - ``hierarchical``: multi-query hybrid retrieval (BM25 + TF-IDF cosine,
+      RRF-fused), repo map + hierarchical repo/dir/file summaries, import-
+      and call-graph expansion, all under the budget (default).
+
+    ``ContextPack.features`` records which machinery actually engaged, so the
+    retrieval ablation measures the components instead of trusting them.
     """
 
-    def __init__(self, index: RepoIndex, tokenizer=None):
+    def __init__(self, index: RepoIndex, tokenizer=None, summarizer=None):
 
         self.index = index
 
         self.tokenizer = tokenizer
+
+        self.summarizer = summarizer or HierarchicalSummarizer(index)
 
     def _count(self, text: str) -> int:
 
@@ -890,7 +1285,15 @@ class ContextAssembler:
 
             return ContextPack(text="", tokens=0, mode=mode)
 
-        hits = self.index.search(task, k=k)
+        queries = expand_query(task) if mode == "hierarchical" else [task]
+
+        if mode == "hierarchical":
+
+            hits = self.index.search_task(task, k=k)
+
+        else:
+
+            hits = self.index.search(task, k=k)
 
         focus = list(focus_paths or [])
 
@@ -910,6 +1313,14 @@ class ContextAssembler:
 
         spent = 0
 
+        features: dict[str, object] = {
+            "queries": len(queries),
+            "hybrid": mode == "hierarchical",
+            "call_graph_files": 0,
+            "file_summaries": 0,
+            "repo_summary": False,
+        }
+
         if mode == "hierarchical":
 
             map_text = self.index.repo_map(
@@ -918,15 +1329,37 @@ class ContextAssembler:
                 focus_paths=focus[:5],
             )
 
-            cost = self._count(map_text)
+            summary_text = self.summarizer.hierarchical_context(
+                focus_paths=focus[:5],
+                budget_tokens=int(budget_tokens * map_fraction * 0.6),
+                tokenizer=self.tokenizer,
+            )
+
+            combined = map_text + "\n" + summary_text
+
+            cost = self._count(combined)
 
             if spent + cost <= budget_tokens:
 
-                pieces.append(map_text)
+                pieces.append(combined)
 
                 spent += cost
 
                 map_included = True
+
+                features["repo_summary"] = "<|repo_map|>" in summary_text
+
+            else:
+
+                cost = self._count(map_text)
+
+                if spent + cost <= budget_tokens:
+
+                    pieces.append(map_text)
+
+                    spent += cost
+
+                    map_included = True
 
         seen_ranges: dict[str, list[tuple[int, int]]] = defaultdict(list)
 
@@ -973,11 +1406,32 @@ class ContextAssembler:
 
                         related.append(rel)
 
-            for rel in related[:3]:
+            # Call-graph expansion: files that call (or are called by) the
+            # retrieved code, up to two hops, before falling back to imports.
+
+            call_graph = self.index.related_by_calls(
+                [c.path for c in used_chunks[:4]], depth=2, max_files=4
+            )
+
+            for rel in call_graph:
+
+                if rel not in focus and rel not in related:
+
+                    related.append(rel)
+
+            features["call_graph_files"] = len(
+                [r for r in related[:6] if r in call_graph]
+            )
+
+            for rel in related[:6]:
 
                 outline = self.index.file_outline(rel)
 
-                cost = self._count(outline)
+                summary = self.summarizer.file_summary(rel, max_chars=360)
+
+                block = f"<|retrieval|> {summary}\n{outline}" if outline != rel else f"<|retrieval|> {summary}"
+
+                cost = self._count(block)
 
                 if spent + cost > budget_tokens:
 
@@ -985,13 +1439,17 @@ class ContextAssembler:
 
                     break
 
-                pieces.append(f"<|retrieval|> {outline}")
+                pieces.append(block)
+
+                features["file_summaries"] += 1
 
                 spent += cost
 
         if not pieces:
 
-            return ContextPack(text="", tokens=0, mode=mode, truncated=truncated)
+            return ContextPack(
+                text="", tokens=0, mode=mode, truncated=truncated, features=features
+            )
 
         text = "\n".join(pieces)
 
@@ -1002,6 +1460,7 @@ class ContextAssembler:
             chunks=used_chunks,
             map_included=map_included,
             truncated=truncated,
+            features=features,
         )
 
     def build_task_prompt(
@@ -1022,3 +1481,257 @@ class ContextAssembler:
             "Repository context (retrieved evidence, read-only; do not edit "
             "files that are not part of the fix):\n" + pack.text + "\n"
         )
+
+
+# ---------------------------------------------------------------------------
+# Hierarchical summarization: repo -> directory -> file -> signature
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class FileFacts:
+    """Deterministic extractive facts about one file."""
+
+    path: str
+    language: str
+    lines: int
+    imports: list[str]
+    symbols: list[Symbol]
+    docstring: str
+
+    def to_dict(self) -> dict:
+        return {
+            "path": self.path,
+            "language": self.language,
+            "lines": self.lines,
+            "imports": self.imports[:12],
+            "symbols": [
+                {"name": s.name, "kind": s.kind, "line": s.line, "signature": s.signature}
+                for s in self.symbols[:40]
+            ],
+            "docstring": self.docstring[:200],
+        }
+
+
+def _first_docstring(path: str, text: str, language: str) -> str:
+    """Module docstring (Python AST) or leading comment block."""
+
+    if language == "python":
+
+        try:
+
+            tree = ast.parse(text)
+
+        except SyntaxError:
+
+            return ""
+
+        doc = ast.get_docstring(tree)
+
+        return (doc or "").strip().splitlines()[0][:200] if doc else ""
+
+    lines: list[str] = []
+
+    for line in text.splitlines():
+
+        stripped = line.strip()
+
+        if not stripped:
+
+            continue
+
+        if stripped.startswith(("#", "//", "*", "/*")):
+
+            body = stripped.lstrip("/*#* ").rstrip("*/ ")
+
+            if body:
+
+                lines.append(body)
+
+            if len(lines) >= 3:
+
+                break
+
+        else:
+
+            break
+
+    return " ".join(lines)[:200]
+
+
+class HierarchicalSummarizer:
+    """Repo -> directory -> file -> signature summaries under a token budget.
+
+    ``ContextAssembler`` retrieval answers "which code is relevant"; this
+    answers "what is this project and how is it organised" — the part an
+    architect needs and a chunk search cannot supply.
+
+    ``summarize_fn(text, instruction) -> str`` is an optional LLM seam. When
+    absent (the default, and what tests use) every summary is *extractive and
+    deterministic*: signatures, counts, docstring heads. The LLM may improve
+    the prose; it may never change the facts, because the extractive version
+    is always the fallback and the checker.
+    """
+
+    def __init__(self, index: RepoIndex, summarize_fn=None):
+        self.index = index
+        self.summarize_fn = summarize_fn
+
+    def _maybe_llm(self, extractive: str, instruction: str) -> str:
+        if self.summarize_fn is None:
+            return extractive
+        try:
+            summary = str(self.summarize_fn(extractive, instruction)).strip()
+            return summary or extractive
+        except Exception:
+            return extractive
+
+    def file_facts(self, path: str) -> FileFacts | None:
+        full = self.index.root / path
+        try:
+            text = full.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            return None
+        language = self.index.file_language.get(path, "text")
+        symbols = sorted(
+            self.index.defined_in(path), key=lambda s: (s.line, s.name)
+        )
+        return FileFacts(
+            path=path,
+            language=language,
+            lines=text.count("\n") + 1,
+            imports=sorted(self.index.imports.get(path, set())),
+            symbols=symbols,
+            docstring=_first_docstring(path, text, language),
+        )
+
+    def file_summary(self, path: str, max_chars: int = 500) -> str:
+        facts = self.file_facts(path)
+        if facts is None:
+            return f"{path}  (unreadable)"
+        lines = [f"{path}  [{facts.language}, {facts.lines} lines]"]
+        if facts.docstring:
+            lines.append(f'  """{facts.docstring}"""')
+        for sym in facts.symbols[:12]:
+            lines.append(f"  {sym.signature}  # L{sym.line}")
+        if len(facts.symbols) > 12:
+            lines.append(f"  ... {len(facts.symbols) - 12} more symbols")
+        text = "\n".join(lines)
+        if len(text) > max_chars:
+            text = text[: max(0, max_chars - 20)] + "\n  ... (truncated)"
+        return self._maybe_llm(
+            text, f"Summarise what {path} does in 1-2 sentences. Facts only."
+        )
+
+    def directory_summary(self, directory: str, max_files: int = 8) -> str:
+        files = [
+            p for p in sorted(self.index.file_language)
+            if str(Path(p).parent) == directory
+        ]
+        if not files:
+            return f"{directory or '.'}  (no indexed files)"
+        langs = Counter(
+            self.index.file_language[p] for p in files
+        )
+        lines = [
+            f"{directory or '.'}/  [{len(files)} files: "
+            + ", ".join(f"{lang}×{n}" for lang, n in langs.most_common(4))
+            + "]"
+        ]
+        for p in files[:max_files]:
+            n_syms = sum(1 for s in self.index.symbols if s.path == p)
+            lines.append(f"  {Path(p).name}  ({n_syms} symbols)")
+        if len(files) > max_files:
+            lines.append(f"  ... {len(files) - max_files} more files")
+        return "\n".join(lines)
+
+    def repo_summary(self, max_chars: int = 900) -> str:
+        index = self.index
+        dirs = Counter(
+            str(Path(p).parent) for p in index.file_language
+        )
+        entry = Counter()
+        for path in index.file_language:
+            name = Path(path).name.lower()
+            if name in {
+                "main.py", "app.py", "index.js", "index.ts", "main.go",
+                "main.rs", "lib.rs", "server.py", "cli.py", "__main__.py",
+                "manage.py", "setup.py", "pyproject.toml", "package.json",
+                "cargo.toml", "go.mod", "makefile",
+            }:
+                entry[path] = 1
+        lines = [
+            f"Repository: {index.root.name}  "
+            f"({index.stats.files} indexed files, "
+            f"{index.stats.chunks} chunks, {index.stats.symbols} symbols)",
+            "Languages: "
+            + ", ".join(
+                f"{lang}×{n}" for lang, n in Counter(
+                    index.file_language.values()
+                ).most_common(6)
+            ),
+            "Top directories:",
+        ]
+        for d, n in dirs.most_common(8):
+            lines.append(f"  {d or '.'}/  ({n} files)")
+        if entry:
+            lines.append("Entry points: " + ", ".join(sorted(entry)[:6]))
+        text = "\n".join(lines)
+        if len(text) > max_chars:
+            text = text[:max_chars]
+        return self._maybe_llm(
+            text, "Summarise this repository's purpose and layout in 3 sentences."
+        )
+
+    def hierarchical_context(
+        self,
+        focus_paths: list[str] | None = None,
+        budget_tokens: int = 800,
+        tokenizer=None,
+    ) -> str:
+        """repo summary -> focus-dir summaries -> focus-file summaries."""
+
+        def count(text: str) -> int:
+            if tokenizer is not None:
+                return len(tokenizer.encode(text, add_special_tokens=False))
+            return max(1, len(text) // 4)
+
+        parts: list[str] = ["<|repo_map|>"]
+
+        repo = self.repo_summary()
+
+        if count(repo) <= budget_tokens:
+
+            parts.append(repo)
+
+        focus = list(focus_paths or [])[:5]
+
+        dirs: list[str] = []
+
+        for p in focus:
+
+            d = str(Path(p).parent)
+
+            if d not in dirs:
+
+                dirs.append(d)
+
+        for d in dirs[:3]:
+
+            text = self.directory_summary(d)
+
+            if count("\n".join(parts)) + count(text) <= budget_tokens:
+
+                parts.append(text)
+
+        for p in focus:
+
+            text = self.file_summary(p)
+
+            if count("\n".join(parts)) + count(text) <= budget_tokens:
+
+                parts.append(text)
+
+        parts.append("<|endoftext|>")
+
+        return "\n".join(parts)

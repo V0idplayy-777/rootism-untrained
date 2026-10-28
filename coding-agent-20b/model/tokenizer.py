@@ -146,31 +146,46 @@ class CodePreTokenizer:
     - Comments
     - Operators
     - Identifiers and keywords
+
+    Whitespace handling is *total*: ``\r`` (CRLF files) and exotic unicode
+    whitespace become their own pre-tokens instead of being silently dropped,
+    so encode/decode round-trips byte-exactly on Windows-line-ending and
+    non-ASCII-whitespace files.
     """
 
+    # NOTE: every class here is EXPLICIT - no \w, \s, \S or bare `.`.
+    # Python `re` and the Rust regex crate (used by the training engine in
+    # model/fast_bpe.py) disagree on exactly those: `.` matches newline only
+    # in Rust; \s differs on \x1c-\x1f; \w differs on combining marks (Rust)
+    # vs numeral letters (Python). Explicit classes keep both engines
+    # character-identical, which the training-time parity gate depends on.
+    # Consequences: string bodies may span a backslash-newline continuation
+    # (one token per literal, matching how the source lexer sees it), and
+    # non-ASCII identifiers fall through to the single-char fallback.
     CODE_PATTERN = re.compile(
         r"""
-        (?:^@@ -[^\n]*) |
-        (?:^(?:---|\+\+\+) [^\n]*) |
+        (?:^@@\ -[^\n]*) |
+        (?:^(?:---|\+\+\+)\ [^\n]*) |
         (?:'''[\s\S]*?'''|\"\"\"[\s\S]*?\"\"\") |
-        (?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*") |
-        (?:`(?:[^`\\]|\\.)*`) |
+        (?:'(?:[^'\\]|\\[\s\S])*'|"(?:[^"\\]|\\[\s\S])*") |
+        (?:`(?:[^`\\]|\\[\s\S])*`) |
         (?://[^\n]*|[\x23][^\n]*) |
         (?:/\*[\s\S]*?\*/) |
-        (?:0[xX][0-9a-fA-F]+|0[oO][0-7]+|0[bB][01]+|\d+\.?\d*(?:[eE][+-]?\d+)?) |
-        (?:[a-zA-Z_$][\w$]*) |
+        (?:0[xX][0-9a-fA-F]+|0[oO][0-7]+|0[bB][01]+|[0-9]+\.?[0-9]*(?:[eE][+-]?[0-9]+)?) |
+        (?:[a-zA-Z_$][0-9A-Za-z_$]*) |
         (?:::=|>>>|<<=|>>=|===|!==|\?\?|\?\.) |
         (?:[+\-*/%&|^~<>!]=?|[<>&|]{2}|->|=>|\.\.\.|\*\*) |
         (?:[{}()\[\];:,.?@&~^]) |
-        (?:[ \t]+) |
-        (?:\n+) |
-        (?:\S)
+        (?:[ \t\x0b\x0c]+) |
+        (?:(?:\r\n|\r|\n)+) |
+        (?:[\t\n\x0b\x0c\r\x1c-\x1f\x20\x85\xa0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+) |
+        (?:[^\t\n\x0b\x0c\r\x1c-\x1f\x20\x85\xa0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000])
         """,
         re.VERBOSE | re.MULTILINE,
     )
 
     def pre_tokenize(self, text: str) -> list[str]:
-        """Split text into pre-tokens."""
+        """Split text into pre-tokens (nothing is dropped)."""
 
         return self.CODE_PATTERN.findall(text)
 

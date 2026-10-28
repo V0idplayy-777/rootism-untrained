@@ -31,13 +31,14 @@ import hashlib
 import json
 import logging
 import sys
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Iterator
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
+from model.fast_bpe import HAS_TOKENIZERS, FastBPETrainer, verify_parity
 from model.tokenizer import CodeTokenizer, EfficientBPETrainer, TokenizerValidator
 
 logger = logging.getLogger(__name__)
@@ -181,31 +182,66 @@ def iter_corpus(
 
         return True
 
+    # Group shards by language and stream them round-robin. Without this,
+    # an alphabetical shard walk plus a char cap would cut the corpus off
+    # partway through the alphabet (python after php) and silently bias the
+    # vocabulary toward whichever languages sort first.
+
+    by_lang: dict[str, list[Path]] = defaultdict(list)
+
     for filepath in sorted(Path(data_dir).rglob("*")):
 
-        if not filepath.is_file():
+        if filepath.is_file() and filepath.suffix == ".jsonl":
 
-            continue
+            lang_of_shard = filepath.stem.split("-")[0]
 
-        if filepath.suffix == ".jsonl":
+            by_lang[lang_of_shard].append(filepath)
 
-            for lang, content in _iter_shard(filepath):
+    def _shard_docs(shards: list[Path]):
 
-                if counts[lang] >= cap:
+        for shard in shards:
 
-                    continue
+            for lang, content in _iter_shard(shard):
 
-                if not emit(lang, content):
+                if counts[lang] < cap and emit(lang, content):
 
-                    continue
+                    yield lang, content
 
-                yield lang, content
+    languages = sorted(by_lang)
 
-                if max_chars is not None and total >= max_chars:
+    shard_iterators = {
 
-                    logger.info(f"Reached max corpus size: {total:,} chars")
+        lang: iter(_shard_docs(by_lang[lang])) for lang in languages
 
-                    return
+    }
+
+    active = [lang for lang in languages]
+
+    while active:
+
+        for lang in list(active):
+
+            try:
+
+                doc_lang, content = next(shard_iterators[lang])
+
+            except StopIteration:
+
+                active.remove(lang)
+
+                continue
+
+            yield doc_lang, content
+
+            if max_chars is not None and total >= max_chars:
+
+                logger.info(f"Reached max corpus size: {total:,} chars")
+
+                return
+
+    for filepath in sorted(Path(data_dir).rglob("*")):
+
+        if not filepath.is_file() or filepath.suffix == ".jsonl":
 
             continue
 
@@ -255,6 +291,7 @@ class ProductionTokenizerTrainer:
         per_language_cap: int | None = None,
         require_spdx: bool = False,
         holdout_docs: int = 200,
+        engine: str = "auto",
     ):
 
         self.vocab_size = vocab_size
@@ -273,7 +310,21 @@ class ProductionTokenizerTrainer:
 
         self.holdout_docs = holdout_docs
 
-        self._trainer = EfficientBPETrainer(
+        self.engine = engine
+
+        use_rust = engine == "rust" or (engine == "auto" and HAS_TOKENIZERS)
+
+        if use_rust and not HAS_TOKENIZERS:
+            raise RuntimeError(
+                "--engine rust requires the `tokenizers` package "
+                "(pip install tokenizers>=0.19)"
+            )
+
+        self._engine_name = "rust" if use_rust else "python"
+
+        trainer_cls = FastBPETrainer if use_rust else EfficientBPETrainer
+
+        self._trainer = trainer_cls(
             vocab_size=vocab_size,
             min_frequency=min_frequency,
             pad_to_vocab_size=True,
@@ -338,6 +389,15 @@ class ProductionTokenizerTrainer:
                 f"vocabulary alignment failed: built {len(tokenizer)} != target {self.vocab_size}"
             )
 
+        parity = None
+
+        if self._engine_name == "rust" and held_out:
+            # Prove the GPT-2-alphabet -> repo-alphabet conversion survived:
+            # both tokenizers must segment held-out documents identically.
+            parity = verify_parity(
+                self._trainer.rust_tokenizer, tokenizer, held_out[:100]
+            )
+
         Path(output_dir).mkdir(parents=True, exist_ok=True)
 
         tokenizer.save(str(output_dir))
@@ -360,6 +420,8 @@ class ProductionTokenizerTrainer:
             "merges": len(tokenizer.merges),
             "min_frequency": self.min_frequency,
             "holdout_documents": len(held_out),
+            "engine": self._engine_name,
+            "rust_python_parity": parity,
             "validation": {k: v for k, v in report.items() if k != "per_sample"},
         }
 
@@ -513,6 +575,16 @@ def main():
         help="Fail unless the trained tokenizer beats installed baselines on code/diffs",
     )
 
+    parser.add_argument(
+        "--engine",
+        choices=["auto", "rust", "python"],
+        default="auto",
+        help=(
+            "BPE trainer backend: `rust` (tokenizers, fast, exact-parity to "
+            "CodeTokenizer), `python` (EfficientBPETrainer), or `auto`"
+        ),
+    )
+
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -528,6 +600,7 @@ def main():
             min_chars_per_token=args.min_chars_per_token,
             per_language_cap=args.per_language_cap,
             require_spdx=args.require_spdx,
+            engine=args.engine,
         )
 
         tokenizer = trainer.train(
