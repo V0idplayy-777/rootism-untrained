@@ -1,0 +1,34 @@
+name: Strip Code Comments
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allows you to click a button on GitHub to run it manually
+
+permissions:
+  contents: write
+
+jobs:
+  clean-comments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Uncomment Tool
+        run: pip install uncomment
+
+      - name: Strip All Comments
+        run: |
+          # Recursively strips comments from all .py files in the repository
+          uncomment . --exclude ".github/**"
+
+      - name: Commit and Push Cleaned Code
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: strip comments from source code [skip ci]"
