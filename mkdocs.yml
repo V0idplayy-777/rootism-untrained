@@ -6,8 +6,9 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
-          import:
-            - https://python.org
+          options:
+            import:
+              - https://python.org
 
 nav:
   - Home: index.md
