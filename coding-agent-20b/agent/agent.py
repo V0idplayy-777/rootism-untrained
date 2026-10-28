@@ -327,13 +327,14 @@ Final Answer: I've created a factorial function that correctly calculates factor
                     steps=steps,
                     success=True,
                 )
-
-"""
-fuck
-"""
+                
+            """
+            fuck
+            """
             
             action, action_input = self._parse_action(response)
             if action and action in self.tools:
+
                 step.action = action
                 step.action_input = action_input
                 step.state = AgentState.ACTING
