@@ -1,0 +1,15 @@
+site_name: My Python Project Documentation
+theme:
+  name: material
+
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          setup_commands:
+            - import sys
+            - sys.path.append(".")
+
+nav:
+  - Home: index.md
+  - Code Reference: reference.md
