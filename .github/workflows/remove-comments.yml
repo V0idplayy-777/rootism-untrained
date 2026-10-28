@@ -1,0 +1,58 @@
+name: Strip Python Comments
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  remove-comments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-numeric-version: '3.11'
+
+      - name: Strip comments from python files
+        run: |
+          python -c '
+          import sys, tokenize
+          from pathlib import Path
+
+          for path in Path(".").rglob("*.py"):
+              try:
+                  with open(path, "r", encoding="utf-8") as f:
+                      tokens = list(tokenize.generate_tokens(f.readline))
+                  
+                  # Rebuild code excluding comments
+                  out = ""
+                  prev_end = (1, 0)
+                  for tok in tokens:
+                      type, string, start, end, line = tok
+                      if type == tokenize.COMMENT:
+                          continue
+                      
+                      # Maintain proper line and column spacing
+                      if start[0] > prev_end[0]:
+                          out += "\n" * (start[0] - prev_end[0])
+                          prev_end = (start[0], 0)
+                      if start[1] > prev_end[1]:
+                          out += " " * (start[1] - prev_end[1])
+                      
+                      out += string
+                      prev_end = end
+                      
+                  with open(path, "w", encoding="utf-8") as f:
+                      f.write(out)
+              except Exception as e:
+                  print(f"Skipping {path}: {e}")
+          '
+
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: strip python comments"
