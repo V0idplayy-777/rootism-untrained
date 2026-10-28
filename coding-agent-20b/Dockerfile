@@ -1,4 +1,3 @@
-# CodingAgent-20B — train / serve / eval images (build args select the role)
 FROM python:3.11-slim AS base
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 WORKDIR /app
@@ -10,8 +9,6 @@ RUN useradd -m -u 10001 appuser && chown -R appuser:appuser /app
 USER appuser
 
 FROM base AS train
-# Training additionally needs the DeepSpeed stack (GPU base in production:
-# FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04 — kept slim here for CI builds).
 CMD ["python", "training/train_production.py", "--help"]
 
 FROM base AS serve

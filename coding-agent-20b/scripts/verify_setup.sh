@@ -1,19 +1,15 @@
 #!/bin/bash
-# Quick verification script
 set -e
 
 echo "=== Coding Agent 20B - Quick Verification ==="
 echo ""
 
-# Check Python
 echo "[1/4] Checking Python..."
 python3 --version
 
-# Check PyTorch
 echo "[2/4] Checking PyTorch..."
 python3 -c "import torch; print(f'  PyTorch: {torch.__version__}'); print(f'  CUDA: {torch.cuda.is_available()}'); print(f'  GPUs: {torch.cuda.device_count()}' if torch.cuda.is_available() else '')"
 
-# Check model can be created
 echo "[3/4] Testing model creation (1B)..."
 python3 -c "
 import sys; sys.path.insert(0, '.')
@@ -25,7 +21,6 @@ print(f'  Parameters: {model.num_parameters():,} ({model.num_parameters()/1e9:.2
 print('  Model created successfully ✓')
 "
 
-# Check dataset generator
 echo "[4/4] Testing dataset generator..."
 python3 -c "
 import sys; sys.path.insert(0, '.')

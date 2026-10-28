@@ -1,24 +1,9 @@
 #!/bin/bash
 # ============================================================
-# Training Launch Script for Coding Agent 20B
-# ============================================================
-# 
-# This script launches distributed training with DeepSpeed.
-#
-# Usage:
-#   # 8 GPUs on single node:
-#   bash scripts/launch_train.sh --num_gpus 8
-#
-#   # Multi-node (create hostfile first):
-#   bash scripts/launch_train.sh --num_gpus 8 --num_nodes 4 --hostfile hostfile.txt
-#
-#   # Quick smoke test (1B model, 100 steps):
-#   bash scripts/launch_train.sh --num_gpus 1 --model_size 1B --max_steps 100
 # ============================================================
 
 set -e
 
-# Defaults
 NUM_GPUS=8
 NUM_NODES=1
 HOSTFILE=""
@@ -28,7 +13,6 @@ MAX_STEPS=""
 RESUME=""
 MASTER_PORT=29500
 
-# Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
         --num_gpus) NUM_GPUS=$2; shift 2;;
@@ -53,14 +37,12 @@ echo "  Config:      $CONFIG"
 echo "  Master Port: $MASTER_PORT"
 echo "============================================================"
 
-# Check if dataset exists
 if [ ! -d "data/processed" ]; then
     echo "ERROR: Processed dataset not found at data/processed"
     echo "Run: python scripts/generate_dataset.py first"
     exit 1
 fi
 
-# Build DeepSpeed command
 DS_CMD="deepspeed"
 DS_ARGS="--num_gpus=$NUM_GPUS"
 DS_ARGS="$DS_ARGS --master_port=$MASTER_PORT"
@@ -83,10 +65,8 @@ if [ -n "$RESUME" ]; then
     TRAIN_ARGS="$TRAIN_ARGS $RESUME"
 fi
 
-# Create directories
 mkdir -p checkpoints logs
 
-# Launch
 echo ""
 echo "Launching: $DS_CMD $DS_ARGS $TRAIN_ARGS"
 echo ""

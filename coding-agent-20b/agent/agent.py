@@ -73,9 +73,6 @@ class AgentResult:
     error: Optional[str] = None
 
 
-# ============================================================
-# TOOLS
-# ============================================================
 
 def execute_python_code(code: str, timeout: int = 10) -> str:
     """Execute Python code in a sandboxed environment."""
@@ -145,7 +142,6 @@ def list_directory(path: str = ".") -> str:
 def search_codebase(query: str, directory: str = ".") -> str:
     """Search for code patterns in the codebase."""
     try:
-        # Simple grep-based search
         result = subprocess.run(
             ['grep', '-r', '-n', query, directory],
             capture_output=True,
@@ -154,16 +150,13 @@ def search_codebase(query: str, directory: str = ".") -> str:
         )
         
         if result.stdout:
-            lines = result.stdout.strip().split('\n')[:20]  # Limit results
+            lines = result.stdout.strip().split('\n')[:20]
             return "\n".join(lines)
         return "No matches found"
     except Exception as e:
         return f"Error searching: {str(e)}"
 
 
-# ============================================================
-# AGENT
-# ============================================================
 
 """
 okay, I'm cooking...
@@ -182,7 +175,6 @@ class CodingAgent:
         self.tokenizer = tokenizer
         self.max_steps = max_steps
         
-        # Register available tools
         self.tools = self._register_tools()
     
     def _register_tools(self) -> Dict[str, Tool]:
@@ -260,7 +252,6 @@ Final Answer: I've created a factorial function that correctly calculates factor
         
         action = action_match.group(1)
         
-        # Extract JSON from Action Input
         input_match = re.search(r'Action Input:\s*({[^}]+})', text, re.DOTALL)
         if input_match:
             try:
@@ -302,11 +293,9 @@ Final Answer: I've created a factorial function that correctly calculates factor
             if verbose:
                 print(f"Step {step_num + 1}/{self.max_steps}")
             
-            # Generate response
             prompt = self._format_conversation(conversation)
             input_ids = self.tokenizer.encode(prompt, add_special_tokens=True)
             
-            # Generate (simplified - in production use proper generation)
             output_ids = self.model.generate(
                 input_ids=torch.tensor([input_ids]),
                 max_new_tokens=512,
@@ -316,10 +305,8 @@ Final Answer: I've created a factorial function that correctly calculates factor
             
             response = self.tokenizer.decode(output_ids[0][len(input_ids):])
             
-            # Parse response
             step = AgentStep()
             
-            # Extract thought
             thought_match = re.search(r'Thought:\s*(.+?)(?=\nAction:|\nFinal Answer:|$)', 
                                      response, re.DOTALL)
             if thought_match:
@@ -327,7 +314,6 @@ Final Answer: I've created a factorial function that correctly calculates factor
                 if verbose:
                     print(f"  Thought: {step.thought[:100]}...")
             
-            # Check for final answer
             final_answer = self._parse_final_answer(response)
             if final_answer:
                 step.state = AgentState.FINISHED
@@ -346,7 +332,6 @@ Final Answer: I've created a factorial function that correctly calculates factor
 fuck
 """
             
-            # Parse action
             action, action_input = self._parse_action(response)
             if action and action in self.tools:
                 step.action = action
@@ -357,7 +342,6 @@ fuck
                     print(f"  Action: {action}")
                     print(f"  Input: {action_input}")
                 
-                # Execute tool
                 tool = self.tools[action]
                 try:
                     observation = tool.function(**action_input)
@@ -370,12 +354,10 @@ fuck
                 if verbose:
                     print(f"  Observation: {observation[:200]}...")
                 
-                # Add to conversation
                 conversation.append({"role": "assistant", "content": response})
                 conversation.append({"role": "user", "content": f"Observation: {observation}"})
             
             else:
-                # No valid action, try to extract answer
                 step.state = AgentState.FINISHED
                 steps.append(step)
                 return AgentResult(
@@ -387,7 +369,6 @@ fuck
             
             steps.append(step)
         
-        # Max steps reached
         return AgentResult(
             answer="Max steps reached without final answer",
             steps=steps,
@@ -408,12 +389,8 @@ fuck
         return "\n".join(parts)
 
 
-# ============================================================
-# EXAMPLE USAGE
-# ============================================================
 
 if __name__ == "__main__":
-    # This is a demonstration - requires trained model
     print("Agent system demonstration")
     print("="*60)
     print("\nTo use the agent with a trained model:")
