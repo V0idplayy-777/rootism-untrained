@@ -17,12 +17,23 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # Runtime requirements only; heavy optional stacks (deepspeed/mpi) are
-          # not needed to audit licences and fail to build on bare runners.
-          pip install --no-deps -r requirements.txt
+          # deepspeed and mpi4py are source-build training extras (they need an
+          # MPI/CUDA toolchain) and cannot install on a bare runner, so they are
+          # audited by version pin only. Fail if the skip list ever grows, so a
+          # new dependency cannot escape the audit silently.
+          SKIP='^(deepspeed|mpi4py)'
+          skipped=$(grep -cE "$SKIP" requirements.txt)
+          if [ "$skipped" -ne 2 ]; then
+            echo "Unexpected number of unaudited requirements ($skipped); update this workflow." >&2
+            exit 1
+          fi
+          grep -vE "$SKIP" requirements.txt > /tmp/audit-requirements.txt
+          pip install --no-deps -r /tmp/audit-requirements.txt
           pip install pip-licenses
 
       - name: Check Licenses
         run: |
-          # Fails the build if unauthorized licenses are found
+          # deepspeed (Apache-2.0) and mpi4py (BSD-3-Clause) are pinned in
+          # requirements.txt and not installed here; both are permissive.
+          # Fails the build if unauthorized licenses are found.
           pip-licenses --fail-on "GPL;AGPL;LGPL"
