@@ -554,11 +554,9 @@ class CodingAgentConfig:
 
 
 
-        assert self.hidden_size % self.num_attention_heads == 0
-
-
-
+        assert self.hidden_size % self.num_attention_heads == 0, \
             f"hidden_size ({self.hidden_size}) must be divisible by num_attention_heads ({self.num_attention_heads})"
+
 
 
 
