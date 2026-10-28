@@ -5,3 +5,8 @@ checkpoints/
 eval_cache/
 logs/
 workspace/
+.agent/
+.ruff_cache/
+node_modules/
+dist/
+*.sqlite3

@@ -366,6 +366,17 @@ TOOL_SCHEMAS = {
 }
 
 
+try:  # project tools (deploy/scaffold/map/search/checkpoint) live in their own module
+
+    from .deploy_tool import tool_schemas as _project_tool_schemas
+
+    TOOL_SCHEMAS.update(_project_tool_schemas())
+
+except Exception:  # pragma: no cover - schema import must never break the agent
+
+    pass
+
+
 class ProductionAgent:
     """Production-grade coding agent with structured tool use.
 
@@ -537,6 +548,12 @@ Example:
     def _handle_control_tool(self, tool: str, args: dict, state: SessionState) -> dict | None:
         """Plan/notes/assumptions/scratch are state operations, not sandbox."""
 
+        project_result = self._handle_project_tool(tool, args)
+
+        if project_result is not None:
+
+            return project_result
+
         if tool == "update_plan":
 
             steps = [str(s) for s in (args.get("steps") or []) if str(s).strip()]
@@ -661,6 +678,30 @@ Example:
             return {"success": True, "topics": self.scratch.list_topics()}
 
         return None
+
+    def _handle_project_tool(self, tool: str, args: dict) -> dict | None:
+        """Scaffold/deploy/map/search/checkpoint: the shipping tools.
+
+        They reuse the CLI/UI implementations, so an agent deploy and a human
+        deploy are the same code path with the same guarantees.
+        """
+
+        if tool not in {"deploy", "scaffold_project", "project_map", "search_project", "checkpoint"}:
+
+            return None
+
+        from .deploy_tool import handle_tool
+
+        return handle_tool(tool, args, self.workspace_path, emit=self._tool_log)
+
+    def _tool_log(self, message: str) -> None:
+        """Progress line for long operations (deploy build stages)."""
+
+        emit = getattr(self, "on_progress", None)
+
+        if callable(emit):
+
+            emit(str(message))
 
     def _checkpoint_milestone(self, state: SessionState, step_index: int, evidence: str) -> None:
         """Snapshot verified progress (git commit when possible).

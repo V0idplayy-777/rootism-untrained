@@ -1,6 +1,6 @@
 # Capability gaps, mitigations, and how each is measured
 
-Six known weaknesses were identified for this stack. This document records, for
+Known weaknesses were identified for this stack. This document records, for
 each one: the failure mode, the mechanism that now addresses it, how to verify
 the mitigation, and what is still *not* solved. Nothing here claims a model
 quality jump that cannot be measured from this repository — the deliverables are
@@ -330,6 +330,48 @@ selection (execution check beats majority when they disagree).
 **Still open.** Decomposition quality is bounded by the planner; if the plan is
 wrong, the units compose a plausible but incorrect module. The validator checks
 syntax and obvious undefined names — not semantics. Run the tests.
+
+---
+
+## 7. Shipping: from a repository to a running, reachable app
+
+Gaps 1–6 make the *model* better at writing code. None of them gets a user from
+"I want this" to "here is the URL", because that needs scaffolding, verification,
+deployment and a surface a non-engineer can use. This section tracks that work.
+
+| # | Gap | Mechanism | Verify |
+|---|-----|-----------|--------|
+| 7.1 | No end-to-end deploy | `deploy/`: detection → Dockerfile/compose → provider → health check → landing/README/report | `tests/test_deploy.py` |
+| 7.2 | Only ad-hoc single files | `scaffold/`: six starters, optional auth/DB, managed Postgres, intent routing | `tests/test_scaffold.py` |
+| 7.3 | No review/test loop | `quality/`: critic, test runner + failure parsing, generated tests, humanised errors | `tests/test_quality.py` |
+| 7.4 | No project memory | `agent/project_map.py`, `agent/semantic_index.py`, `agent/checkpoint.py`, `agent/plan_approval.py` | `tests/test_project_memory.py` |
+| 7.5 | No data for the above | `dataset/project_data.py` (multi-file rows), `dataset/repair_traces.py` (fail→fix traces) | `tests/test_project_data.py` |
+| 7.6 | No non-engineer surface | `ui/` chat (simple/power, SSE, same-origin preview) + `cli.py` (`agent …`) | `tests/test_ui.py`, `tests/test_cli.py` |
+
+**Deploy honesty.** A deploy is only `ok` when the health endpoint answered
+(2xx/3xx) within the budget. `ProviderResult.ok=False` carries a concrete error;
+`humanize()` turns it into a sentence plus next steps; logs and
+`.agent/deploy/last.json` are redacted. If no host is configured the `archive`
+provider produces a portable `.tar.gz` + `Dockerfile` and the result says
+`url=None, public=False` rather than inventing a URL.
+
+**Why the starters are deterministic.** Templates are pure
+`ProjectOptions -> {path: content}`, so a starter is reproducible, diffable and
+trainable on (the dataset rows are renders of the same templates). Regeneration
+costs nothing and no model is needed to prove the output runs: every starter's
+own test suite is executed in CI (`tests/test_scaffold.py`).
+
+**What is still not solved.**
+
+- Live deploys to Vercel/Fly/Render are exercised against scripted HTTP and
+  stubbed CLIs (`FakeHttpClient`, patched `which`); they are not run against real
+  accounts in this repository, so provider API drift is possible.
+- `local` needs a Docker daemon; without one the fixture set covers the archive
+  path instead.
+- The UI's live preview proxies a child process on a free port; it is verified
+  with a static site and a real FastAPI process, not with every starter.
+- Plan approval gates *mass* writes from the UI/CLI; a model calling `write_file`
+  directly is still bounded by the workspace, not by the plan.
 
 ---
 
