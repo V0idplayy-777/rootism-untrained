@@ -745,8 +745,6 @@ class RepoIndex:
 
         for counts in self._doc_tokens:
 
-            total = sum(counts.values()) or 1
-
             vec = {}
 
             for term, tf in counts.items():

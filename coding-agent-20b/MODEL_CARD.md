@@ -24,8 +24,10 @@ anneal on tests/issues/PRs/docs (plus security and distribution-shift sources)
 Data: permissive-license code (SPDX gate in `dataset/production_processor.py`,
 reused by the tokenizer corpus sampler), MinHash-LSH dedup, attention-aware
 packing (`dataset/packing.py`), mixture in `dataset/mixture.py`:
-`the-stack-code 0.56 · issues 0.06 · prs 0.08 · tests 0.08 · docs 0.06 ·
-instruction 0.09 · security 0.03 (×3) · creative 0.04 (×2)`.
+`the-stack-code 0.50 · issues 0.06 · prs 0.08 · tests 0.08 · docs 0.06 ·
+instruction 0.08 · security 0.03 (×3) · creative 0.03 (×2) · instruction-induction
+0.03 · recovery 0.02 · project-scaffold 0.015 (×1.5) · repair-trace 0.015 (×2)`
+(weights sum to 1.00; the last two are the multi-file and fail->fix->green sources).
 
 - **Security** (`dataset/security_data.py`): curated CWE-tagged safe/vulnerable
   pairs with review/repair/implement SFT rows and DPO preference pairs.

@@ -6,6 +6,7 @@ evaluation, staged training and serving.
 
 - Model card: `MODEL_CARD.md` · Eval protocol: `docs/EVAL_PROTOCOL.md` · Repro: `docs/REPRODUCIBILITY.md`
 - Capability gaps and how each is addressed/measured: `docs/CAPABILITY_GAPS.md`
+- Idea → live app in four commands: `docs/QUICKSTART.md` · No lock-in / eject: `docs/EJECT.md`
 - Install: `pip install -r requirements.txt` (dev: `requirements-dev.txt`)
 - Test: `python -m pytest tests/ -q` (CPU, tiny config — no GPU needed)
 - Tokenizer (real corpus + Rust engine + parity/competitive gates):
@@ -17,6 +18,35 @@ evaluation, staged training and serving.
 - Train: `training/train_production.py` + `configs/pipeline.json` (pretrain → mid-train → SFT → DPO; security and cross-domain SFT sources are upsampled)
 - Serve: `python -m inference.server --checkpoint <ckpt> --port 8000` (OpenAI-compatible)
 - Docker: `docker compose up serve` (train/eval/serve targets in `Dockerfile`)
+
+## Idea → running app (`agent`)
+
+```bash
+pip install -e ".[app]"
+agent doctor                                              # toolchain + what is optional
+agent init --request "a web app where users sign up and save tasks" tasks-app
+agent verify                                              # run the tests, explain failures
+agent review                                              # score + findings before shipping
+agent deploy --provider local                             # or vercel/fly/render/coolify
+agent preview                                             # chat UI at :7860
+```
+
+Nothing above needs a GPU or a hosted service. The pieces:
+
+| Module | What it does |
+| --- | --- |
+| `scaffold/` | six starters (`fastapi-react`, `nextjs-fullstack`, `flask-htmx`, `cli-tool`, `discord-bot`, `static-site`), optional JWT auth + SQLite→Postgres, Neon/Supabase provisioning. Plain-English intent → starter, with the reasons |
+| `quality/` | deterministic critic (score, findings, fix prompt), test runner with parsed failure signals, generated starter tests, plain-English error humaniser |
+| `deploy/` | detection, Dockerfile/compose generation, seven providers, verified health check, landing page + README link + `DEPLOY.md`/`HOSTING.md`, redacted logs |
+| `agent/project_map.py`, `agent/semantic_index.py` | persistent project map (tree, summaries, symbols) and local hybrid retrieval |
+| `agent/checkpoint.py`, `agent/plan_approval.py` | byte-exact snapshot/rollback; plans the user must approve before mass writes |
+| `agent/deploy_tool.py` | `deploy` / `scaffold_project` / `project_map` / `search_project` / `checkpoint` as model tools, sharing the CLI code path |
+| `ui/` | simple/power chat surface, SSE progress, same-origin live preview |
+| `dataset/project_data.py`, `dataset/repair_traces.py` | multi-file project SFT/DPO rows and fail→diagnose→fix traces (fed by real `VerificationLoop` runs) |
+
+Guarantees: a URL is only reported after the health endpoint answered; a failed
+deploy is a failure with a plain-language cause; `agentdeploy.toml` never stores
+secrets; every generated file is optional and deletable (`docs/EJECT.md`).
 
 ## Working with repositories bigger than the context window
 

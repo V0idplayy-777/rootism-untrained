@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agent - build, test, deploy</title>
+    <meta name="description" content="Chat with a coding agent that scaffolds, tests and deploys real projects." />
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/app.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="logo" aria-hidden="true">◆</span>
+          <div>
+            <strong>Agent</strong>
+            <span class="muted small">build · test · deploy</span>
+          </div>
+        </div>
+
+        <div class="modes" role="group" aria-label="Interface mode">
+          <button type="button" class="mode active" data-mode="simple">Simple</button>
+          <button type="button" class="mode" data-mode="power">Power</button>
+        </div>
+
+        <section class="card" id="project-card" aria-live="polite">
+          <h2>Project</h2>
+          <p class="muted small">Checking the workspace…</p>
+        </section>
+
+        <section class="starters">
+          <h2>Start something</h2>
+          <div id="templates" class="template-list"></div>
+        </section>
+
+        <section class="card actions">
+          <h2>Ship it</h2>
+          <button type="button" id="preview-btn" class="ghost">Live preview</button>
+          <button type="button" id="deploy-btn" class="primary">Deploy</button>
+          <p class="muted small" id="deploy-hint">Dry run first — nothing is created until you confirm.</p>
+          <a id="live-link" class="live-link" hidden target="_blank" rel="noopener"></a>
+        </section>
+
+        <footer class="muted small" id="footer"></footer>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <h1 id="title">What should we build?</h1>
+            <p class="muted" id="subtitle">Describe it in plain English — a plan comes first.</p>
+          </div>
+          <div class="top-actions">
+            <span class="pill" id="mode-pill">checking…</span>
+            <button type="button" id="reset" class="ghost small">New chat</button>
+          </div>
+        </header>
+
+        <div class="transcript" id="transcript">
+          <div class="empty" id="empty">
+            <p class="empty-title">Tell me what you want to build.</p>
+            <p class="muted">No model? No problem: scaffolding, tests, review and the deploy plan still run locally.</p>
+            <div class="chips">
+              <button type="button" class="chip" data-prompt="A web app where people sign up and save tasks">A to-do app with accounts</button>
+              <button type="button" class="chip" data-prompt="An internal tool to track support tickets">Internal ticket tracker</button>
+              <button type="button" class="chip" data-prompt="A command line tool that counts words in files">A small CLI tool</button>
+              <button type="button" class="chip" data-prompt="A one page landing site with dark mode">A landing page</button>
+            </div>
+          </div>
+        </div>
+
+        <form class="composer" id="composer">
+          <label class="check">
+            <input type="checkbox" id="plan-first" />
+            <span>Plan first</span>
+          </label>
+          <textarea
+            id="input"
+            rows="2"
+            placeholder="e.g. Build a web app where users sign up and save tasks, then deploy it."
+            aria-label="Message"
+          ></textarea>
+          <button type="submit" id="send" class="primary">Send</button>
+        </form>
+        <p class="muted small composer-note">Enter to send · Shift+Enter for a new line</p>
+      </main>
+
+      <section class="preview-panel" id="preview-panel" hidden aria-label="Live preview">
+        <header>
+          <span>Live preview</span>
+          <span class="spacer"></span>
+          <a id="preview-open" target="_blank" rel="noopener" class="small ghost-link">Open</a>
+          <button type="button" id="preview-close" class="ghost small" aria-label="Close preview">×</button>
+        </header>
+        <iframe id="preview-frame" title="Live preview of the project"></iframe>
+      </section>
+    </div>
+    <script src="/assets/app.js" defer></script>
+  </body>
+</html>

@@ -20,17 +20,21 @@ class SourceSpec:
 
 
 DEFAULT_MIXTURE: list[SourceSpec] = [
-    SourceSpec("the-stack-code", 0.56, 1.0, "code"),
+    SourceSpec("the-stack-code", 0.50, 1.0, "code"),
     SourceSpec("github-issues", 0.06, 2.0, "issues"),
     SourceSpec("github-prs", 0.08, 2.0, "prs"),
     SourceSpec("tests", 0.08, 2.5, "tests"),
     SourceSpec("docs-and-comments", 0.06, 1.5, "docs"),
-    SourceSpec("instruction-sft", 0.09, 1.0, "instruction"),
+    SourceSpec("instruction-sft", 0.08, 1.0, "instruction"),
     # Security-critical code is rare in public corpora but must not be rare in
     SourceSpec("security-sft", 0.03, 3.0, "security"),
-    SourceSpec("creative-sft", 0.04, 2.0, "creative"),
+    SourceSpec("creative-sft", 0.03, 2.0, "creative"),
     SourceSpec("instruction-induction", 0.03, 1.5, "instruction"),
     SourceSpec("recovery-sft", 0.02, 2.0, "instruction"),
+    # Multi-file project generation and fail->fix->green traces: the parts of
+    # coding-agent behaviour that single-file SFT data does not teach.
+    SourceSpec("project-scaffold-sft", 0.015, 1.5, "instruction"),
+    SourceSpec("repair-trace-sft", 0.015, 2.0, "instruction"),
 ]
 
 
