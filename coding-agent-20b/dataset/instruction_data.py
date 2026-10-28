@@ -12,55 +12,106 @@ Generates diverse instruction-response pairs for training:
 - Tool use / function calling examples
 """
 
+
+
 import random
+
 import json
+
 from typing import List, Dict, Any, Optional, Tuple
+
 from dataclasses import dataclass
 
 
+
+
+
 @dataclass
+
 class InstructionSample:
+
     """A single instruction-following training example."""
+
     instruction: str
+
     input_context: str
+
     output: str
+
     category: str
+
     language: Optional[str] = None
+
     difficulty: str = "intermediate"
 
 
+
+
+
 class InstructionGenerator:
+
     """Generates instruction-following training samples."""
 
+
+
     def __init__(self):
+
         self.generators = [
+
             self._generate_code_gen_instructions,
+
             self._generate_bug_fix_instructions,
+
             self._generate_code_review_instructions,
+
             self._generate_explanation_instructions,
+
             self._generate_refactor_instructions,
+
             self._generate_test_gen_instructions,
+
             self._generate_multiturn_conversations,
+
             self._generate_tool_use_instructions,
+
             self._generate_algorithm_instructions,
+
             self._generate_debug_instructions,
+
         ]
 
+
+
     def generate_batch(self, count: int) -> List[InstructionSample]:
+
         """Generate a batch of instruction samples."""
+
         samples = []
+
         for _ in range(count):
+
             gen = random.choice(self.generators)
+
             batch = gen()
+
             samples.extend(batch)
+
         return samples[:count]
 
+
+
     def _generate_code_gen_instructions(self) -> List[InstructionSample]:
+
         """Generate code generation instruction samples."""
+
         templates = [
+
             {
+
                 "instruction": "Write a function that finds all prime numbers up to n using the Sieve of Eratosthenes algorithm.",
+
                 "input_context": "",
+
                 "output": '''def sieve_of_eratosthenes(n: int) -> List[int]:
     """
     Find all prime numbers up to n using the Sieve of Eratosthenes.
@@ -80,12 +131,19 @@ class InstructionGenerator:
                 is_prime[j] = False
     
     return [i for i in range(2, n + 1) if is_prime[i]]''',
+
                 "category": "code_generation",
+
                 "language": "python",
+
             },
+
             {
+
                 "instruction": "Implement a thread-safe singleton pattern in Python.",
+
                 "input_context": "",
+
                 "output": '''import threading
 from typing import Optional
 
@@ -126,12 +184,19 @@ class DatabaseConnection(metaclass=SingletonMeta):
 db1 = DatabaseConnection()
 db2 = DatabaseConnection()
 assert db1 is db2  # Same instance''',
+
                 "category": "code_generation",
+
                 "language": "python",
+
             },
+
             {
+
                 "instruction": "Create a Python decorator that caches function results with TTL (time-to-live) expiration.",
+
                 "input_context": "",
+
                 "output": '''import time
 import functools
 import hashlib
@@ -197,12 +262,19 @@ result1 = expensive_computation(2, 10)  # Returns 1024
 
 # Second call: cached (fast)
 result2 = expensive_computation(2, 10)  # Returns 1024 instantly''',
+
                 "category": "code_generation",
+
                 "language": "python",
+
             },
+
             {
+
                 "instruction": "Write a JavaScript function that debounces another function with configurable delay and immediate option.",
+
                 "input_context": "",
+
                 "output": '''/**
  * Creates a debounced version of the provided function.
  * 
@@ -276,27 +348,49 @@ const handleSearch = debounce((query) => {
 document.getElementById("search").addEventListener("input", (e) => {
     handleSearch(e.target.value);
 });''',
+
                 "category": "code_generation",
+
                 "language": "javascript",
+
             },
+
         ]
+
+
 
         return [
+
             InstructionSample(
+
                 instruction=t["instruction"],
+
                 input_context=t["input_context"],
+
                 output=t["output"],
+
                 category=t["category"],
+
                 language=t.get("language"),
+
             )
+
             for t in templates
+
         ]
 
+
+
     def _generate_bug_fix_instructions(self) -> List[InstructionSample]:
+
         """Generate bug fixing instruction samples."""
+
         templates = [
+
             {
+
                 "instruction": "The following code has a bug where the linked list reverse function doesn't work correctly. Find and fix the bug.",
+
                 "input_context": '''def reverse_linked_list(head):
     """Reverse a singly linked list."""
     prev = None
@@ -307,6 +401,7 @@ document.getElementById("search").addEventListener("input", (e) => {
         prev = current
         # Bug: forgot to advance current
     return prev''',
+
                 "output": '''The bug is that `current` is never advanced to `next_node` inside the loop,
 causing an infinite loop. Here's the fix:
 
@@ -329,11 +424,17 @@ Without this, `current` stays the same and the loop never terminates.
 
 **Time Complexity:** O(n) - single pass through the list
 **Space Complexity:** O(1) - only three pointers used''',
+
                 "category": "bug_fixing",
+
                 "language": "python",
+
             },
+
             {
+
                 "instruction": "This Python function is supposed to find the maximum subarray sum (Kadane's algorithm) but returns wrong results for all-negative arrays. Fix it.",
+
                 "input_context": '''def max_subarray_sum(arr):
     """Find maximum contiguous subarray sum."""
     max_sum = 0
@@ -345,6 +446,7 @@ Without this, `current` stays the same and the loop never terminates.
         if current_sum > max_sum:
             max_sum = current_sum
     return max_sum''',
+
                 "output": '''The bug is that initializing `max_sum = 0` causes all-negative arrays to
 return 0 instead of the least negative element. Here's the fix:
 
@@ -375,27 +477,49 @@ def max_subarray_sum(arr):
 - `[1, -2, 3, 4, -1]` → `7` (subarray [3, 4])
 - `[-3, -2, -5, -1]` → `-1` (subarray [-1]) ← previously returned 0
 - `[5, -1, 5]` → `9` (subarray [5, -1, 5])''',
+
                 "category": "bug_fixing",
+
                 "language": "python",
+
             },
+
         ]
+
+
 
         return [
+
             InstructionSample(
+
                 instruction=t["instruction"],
+
                 input_context=t["input_context"],
+
                 output=t["output"],
+
                 category=t["category"],
+
                 language=t.get("language"),
+
             )
+
             for t in templates
+
         ]
 
+
+
     def _generate_code_review_instructions(self) -> List[InstructionSample]:
+
         """Generate code review instruction samples."""
+
         templates = [
+
             {
+
                 "instruction": "Review this code for performance issues, security vulnerabilities, and best practices. Provide specific recommendations.",
+
                 "input_context": '''from flask import Flask, request
 import sqlite3
 
@@ -416,6 +540,7 @@ def get_user(id):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE id = " + id)
     return str(cursor.fetchone())''',
+
                 "output": '''## Code Review
 
 ### 🔴 Critical: SQL Injection Vulnerability
@@ -504,28 +629,51 @@ if len(query) < 2:
 | No connection pooling | Medium | Performance |
 | Raw data exposure | Medium | Security |
 | No input validation | Medium | Best Practice |''',
+
                 "category": "code_review",
+
                 "language": "python",
+
             },
+
         ]
+
+
 
         return [
+
             InstructionSample(
+
                 instruction=t["instruction"],
+
                 input_context=t["input_context"],
+
                 output=t["output"],
+
                 category=t["category"],
+
                 language=t.get("language"),
+
             )
+
             for t in templates
+
         ]
 
+
+
     def _generate_explanation_instructions(self) -> List[InstructionSample]:
+
         """Generate code explanation samples."""
+
         templates = [
+
             {
+
                 "instruction": "Explain how Python's GIL (Global Interpreter Lock) works and its implications for multi-threaded programs.",
+
                 "input_context": "",
+
                 "output": '''# Python's Global Interpreter Lock (GIL)
 
 ## What is the GIL?
@@ -593,26 +741,47 @@ experimental and may change C extension compatibility.
 | I/O-bound | `threading` or `asyncio` | GIL released during I/O |
 | CPU-bound | `multiprocessing` | Separate processes, separate GILs |
 | Mixed | `concurrent.futures` | Choose executor based on task |''',
+
                 "category": "explanation",
+
                 "language": "python",
+
             },
+
         ]
+
+
 
         return [
+
             InstructionSample(
+
                 instruction=t["instruction"],
+
                 input_context=t["input_context"],
+
                 output=t["output"],
+
                 category=t["category"],
+
                 language=t.get("language"),
+
             )
+
             for t in templates
+
         ]
 
+
+
     def _generate_refactor_instructions(self) -> List[InstructionSample]:
+
         templates = [
+
             {
+
                 "instruction": "Refactor this code to follow SOLID principles and improve maintainability. The current code mixes concerns and has tight coupling.",
+
                 "input_context": '''class OrderProcessor:
     def process(self, order):
         # Validate
@@ -646,6 +815,7 @@ experimental and may change C extension compatibility.
         server.quit()
         
         return {"status": "success", "total": final}''',
+
                 "output": '''"""
 Refactored Order Processor following SOLID principles:
 - S: Each class has a single responsibility
@@ -824,26 +994,47 @@ def create_order_processor() -> OrderProcessor:
         repository=SqliteOrderRepository(),
         notifier=EmailNotificationService("smtp.gmail.com", 587),
     )''',
+
                 "category": "refactoring",
+
                 "language": "python",
+
             },
+
         ]
+
+
 
         return [
+
             InstructionSample(
+
                 instruction=t["instruction"],
+
                 input_context=t["input_context"],
+
                 output=t["output"],
+
                 category=t["category"],
+
                 language=t.get("language"),
+
             )
+
             for t in templates
+
         ]
 
+
+
     def _generate_test_gen_instructions(self) -> List[InstructionSample]:
+
         templates = [
+
             {
+
                 "instruction": "Write comprehensive unit tests for this function, including edge cases, error cases, and boundary conditions.",
+
                 "input_context": '''def parse_duration(duration_str: str) -> int:
     """
     Parse a duration string into total seconds.
@@ -868,6 +1059,7 @@ def create_order_processor() -> OrderProcessor:
     seconds = int(match.group(3) or 0)
     
     return hours * 3600 + minutes * 60 + seconds''',
+
                 "output": '''import pytest
 from parse_duration import parse_duration
 
@@ -978,91 +1170,177 @@ class TestParseDuration:
     def test_invalid_inputs(self, invalid_input):
         with pytest.raises(ValueError):
             parse_duration(invalid_input)''',
+
                 "category": "test_generation",
+
                 "language": "python",
+
             },
+
         ]
 
+
+
         return [
+
             InstructionSample(
+
                 instruction=t["instruction"],
+
                 input_context=t["input_context"],
+
                 output=t["output"],
+
                 category=t["category"],
+
                 language=t.get("language"),
+
             )
+
             for t in templates
+
         ]
+
+
 
     def _generate_multiturn_conversations(self) -> List[InstructionSample]:
+
         """Generate multi-turn coding conversations."""
+
         conversations = [
+
             {
+
                 "instruction": "multi_turn_conversation",
+
                 "input_context": "",
+
                 "output": json.dumps({
+
                     "messages": [
+
                         {"role": "user", "content": "I need to implement a REST API for a todo app. What framework should I use in Python?"},
+
                         {"role": "assistant", "content": "For a Python REST API, I recommend **FastAPI** — it's modern, fast, has automatic docs, and great type support.\n\nHere's a starter:\n\n```python\nfrom fastapi import FastAPI, HTTPException\nfrom pydantic import BaseModel\n\napp = FastAPI(title=\"Todo API\")\n\nclass Todo(BaseModel):\n    id: int | None = None\n    title: str\n    completed: bool = False\n\ntodos = []\n\n@app.post(\"/todos\", response_model=Todo)\nasync def create_todo(todo: Todo):\n    todo.id = len(todos) + 1\n    todos.append(todo)\n    return todo\n\n@app.get(\"/todos\")\nasync def list_todos():\n    return todos\n\n@app.get(\"/todos/{todo_id}\")\nasync def get_todo(todo_id: int):\n    for todo in todos:\n        if todo.id == todo_id:\n            return todo\n    raise HTTPException(status_code=404, detail=\"Todo not found\")\n```\n\nWould you like me to add database persistence or authentication?"},
+
                         {"role": "user", "content": "Yes, please add SQLite database persistence using SQLAlchemy."},
+
                         {"role": "assistant", "content": "Here's the FastAPI app with SQLAlchemy persistence:\n\n```python\nfrom fastapi import FastAPI, HTTPException, Depends\nfrom pydantic import BaseModel\nfrom sqlalchemy import create_engine, Column, Integer, String, Boolean\nfrom sqlalchemy.orm import declarative_base, sessionmaker, Session\n\n# Database setup\nengine = create_engine(\"sqlite:///todos.db\")\nSessionLocal = sessionmaker(bind=engine)\nBase = declarative_base()\n\n# SQLAlchemy Model\nclass TodoModel(Base):\n    __tablename__ = \"todos\"\n    id = Column(Integer, primary_key=True, index=True)\n    title = Column(String, nullable=False)\n    completed = Column(Boolean, default=False)\n\nBase.metadata.create_all(engine)\n\n# Pydantic schemas\nclass TodoCreate(BaseModel):\n    title: str\n\nclass TodoResponse(BaseModel):\n    id: int\n    title: str\n    completed: bool\n    class Config:\n        from_attributes = True\n\n# Dependency\ndef get_db():\n    db = SessionLocal()\n    try:\n        yield db\n    finally:\n        db.close()\n\napp = FastAPI(title=\"Todo API\")\n\n@app.post(\"/todos\", response_model=TodoResponse)\nasync def create_todo(todo: TodoCreate, db: Session = Depends(get_db)):\n    db_todo = TodoModel(title=todo.title)\n    db.add(db_todo)\n    db.commit()\n    db.refresh(db_todo)\n    return db_todo\n\n@app.get(\"/todos\", response_model=list[TodoResponse])\nasync def list_todos(db: Session = Depends(get_db)):\n    return db.query(TodoModel).all()\n\n@app.get(\"/todos/{todo_id}\", response_model=TodoResponse)\nasync def get_todo(todo_id: int, db: Session = Depends(get_db)):\n    todo = db.query(TodoModel).filter(TodoModel.id == todo_id).first()\n    if not todo:\n        raise HTTPException(404, \"Todo not found\")\n    return todo\n```"},
+
                     ]
+
                 }),
+
                 "category": "multi_turn",
+
                 "language": "python",
+
             },
+
         ]
 
+
+
         return [
+
             InstructionSample(
+
                 instruction=c["instruction"],
+
                 input_context=c["input_context"],
+
                 output=c["output"],
+
                 category=c["category"],
+
                 language=c.get("language"),
+
             )
+
             for c in conversations
+
         ]
+
+
 
     def _generate_tool_use_instructions(self) -> List[InstructionSample]:
+
         """Generate tool/function calling examples."""
+
         templates = [
+
             {
+
                 "instruction": "The user wants to search for Python documentation about decorators. Show how you would use the available tools to help.",
+
                 "input_context": 'Available tools: [search_docs(query: str), run_code(code: str), read_file(path: str), write_file(path: str, content: str)]',
+
                 "output": json.dumps({
+
                     "thought": "The user wants to learn about Python decorators. I'll search the documentation first, then provide a code example they can run.",
+
                     "tool_calls": [
+
                         {"tool": "search_docs", "args": {"query": "Python decorators how to use"}},
+
                     ],
+
                     "response": "Let me look up the documentation on decorators for you.",
+
                     "follow_up": {
+
                         "thought": "Based on the documentation results, I'll now provide a working example.",
+
                         "tool_calls": [
+
                             {"tool": "run_code", "args": {"code": "def my_decorator(func):\n    def wrapper(*args, **kwargs):\n        print(f'Calling {func.__name__}')\n        result = func(*args, **kwargs)\n        print(f'{func.__name__} returned {result}')\n        return result\n    return wrapper\n\n@my_decorator\ndef add(a, b):\n    return a + b\n\nprint(add(3, 4))"}},
+
                         ],
+
                         "response": "Here's a practical decorator example you can try.",
+
                     },
+
                 }),
+
                 "category": "tool_use",
+
             },
+
         ]
+
+
 
         return [
+
             InstructionSample(
+
                 instruction=t["instruction"],
+
                 input_context=t["input_context"],
+
                 output=t["output"],
+
                 category=t["category"],
+
             )
+
             for t in templates
+
         ]
 
+
+
     def _generate_algorithm_instructions(self) -> List[InstructionSample]:
+
         templates = [
+
             {
+
                 "instruction": "Explain the difference between BFS and DFS, when to use each, and implement both for a graph.",
+
                 "input_context": "",
+
                 "output": '''# BFS vs DFS: Graph Traversal Algorithms
 
 ## Key Differences
@@ -1155,26 +1433,47 @@ def bfs_shortest_path(graph: Graph, start: str, end: str) -> List[str]:
     
     return []  # No path found
 ```''',
+
                 "category": "algorithm_explanation",
+
                 "language": "python",
+
             },
+
         ]
+
+
 
         return [
+
             InstructionSample(
+
                 instruction=t["instruction"],
+
                 input_context=t["input_context"],
+
                 output=t["output"],
+
                 category=t["category"],
+
                 language=t.get("language"),
+
             )
+
             for t in templates
+
         ]
 
+
+
     def _generate_debug_instructions(self) -> List[InstructionSample]:
+
         templates = [
+
             {
+
                 "instruction": "My Python program is running slowly. Here's the profiling output. Help me identify and fix the performance bottleneck.",
+
                 "input_context": '''# Profiling output (cProfile):
 # ncalls  tottime  percall  cumtime  percall filename:lineno(function)
 # 1       0.001    0.001    12.345   12.345  main.py:1(main)
@@ -1192,6 +1491,7 @@ def find_duplicates(items):
             if items[i] == items[j] and items[i] not in duplicates:
                 duplicates.append(items[i])
     return duplicates''',
+
                 "output": '''## Performance Analysis
 
 ### Bottleneck Identified: `find_duplicates()` in utils.py:15
@@ -1251,18 +1551,34 @@ if item in my_set:   # Hash lookup
 2. **Check algorithm complexity** — O(n²) or worse is usually the culprit
 3. **Use appropriate data structures** — sets for membership, dicts for lookup
 4. **Consider vectorization** — NumPy for numeric operations''',
+
                 "category": "debugging",
+
                 "language": "python",
+
             },
+
         ]
 
+
+
         return [
+
             InstructionSample(
+
                 instruction=t["instruction"],
+
                 input_context=t["input_context"],
+
                 output=t["output"],
+
                 category=t["category"],
+
                 language=t.get("language"),
+
             )
+
             for t in templates
+
         ]
+

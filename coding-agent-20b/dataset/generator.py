@@ -11,31 +11,58 @@ Generates a massive, diverse code dataset from scratch using:
 Target: 300B+ tokens for training a 20B parameter model.
 """
 
+
+
 import os
+
 import json
+
 import random
+
 import hashlib
+
 import logging
+
 from typing import List, Dict, Any, Optional
+
 from pathlib import Path
+
 from dataclasses import asdict
 
+
+
 from .code_templates import (
+
     CodeSample,
+
     PythonCodeGenerator, NameGenerator,
+
 )
+
 from .instruction_data import InstructionGenerator, InstructionSample
+
 from .processor import DatasetProcessor, DatasetConfig
+
+
 
 logger = logging.getLogger(__name__)
 
 
+
+
+
 class JavaScriptCodeGenerator:
+
     """Generate JavaScript/TypeScript code samples."""
 
+
+
     SAMPLES = [
+
         {
+
             "language": "javascript",
+
             "code": '''/**
  * Debounce function - delays execution until after wait milliseconds
  * have elapsed since the last invocation.
@@ -88,12 +115,19 @@ function debounce(func, wait, options = {}) {
     
     return debounced;
 }''',
+
             "description": "Advanced debounce function with leading/trailing edge options",
+
             "complexity": "intermediate",
+
             "domain": "web",
+
         },
+
         {
+
             "language": "typescript",
+
             "code": '''/**
  * Type-safe event emitter with generics.
  */
@@ -157,12 +191,19 @@ const emitter = new TypedEventEmitter<AppEvents>();
 const unsub = emitter.on('user:login', (userId, timestamp) => {
     console.log(`User ${userId} logged in at ${timestamp.toISOString()}`);
 });''',
+
             "description": "Type-safe event emitter with generics in TypeScript",
+
             "complexity": "advanced",
+
             "domain": "web",
+
         },
+
         {
+
             "language": "rust",
+
             "code": '''use std::collections::HashMap;
 use std::hash::Hash;
 
@@ -292,12 +333,19 @@ impl<K: Hash + Eq + Clone, V: Clone> LRUCache<K, V> {
     pub fn len(&self) -> usize { self.map.len() }
     pub fn is_empty(&self) -> bool { self.map.is_empty() }
 }''',
+
             "description": "LRU Cache implementation in Rust with doubly-linked list",
+
             "complexity": "advanced",
+
             "domain": "systems",
+
         },
+
         {
+
             "language": "go",
+
             "code": '''package main
 
 import (
@@ -435,12 +483,19 @@ func main() {
 	time.Sleep(3 * time.Second)
 	pool.Stop()
 }''',
+
             "description": "Concurrent worker pool in Go with graceful shutdown",
+
             "complexity": "intermediate",
+
             "domain": "systems",
+
         },
+
         {
+
             "language": "cpp",
+
             "code": '''#include <iostream>
 #include <vector>
 #include <memory>
@@ -592,27 +647,49 @@ int main() {
 
     return 0;
 }''',
+
             "description": "Modern C++ with Result types, RAII, smart pointers, and move semantics",
+
             "complexity": "advanced",
+
             "domain": "systems",
+
         },
+
     ]
 
+
+
     def generate(self) -> List[CodeSample]:
+
         return [
+
             CodeSample(
+
                 language=s["language"],
+
                 code=s["code"],
+
                 description=s["description"],
+
                 complexity=s["complexity"],
+
                 domain=s["domain"],
+
                 tags=[],
+
             )
+
             for s in self.SAMPLES
+
         ]
 
 
+
+
+
 class FIMGenerator:
+
     """
     Fill-in-the-Middle (FIM) data generator.
     
@@ -621,65 +698,119 @@ class FIMGenerator:
     completion use cases.
     """
 
+
+
     def __init__(self):
-        self.split_points = [0.3, 0.5, 0.7]  # Where to split the code
+
+        self.split_points = [0.3, 0.5, 0.7]                           
+
+
 
     def generate_fim(self, code: str, language: str = "python") -> List[Dict[str, str]]:
+
         """
         Generate FIM examples from a code sample.
         
         Split code at multiple points to create prefix/middle/suffix triples.
         """
+
         lines = code.split('\n')
+
         if len(lines) < 5:
+
             return []
+
+
 
         examples = []
 
+
+
         for split_ratio in self.split_points:
+
             split_idx = max(2, int(len(lines) * split_ratio))
 
+
+
             prefix = '\n'.join(lines[:split_idx])
+
             middle = '\n'.join(lines[split_idx:split_idx + 3])
+
             suffix = '\n'.join(lines[split_idx + 3:])
 
+
+
             if not middle.strip():
+
                 continue
 
-            # FIM format
+
+
+                        
+
             fim_text = (
+
                 f"<|fim_prefix|>{prefix}"
+
                 f"<|fim_suffix|>{suffix}"
+
                 f"<|fim_middle|>{middle}"
+
             )
 
+
+
             examples.append({
+
                 "text": fim_text,
+
                 "category": "fim",
+
                 "language": language,
+
             })
+
+
 
         return examples
 
 
+
+
+
 class DatasetGenerator:
+
     """
     Main dataset generator that combines all sources and creates
     the full training dataset.
     """
 
+
+
     def __init__(self, output_dir: str = "data/processed"):
+
         self.output_dir = Path(output_dir)
+
         self.python_gen = PythonCodeGenerator()
+
         self.js_gen = JavaScriptCodeGenerator()
+
         self.instruction_gen = InstructionGenerator()
+
         self.fim_gen = FIMGenerator()
 
+
+
     def generate_full_dataset(
+
         self,
+
         target_samples: int = 1_000_000,
+
         output_dir: Optional[str] = None,
+
     ) -> Dict[str, Any]:
+
         """
         Generate the complete training dataset.
         
@@ -690,189 +821,373 @@ class DatasetGenerator:
         Returns:
             Generation statistics
         """
+
         output_dir = output_dir or str(self.output_dir)
+
         os.makedirs(output_dir, exist_ok=True)
 
+
+
         stats = {
+
             "target_samples": target_samples,
+
             "code_samples": 0,
+
             "instruction_samples": 0,
+
             "fim_samples": 0,
+
             "total_samples": 0,
+
         }
+
+
 
         all_documents = []
 
+
+
         logger.info("Phase 1: Generating code samples...")
+
         code_docs = self._generate_code_samples(target_samples // 3)
+
         all_documents.extend(code_docs)
+
         stats["code_samples"] = len(code_docs)
+
         logger.info(f"  Generated {len(code_docs)} code documents")
 
+
+
         logger.info("Phase 2: Generating instruction samples...")
+
         instruction_docs = self._generate_instruction_samples(target_samples // 3)
+
         all_documents.extend(instruction_docs)
+
         stats["instruction_samples"] = len(instruction_docs)
+
         logger.info(f"  Generated {len(instruction_docs)} instruction documents")
 
+
+
         logger.info("Phase 3: Generating FIM samples...")
+
         fim_docs = self._generate_fim_samples(target_samples // 3)
+
         all_documents.extend(fim_docs)
+
         stats["fim_samples"] = len(fim_docs)
+
         logger.info(f"  Generated {len(fim_docs)} FIM documents")
 
-        # Shuffle
+
+
+                 
+
         random.shuffle(all_documents)
+
         stats["total_samples"] = len(all_documents)
 
-        # Save raw documents
+
+
+                            
+
         raw_path = os.path.join(output_dir, "raw_documents.jsonl")
+
         with open(raw_path, 'w') as f:
+
             for doc in all_documents:
+
                 f.write(json.dumps(doc) + '\n')
+
+
 
         logger.info(f"Saved {len(all_documents)} documents to {raw_path}")
 
-        # Save stats
+
+
+                    
+
         stats_path = os.path.join(output_dir, "generation_stats.json")
+
         with open(stats_path, 'w') as f:
+
             json.dump(stats, f, indent=2)
+
+
 
         return stats
 
+
+
     def _generate_code_samples(self, target: int) -> List[Dict[str, Any]]:
+
         """Generate code samples with combinatorial expansion."""
+
         documents = []
+
+
 
         complexities = ["beginner", "intermediate", "advanced", "expert"]
+
         domains = ["algorithms", "data", "web", "systems", "testing"]
 
+
+
         for i in range(target):
+
             complexity = random.choice(complexities)
+
             domain = random.choice(domains)
 
+
+
             try:
+
                 sample = self.python_gen.generate(complexity, domain)
+
                 doc = {
+
                     "text": self._format_code_document(sample),
+
                     "category": "code",
+
                     "language": sample.language,
+
                     "complexity": sample.complexity,
+
                     "domain": sample.domain,
+
                 }
+
                 documents.append(doc)
+
             except Exception:
+
                 pass
 
-            # Also generate JS/TS/Rust/Go/C++ samples
+
+
+                                                     
+
             if i % 5 == 0:
+
                 for js_sample in self.js_gen.generate():
+
                     doc = {
+
                         "text": self._format_code_document(js_sample),
+
                         "category": "code",
+
                         "language": js_sample.language,
+
                         "complexity": js_sample.complexity,
+
                         "domain": js_sample.domain,
+
                     }
+
                     documents.append(doc)
 
+
+
         return documents[:target]
+
+
 
     def _generate_instruction_samples(self, target: int) -> List[Dict[str, Any]]:
+
         """Generate instruction-following samples."""
+
         documents = []
+
+
 
         samples = self.instruction_gen.generate_batch(target)
+
         for sample in samples:
+
             doc = {
+
                 "text": self._format_instruction_document(sample),
+
                 "category": sample.category,
+
                 "language": sample.language,
+
             }
+
             documents.append(doc)
 
+
+
         return documents[:target]
+
+
 
     def _generate_fim_samples(self, target: int) -> List[Dict[str, Any]]:
+
         """Generate fill-in-the-middle samples from code."""
+
         documents = []
 
-        # Use generated code samples as source for FIM
+
+
+                                                      
+
         complexities = ["intermediate", "advanced", "expert"]
+
         domains = ["algorithms", "data", "web", "systems"]
 
+
+
         generated = 0
+
         attempts = 0
 
+
+
         while generated < target and attempts < target * 10:
+
             attempts += 1
+
             complexity = random.choice(complexities)
+
             domain = random.choice(domains)
 
+
+
             try:
+
                 sample = self.python_gen.generate(complexity, domain)
+
                 fim_examples = self.fim_gen.generate_fim(sample.code, sample.language)
 
+
+
                 for fim in fim_examples:
+
                     documents.append(fim)
+
                     generated += 1
+
                     if generated >= target:
+
                         break
+
             except Exception:
+
                 pass
+
+
 
         return documents[:target]
 
+
+
     def _format_code_document(self, sample: CodeSample) -> str:
+
         """Format a code sample into a training document."""
+
         parts = []
 
-        # Language tag
+
+
+                      
+
         parts.append(f"<|{sample.language}|>")
 
-        # Description as comment
+
+
+                                
+
         if sample.description:
+
             parts.append(f"# {sample.description}")
 
-        # Code
+
+
+              
+
         parts.append("<|code_start|>")
+
         parts.append(sample.code)
+
         parts.append("<|code_end|>")
 
+
+
         return '\n'.join(parts)
+
+
 
     def _format_instruction_document(self, sample: InstructionSample) -> str:
+
         """Format an instruction sample into a training document."""
+
         parts = [
+
             "<|system|>",
+
             "You are an expert coding assistant. Help the user with their programming task.",
+
             "<eos>",
+
             "<|user|>",
+
             sample.instruction,
+
         ]
 
+
+
         if sample.input_context:
+
             parts.append("")
+
             parts.append("```" + (sample.language or ""))
+
             parts.append(sample.input_context)
+
             parts.append("```")
 
+
+
         parts.extend([
+
             "<eos>",
+
             "<|assistant|>",
+
             sample.output,
+
             "<eos>",
+
         ])
+
+
 
         return '\n'.join(parts)
 
+
+
     def tokenize_and_shard(
+
         self,
+
         raw_dir: str,
+
         output_dir: str,
+
         tokenizer,
+
         config: Optional[DatasetConfig] = None,
+
     ) -> Dict[str, Any]:
+
         """
         Tokenize raw documents and create binary shards.
         
@@ -885,22 +1200,42 @@ class DatasetGenerator:
         Returns:
             Processing statistics
         """
+
         if config is None:
+
             config = DatasetConfig()
 
-        # Load raw documents
+
+
+                            
+
         raw_path = os.path.join(raw_dir, "raw_documents.jsonl")
+
         documents = []
 
+
+
         logger.info(f"Loading documents from {raw_path}...")
+
         with open(raw_path) as f:
+
             for line in f:
+
                 documents.append(json.loads(line))
+
+
 
         logger.info(f"Loaded {len(documents)} documents")
 
-        # Process
+
+
+                 
+
         processor = DatasetProcessor(config, tokenizer)
+
         stats = processor.process(documents, output_dir)
 
+
+
         return stats
+
