@@ -1,7 +1,7 @@
 -r requirements.txt
 pytest==8.2.2
 pytest-cov==5.0.0
-ruff==0.5.1
+ruff==0.17.2
 
 # Optional: reference tokenizer for the competitiveness gate (scripts/evaluate_tokenizer.py)
 tiktoken==0.7.0
