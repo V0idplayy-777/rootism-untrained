@@ -10,7 +10,7 @@ mpi4py==3.1.6
 accelerate==0.30.1
 
 # Tokenizer / data
-sentencepiece==0.2.0
+sentencepiece==0.2.2
 tokenizers==0.19.1
 datasets==2.20.0
 datasketch==1.6.5
