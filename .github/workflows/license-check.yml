@@ -1,0 +1,26 @@
+name: License Compliance
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  license-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pip-licenses
+
+      - name: Check Licenses
+        run: |
+          # Fails the build if unauthorized licenses are found
+          pip-licenses --fail-on GPL AGPL LGPL
