@@ -165,6 +165,10 @@ def search_codebase(query: str, directory: str = ".") -> str:
 # AGENT
 # ============================================================
 
+"""
+okay, I'm cooking...
+"""
+
 class CodingAgent:
     """
     ReAct-style coding agent with tool use.
