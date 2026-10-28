@@ -9,7 +9,19 @@ that flow (calibrate -> quantize -> save) so kernels can be swapped in.
 
 
 
+
+
+
+
 from __future__ import annotations
+
+
+
+
+
+
+
+
 
 
 
@@ -21,7 +33,15 @@ import copy
 
 
 
+
+
+
+
 from pathlib import Path
+
+
+
+
 
 
 
@@ -33,7 +53,19 @@ from typing import Dict
 
 
 
+
+
+
+
+
+
+
+
 import torch
+
+
+
+
 
 
 
@@ -49,7 +81,23 @@ import torch.nn as nn
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def dynamic_int8(model: nn.Module) -> nn.Module:
+
+
+
+
 
 
 
@@ -57,7 +105,15 @@ def dynamic_int8(model: nn.Module) -> nn.Module:
 
 
 
+
+
+
+
     m.eval()
+
+
+
+
 
 
 
@@ -73,7 +129,23 @@ def dynamic_int8(model: nn.Module) -> nn.Module:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def weight_only_int8_state_dict(model: nn.Module) -> Dict:
+
+
+
+
 
 
 
@@ -81,7 +153,15 @@ def weight_only_int8_state_dict(model: nn.Module) -> Dict:
 
 
 
+
+
+
+
     packed = {}
+
+
+
+
 
 
 
@@ -89,7 +169,15 @@ def weight_only_int8_state_dict(model: nn.Module) -> Dict:
 
 
 
+
+
+
+
         if tensor.dtype in (torch.float32, torch.float16, torch.bfloat16) and tensor.dim() == 2 and name.endswith("weight"):
+
+
+
+
 
 
 
@@ -97,7 +185,15 @@ def weight_only_int8_state_dict(model: nn.Module) -> Dict:
 
 
 
+
+
+
+
             scale = (w.abs().amax(dim=1, keepdim=True) / 127.0).clamp_min(1e-8)
+
+
+
+
 
 
 
@@ -105,7 +201,15 @@ def weight_only_int8_state_dict(model: nn.Module) -> Dict:
 
 
 
+
+
+
+
             packed[name] = q
+
+
+
+
 
 
 
@@ -113,11 +217,23 @@ def weight_only_int8_state_dict(model: nn.Module) -> Dict:
 
 
 
+
+
+
+
         else:
 
 
 
+
+
+
+
             packed[name] = tensor
+
+
+
+
 
 
 
@@ -133,7 +249,23 @@ def weight_only_int8_state_dict(model: nn.Module) -> Dict:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def load_weight_only_int8(model: nn.Module, packed: Dict) -> nn.Module:
+
+
+
+
 
 
 
@@ -141,7 +273,15 @@ def load_weight_only_int8(model: nn.Module, packed: Dict) -> nn.Module:
 
 
 
+
+
+
+
     for name, tensor in packed.items():
+
+
+
+
 
 
 
@@ -149,7 +289,15 @@ def load_weight_only_int8(model: nn.Module, packed: Dict) -> nn.Module:
 
 
 
+
+
+
+
             continue
+
+
+
+
 
 
 
@@ -157,7 +305,15 @@ def load_weight_only_int8(model: nn.Module, packed: Dict) -> nn.Module:
 
 
 
+
+
+
+
             state[name] = (tensor.float() * packed[name + ".scale"]).to(torch.float32)
+
+
+
+
 
 
 
@@ -165,11 +321,23 @@ def load_weight_only_int8(model: nn.Module, packed: Dict) -> nn.Module:
 
 
 
+
+
+
+
             state[name] = tensor
 
 
 
+
+
+
+
     model.load_state_dict(state, strict=False)
+
+
+
+
 
 
 
@@ -185,7 +353,23 @@ def load_weight_only_int8(model: nn.Module, packed: Dict) -> nn.Module:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def save_quantized(model: nn.Module, path: str, method: str = "weight_only_int8") -> Path:
+
+
+
+
 
 
 
@@ -193,7 +377,15 @@ def save_quantized(model: nn.Module, path: str, method: str = "weight_only_int8"
 
 
 
+
+
+
+
     p.parent.mkdir(parents=True, exist_ok=True)
+
+
+
+
 
 
 
@@ -201,7 +393,15 @@ def save_quantized(model: nn.Module, path: str, method: str = "weight_only_int8"
 
 
 
+
+
+
+
         torch.save({"method": method, "state_dict": weight_only_int8_state_dict(model)}, p)
+
+
+
+
 
 
 
@@ -209,7 +409,15 @@ def save_quantized(model: nn.Module, path: str, method: str = "weight_only_int8"
 
 
 
+
+
+
+
         torch.save({"method": method, "state_dict": dynamic_int8(model).state_dict()}, p)
+
+
+
+
 
 
 
@@ -217,7 +425,15 @@ def save_quantized(model: nn.Module, path: str, method: str = "weight_only_int8"
 
 
 
+
+
+
+
         raise ValueError(f"unknown quantization method {method!r}")
+
+
+
+
 
 
 
@@ -233,7 +449,23 @@ def save_quantized(model: nn.Module, path: str, method: str = "weight_only_int8"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def benchmark_model(model: nn.Module, example_ids: torch.Tensor, repeats: int = 3) -> Dict:
+
+
+
+
 
 
 
@@ -241,7 +473,15 @@ def benchmark_model(model: nn.Module, example_ids: torch.Tensor, repeats: int = 
 
 
 
+
+
+
+
     model.eval()
+
+
+
+
 
 
 
@@ -249,7 +489,15 @@ def benchmark_model(model: nn.Module, example_ids: torch.Tensor, repeats: int = 
 
 
 
+
+
+
+
     with torch.no_grad():
+
+
+
+
 
 
 
@@ -257,7 +505,15 @@ def benchmark_model(model: nn.Module, example_ids: torch.Tensor, repeats: int = 
 
 
 
+
+
+
+
         for _ in range(repeats):
+
+
+
+
 
 
 
@@ -265,7 +521,15 @@ def benchmark_model(model: nn.Module, example_ids: torch.Tensor, repeats: int = 
 
 
 
+
+
+
+
         elapsed = (time.time() - start) / max(repeats, 1)
+
+
+
+
 
 
 
@@ -273,7 +537,15 @@ def benchmark_model(model: nn.Module, example_ids: torch.Tensor, repeats: int = 
 
 
 
+
+
+
+
             "tokens_per_second": example_ids.numel() / max(elapsed, 1e-9)}
+
+
+
+
 
 
 

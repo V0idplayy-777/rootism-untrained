@@ -15,7 +15,19 @@ Handles:
 
 
 
+
+
+
+
+
+
+
+
 import os
+
+
+
+
 
 
 
@@ -23,7 +35,15 @@ import json
 
 
 
+
+
+
+
 import struct
+
+
+
+
 
 
 
@@ -31,7 +51,15 @@ import hashlib
 
 
 
+
+
+
+
 import random
+
+
+
+
 
 
 
@@ -39,7 +67,15 @@ import numpy as np
 
 
 
+
+
+
+
 from typing import List, Dict, Optional, Tuple, Iterator, Any
+
+
+
+
 
 
 
@@ -47,11 +83,27 @@ from dataclasses import dataclass
 
 
 
+
+
+
+
 from pathlib import Path
 
 
 
+
+
+
+
 import logging
+
+
+
+
+
+
+
+
 
 
 
@@ -71,7 +123,23 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @dataclass
+
+
+
+
 
 
 
@@ -79,7 +147,15 @@ class DatasetConfig:
 
 
 
+
+
+
+
     """Configuration for dataset processing."""
+
+
+
+
 
 
 
@@ -87,7 +163,15 @@ class DatasetConfig:
 
 
 
+
+
+
+
     train_split: float = 0.95
+
+
+
+
 
 
 
@@ -95,7 +179,15 @@ class DatasetConfig:
 
 
 
+
+
+
+
     test_split: float = 0.01
+
+
+
+
 
 
 
@@ -103,11 +195,23 @@ class DatasetConfig:
 
 
 
+
+
+
+
     min_sequence_length: int = 32
 
 
 
+
+
+
+
     dedup_threshold: float = 0.85                                
+
+
+
+
 
 
 
@@ -123,7 +227,23 @@ class DatasetConfig:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class TextDeduplicator:
+
+
+
+
 
 
 
@@ -138,7 +258,19 @@ class TextDeduplicator:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, num_hashes: int = 128, num_bands: int = 16):
+
+
+
+
 
 
 
@@ -146,7 +278,15 @@ class TextDeduplicator:
 
 
 
+
+
+
+
         self.num_bands = num_bands
+
+
+
+
 
 
 
@@ -154,7 +294,15 @@ class TextDeduplicator:
 
 
 
+
+
+
+
         self.signatures: Dict[str, np.ndarray] = {}
+
+
+
+
 
 
 
@@ -166,7 +314,19 @@ class TextDeduplicator:
 
 
 
+
+
+
+
+
+
+
+
     def _shingles(self, text: str, k: int = 5) -> set:
+
+
+
+
 
 
 
@@ -174,7 +334,15 @@ class TextDeduplicator:
 
 
 
+
+
+
+
         text = text.lower().strip()
+
+
+
+
 
 
 
@@ -182,7 +350,15 @@ class TextDeduplicator:
 
 
 
+
+
+
+
             return {text}
+
+
+
+
 
 
 
@@ -194,11 +370,27 @@ class TextDeduplicator:
 
 
 
+
+
+
+
+
+
+
+
     def _minhash(self, shingles: set) -> np.ndarray:
 
 
 
+
+
+
+
         """Compute MinHash signature for a set of shingles."""
+
+
+
+
 
 
 
@@ -210,7 +402,19 @@ class TextDeduplicator:
 
 
 
+
+
+
+
+
+
+
+
         for shingle in shingles:
+
+
+
+
 
 
 
@@ -218,7 +422,15 @@ class TextDeduplicator:
 
 
 
+
+
+
+
                                                            
+
+
+
+
 
 
 
@@ -230,7 +442,19 @@ class TextDeduplicator:
 
 
 
+
+
+
+
+
+
+
+
             for i in range(self.num_hashes):
+
+
+
+
 
 
 
@@ -238,11 +462,27 @@ class TextDeduplicator:
 
 
 
+
+
+
+
                 permuted = (hash_val ^ ((i * 2654435761) & 0xFFFFFFFF)) & 0xFFFFFFFF
 
 
 
+
+
+
+
                 signature[i] = min(signature[i], permuted)
+
+
+
+
+
+
+
+
 
 
 
@@ -258,7 +498,19 @@ class TextDeduplicator:
 
 
 
+
+
+
+
+
+
+
+
     def add(self, doc_id: str, text: str) -> bool:
+
+
+
+
 
 
 
@@ -268,7 +520,15 @@ class TextDeduplicator:
 
 
 
+
+
+
+
         shingles = self._shingles(text)
+
+
+
+
 
 
 
@@ -276,7 +536,19 @@ class TextDeduplicator:
 
 
 
+
+
+
+
             return False
+
+
+
+
+
+
+
+
 
 
 
@@ -292,7 +564,19 @@ class TextDeduplicator:
 
 
 
+
+
+
+
+
+
+
+
                                              
+
+
+
+
 
 
 
@@ -300,11 +584,23 @@ class TextDeduplicator:
 
 
 
+
+
+
+
             start = band_idx * self.rows_per_band
 
 
 
+
+
+
+
             end = start + self.rows_per_band
+
+
+
+
 
 
 
@@ -316,7 +612,19 @@ class TextDeduplicator:
 
 
 
+
+
+
+
+
+
+
+
             bucket_key = (band_idx, band)
+
+
+
+
 
 
 
@@ -324,7 +632,15 @@ class TextDeduplicator:
 
 
 
+
+
+
+
                                                                 
+
+
+
+
 
 
 
@@ -332,7 +648,15 @@ class TextDeduplicator:
 
 
 
+
+
+
+
                     existing_sig = self.signatures[existing_id]
+
+
+
+
 
 
 
@@ -340,7 +664,15 @@ class TextDeduplicator:
 
 
 
+
+
+
+
                     if similarity > 0.85:
+
+
+
+
 
 
 
@@ -352,7 +684,19 @@ class TextDeduplicator:
 
 
 
+
+
+
+
+
+
+
+
                                   
+
+
+
+
 
 
 
@@ -360,7 +704,15 @@ class TextDeduplicator:
 
 
 
+
+
+
+
         for band_idx in range(self.num_bands):
+
+
+
+
 
 
 
@@ -368,7 +720,15 @@ class TextDeduplicator:
 
 
 
+
+
+
+
             end = start + self.rows_per_band
+
+
+
+
 
 
 
@@ -376,11 +736,27 @@ class TextDeduplicator:
 
 
 
+
+
+
+
             bucket_key = (band_idx, band)
 
 
 
+
+
+
+
             self.buckets.setdefault(bucket_key, []).append(doc_id)
+
+
+
+
+
+
+
+
 
 
 
@@ -400,7 +776,23 @@ class TextDeduplicator:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class QualityFilter:
+
+
+
+
 
 
 
@@ -412,7 +804,19 @@ class QualityFilter:
 
 
 
+
+
+
+
+
+
+
+
     @staticmethod
+
+
+
+
 
 
 
@@ -420,9 +824,17 @@ class QualityFilter:
 
 
 
+
+
+
+
         """
         Check if text is quality code. Returns (passes, reason).
         """
+
+
+
+
 
 
 
@@ -434,11 +846,27 @@ class QualityFilter:
 
 
 
+
+
+
+
+
+
+
+
                    
 
 
 
+
+
+
+
         if len(lines) < 3:
+
+
+
+
 
 
 
@@ -450,7 +878,19 @@ class QualityFilter:
 
 
 
+
+
+
+
+
+
+
+
                              
+
+
+
+
 
 
 
@@ -458,11 +898,23 @@ class QualityFilter:
 
 
 
+
+
+
+
         repetition_ratio = 1 - len(unique_lines) / len(lines)
 
 
 
+
+
+
+
         if repetition_ratio > 0.5:
+
+
+
+
 
 
 
@@ -474,7 +926,19 @@ class QualityFilter:
 
 
 
+
+
+
+
+
+
+
+
                                    
+
+
+
+
 
 
 
@@ -482,7 +946,15 @@ class QualityFilter:
 
 
 
+
+
+
+
             'def ', 'class ', 'import ', 'from ', 'return ',
+
+
+
+
 
 
 
@@ -490,11 +962,23 @@ class QualityFilter:
 
 
 
+
+
+
+
             'for ', 'while ', 'try ', 'catch ', 'async ',
 
 
 
+
+
+
+
             '=>', '::', '->',                            
+
+
+
+
 
 
 
@@ -506,11 +990,27 @@ class QualityFilter:
 
 
 
+
+
+
+
+
+
+
+
         has_code = any(indicator in text for indicator in code_indicators)
 
 
 
+
+
+
+
         if not has_code:
+
+
+
+
 
 
 
@@ -522,7 +1022,19 @@ class QualityFilter:
 
 
 
+
+
+
+
+
+
+
+
                                      
+
+
+
+
 
 
 
@@ -530,7 +1042,15 @@ class QualityFilter:
 
 
 
+
+
+
+
         stack = []
+
+
+
+
 
 
 
@@ -538,7 +1058,15 @@ class QualityFilter:
 
 
 
+
+
+
+
             if char in brackets:
+
+
+
+
 
 
 
@@ -546,7 +1074,15 @@ class QualityFilter:
 
 
 
+
+
+
+
             elif char in brackets.values():
+
+
+
+
 
 
 
@@ -554,7 +1090,15 @@ class QualityFilter:
 
 
 
+
+
+
+
                     return False, "Unbalanced brackets"
+
+
+
+
 
 
 
@@ -566,7 +1110,19 @@ class QualityFilter:
 
 
 
+
+
+
+
+
+
+
+
                                                       
+
+
+
+
 
 
 
@@ -574,7 +1130,19 @@ class QualityFilter:
 
 
 
+
+
+
+
             return False, "Too many unclosed brackets"
+
+
+
+
+
+
+
+
 
 
 
@@ -594,7 +1162,23 @@ class QualityFilter:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class DatasetSharder:
+
+
+
+
 
 
 
@@ -609,7 +1193,19 @@ class DatasetSharder:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, output_dir: str, shard_size_tokens: int = 1_000_000):
+
+
+
+
 
 
 
@@ -617,7 +1213,15 @@ class DatasetSharder:
 
 
 
+
+
+
+
         self.output_dir.mkdir(parents=True, exist_ok=True)
+
+
+
+
 
 
 
@@ -629,7 +1233,19 @@ class DatasetSharder:
 
 
 
+
+
+
+
+
+
+
+
     def create_shards(
+
+
+
+
 
 
 
@@ -637,7 +1253,15 @@ class DatasetSharder:
 
 
 
+
+
+
+
         token_ids: List[int],
+
+
+
+
 
 
 
@@ -645,7 +1269,15 @@ class DatasetSharder:
 
 
 
+
+
+
+
     ) -> List[str]:
+
+
+
+
 
 
 
@@ -657,7 +1289,15 @@ class DatasetSharder:
 
 
 
+
+
+
+
         shard_paths = []
+
+
+
+
 
 
 
@@ -665,7 +1305,19 @@ class DatasetSharder:
 
 
 
+
+
+
+
         num_shards = (total_tokens + self.shard_size_tokens - 1) // self.shard_size_tokens
+
+
+
+
+
+
+
+
 
 
 
@@ -681,7 +1333,19 @@ class DatasetSharder:
 
 
 
+
+
+
+
+
+
+
+
         for i in range(num_shards):
+
+
+
+
 
 
 
@@ -689,7 +1353,15 @@ class DatasetSharder:
 
 
 
+
+
+
+
             end = min(start + self.shard_size_tokens, total_tokens)
+
+
+
+
 
 
 
@@ -701,7 +1373,19 @@ class DatasetSharder:
 
 
 
+
+
+
+
+
+
+
+
             shard_path = self.output_dir / f"{prefix}_{i:05d}.bin"
+
+
+
+
 
 
 
@@ -709,11 +1393,23 @@ class DatasetSharder:
 
 
 
+
+
+
+
                                           
 
 
 
+
+
+
+
             arr = np.array(shard_tokens, dtype=np.uint32)
+
+
+
+
 
 
 
@@ -725,7 +1421,19 @@ class DatasetSharder:
 
 
 
+
+
+
+
+
+
+
+
             shard_paths.append(str(shard_path))
+
+
+
+
 
 
 
@@ -737,7 +1445,19 @@ class DatasetSharder:
 
 
 
+
+
+
+
+
+
+
+
                         
+
+
+
+
 
 
 
@@ -745,7 +1465,15 @@ class DatasetSharder:
 
 
 
+
+
+
+
             "num_shards": num_shards,
+
+
+
+
 
 
 
@@ -753,7 +1481,15 @@ class DatasetSharder:
 
 
 
+
+
+
+
             "shard_size_tokens": self.shard_size_tokens,
+
+
+
+
 
 
 
@@ -761,7 +1497,15 @@ class DatasetSharder:
 
 
 
+
+
+
+
                 {
+
+
+
+
 
 
 
@@ -769,7 +1513,15 @@ class DatasetSharder:
 
 
 
+
+
+
+
                     "tokens": self.shard_size_tokens if i < num_shards - 1
+
+
+
+
 
 
 
@@ -777,7 +1529,15 @@ class DatasetSharder:
 
 
 
+
+
+
+
                 }
+
+
+
+
 
 
 
@@ -785,7 +1545,15 @@ class DatasetSharder:
 
 
 
+
+
+
+
             ],
+
+
+
+
 
 
 
@@ -797,7 +1565,19 @@ class DatasetSharder:
 
 
 
+
+
+
+
+
+
+
+
         manifest_path = self.output_dir / f"{prefix}_manifest.json"
+
+
+
+
 
 
 
@@ -805,7 +1585,19 @@ class DatasetSharder:
 
 
 
+
+
+
+
             json.dump(manifest, f, indent=2)
+
+
+
+
+
+
+
+
 
 
 
@@ -825,7 +1617,23 @@ class DatasetSharder:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class MemoryMappedDataset:
+
+
+
+
 
 
 
@@ -842,7 +1650,19 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(
+
+
+
+
 
 
 
@@ -850,7 +1670,15 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
         data_dir: str,
+
+
+
+
 
 
 
@@ -858,7 +1686,15 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
         seq_length: int = 8192,
+
+
+
+
 
 
 
@@ -866,11 +1702,23 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
         self.data_dir = Path(data_dir)
 
 
 
+
+
+
+
         self.split = split
+
+
+
+
 
 
 
@@ -882,7 +1730,19 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
                        
+
+
+
+
 
 
 
@@ -890,7 +1750,15 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
         with open(manifest_path) as f:
+
+
+
+
 
 
 
@@ -902,7 +1770,19 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
                                
+
+
+
+
 
 
 
@@ -910,7 +1790,15 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
         self.shard_offsets = [0]
+
+
+
+
 
 
 
@@ -918,7 +1806,15 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
         for shard_info in self.manifest["shards"]:
+
+
+
+
 
 
 
@@ -926,11 +1822,23 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
             mmap = np.memmap(str(shard_path), dtype=np.uint32, mode='r')
 
 
 
+
+
+
+
             self.shards.append(mmap)
+
+
+
+
 
 
 
@@ -942,7 +1850,19 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
         self.total_tokens = self.manifest["total_tokens"]
+
+
+
+
 
 
 
@@ -954,7 +1874,19 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
         logger.info(
+
+
+
+
 
 
 
@@ -962,7 +1894,15 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
             f"{self.num_sequences:,} sequences of length {seq_length}"
+
+
+
+
 
 
 
@@ -974,7 +1914,19 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
     def __len__(self) -> int:
+
+
+
+
 
 
 
@@ -986,7 +1938,19 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
     def __getitem__(self, idx: int) -> np.ndarray:
+
+
+
+
 
 
 
@@ -994,7 +1958,15 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
         start = idx * self.seq_length
+
+
+
+
 
 
 
@@ -1006,11 +1978,27 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
                                         
 
 
 
+
+
+
+
         tokens = self._get_tokens(start, end)
+
+
+
+
 
 
 
@@ -1022,7 +2010,19 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
     def _get_tokens(self, start: int, end: int) -> np.ndarray:
+
+
+
+
 
 
 
@@ -1030,7 +2030,15 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
                              
+
+
+
+
 
 
 
@@ -1038,7 +2046,15 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
         for i in range(len(self.shard_offsets) - 1):
+
+
+
+
 
 
 
@@ -1046,7 +2062,15 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
                 shard_idx = i
+
+
+
+
 
 
 
@@ -1058,11 +2082,31 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
         local_start = start - self.shard_offsets[shard_idx]
 
 
 
+
+
+
+
         local_end = min(end - self.shard_offsets[shard_idx], len(self.shards[shard_idx]))
+
+
+
+
+
+
+
+
 
 
 
@@ -1078,7 +2122,19 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
                                                 
+
+
+
+
 
 
 
@@ -1086,7 +2142,15 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
         if remaining > 0 and shard_idx + 1 < len(self.shards):
+
+
+
+
 
 
 
@@ -1094,7 +2158,19 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
             tokens = np.concatenate([tokens, next_tokens])
+
+
+
+
+
+
+
+
 
 
 
@@ -1110,7 +2186,19 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
     def get_batch(self, batch_size: int, indices: Optional[List[int]] = None) -> Tuple[np.ndarray, np.ndarray]:
+
+
+
+
 
 
 
@@ -1118,11 +2206,27 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
         if indices is None:
 
 
 
+
+
+
+
             indices = random.sample(range(len(self)), batch_size)
+
+
+
+
+
+
+
+
 
 
 
@@ -1138,7 +2242,19 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
                                                     
+
+
+
+
 
 
 
@@ -1146,7 +2262,19 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
         targets = batch[:, 1:]
+
+
+
+
+
+
+
+
 
 
 
@@ -1162,7 +2290,19 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
     def iterate_epoch(self, batch_size: int, shuffle: bool = True) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
+
+
+
+
 
 
 
@@ -1170,11 +2310,23 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
         indices = list(range(len(self)))
 
 
 
+
+
+
+
         if shuffle:
+
+
+
+
 
 
 
@@ -1186,7 +2338,19 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
         for i in range(0, len(indices), batch_size):
+
+
+
+
 
 
 
@@ -1194,11 +2358,23 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
             if len(batch_indices) < batch_size:
 
 
 
+
+
+
+
                 continue
+
+
+
+
 
 
 
@@ -1214,7 +2390,23 @@ class MemoryMappedDataset:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class DatasetProcessor:
+
+
+
+
 
 
 
@@ -1236,7 +2428,19 @@ class DatasetProcessor:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, config: DatasetConfig, tokenizer):
+
+
+
+
 
 
 
@@ -1244,11 +2448,23 @@ class DatasetProcessor:
 
 
 
+
+
+
+
         self.tokenizer = tokenizer
 
 
 
+
+
+
+
         self.deduplicator = TextDeduplicator()
+
+
+
+
 
 
 
@@ -1260,7 +2476,19 @@ class DatasetProcessor:
 
 
 
+
+
+
+
+
+
+
+
     def process(
+
+
+
+
 
 
 
@@ -1268,7 +2496,15 @@ class DatasetProcessor:
 
 
 
+
+
+
+
         raw_texts: List[Dict[str, Any]],
+
+
+
+
 
 
 
@@ -1276,7 +2512,15 @@ class DatasetProcessor:
 
 
 
+
+
+
+
     ) -> Dict[str, Any]:
+
+
+
+
 
 
 
@@ -1293,7 +2537,15 @@ class DatasetProcessor:
 
 
 
+
+
+
+
         stats = {
+
+
+
+
 
 
 
@@ -1301,7 +2553,15 @@ class DatasetProcessor:
 
 
 
+
+
+
+
             "filtered_quality": 0,
+
+
+
+
 
 
 
@@ -1309,7 +2569,15 @@ class DatasetProcessor:
 
 
 
+
+
+
+
             "total_tokens": 0,
+
+
+
+
 
 
 
@@ -1317,7 +2585,19 @@ class DatasetProcessor:
 
 
 
+
+
+
+
         }
+
+
+
+
+
+
+
+
 
 
 
@@ -1333,7 +2613,23 @@ class DatasetProcessor:
 
 
 
+
+
+
+
+
+
+
+
         logger.info(f"Processing {len(raw_texts)} documents...")
+
+
+
+
+
+
+
+
 
 
 
@@ -1345,11 +2641,27 @@ class DatasetProcessor:
 
 
 
+
+
+
+
             if (i + 1) % 10000 == 0:
 
 
 
+
+
+
+
                 logger.info(f"  Processed {i + 1}/{len(raw_texts)} documents")
+
+
+
+
+
+
+
+
 
 
 
@@ -1365,7 +2677,19 @@ class DatasetProcessor:
 
 
 
+
+
+
+
+
+
+
+
                             
+
+
+
+
 
 
 
@@ -1373,7 +2697,15 @@ class DatasetProcessor:
 
 
 
+
+
+
+
             if not passes:
+
+
+
+
 
 
 
@@ -1381,7 +2713,19 @@ class DatasetProcessor:
 
 
 
+
+
+
+
                 continue
+
+
+
+
+
+
+
+
 
 
 
@@ -1393,7 +2737,15 @@ class DatasetProcessor:
 
 
 
+
+
+
+
             doc_id = hashlib.md5(text[:200].encode()).hexdigest()
+
+
+
+
 
 
 
@@ -1401,11 +2753,27 @@ class DatasetProcessor:
 
 
 
+
+
+
+
                 stats["filtered_duplicate"] += 1
 
 
 
+
+
+
+
                 continue
+
+
+
+
+
+
+
+
 
 
 
@@ -1417,7 +2785,19 @@ class DatasetProcessor:
 
 
 
+
+
+
+
             tokens = self.tokenizer.encode(text, add_special_tokens=True)
+
+
+
+
+
+
+
+
 
 
 
@@ -1429,7 +2809,19 @@ class DatasetProcessor:
 
 
 
+
+
+
+
             tokens.append(self.tokenizer.eos_token_id)
+
+
+
+
+
+
+
+
 
 
 
@@ -1441,11 +2833,27 @@ class DatasetProcessor:
 
 
 
+
+
+
+
             if len(tokens) < self.config.min_sequence_length:
 
 
 
+
+
+
+
                 continue
+
+
+
+
+
+
+
+
 
 
 
@@ -1461,7 +2869,19 @@ class DatasetProcessor:
 
 
 
+
+
+
+
+
+
+
+
         stats["total_tokens"] = len(all_tokens)
+
+
+
+
 
 
 
@@ -1473,7 +2893,19 @@ class DatasetProcessor:
 
 
 
+
+
+
+
+
+
+
+
                                    
+
+
+
+
 
 
 
@@ -1481,7 +2913,15 @@ class DatasetProcessor:
 
 
 
+
+
+
+
         train_end = int(total * self.config.train_split)
+
+
+
+
 
 
 
@@ -1493,7 +2933,19 @@ class DatasetProcessor:
 
 
 
+
+
+
+
+
+
+
+
         splits = {
+
+
+
+
 
 
 
@@ -1501,11 +2953,23 @@ class DatasetProcessor:
 
 
 
+
+
+
+
             "val": all_tokens[train_end:val_end],
 
 
 
+
+
+
+
             "test": all_tokens[val_end:],
+
+
+
+
 
 
 
@@ -1517,7 +2981,19 @@ class DatasetProcessor:
 
 
 
+
+
+
+
+
+
+
+
                                       
+
+
+
+
 
 
 
@@ -1525,11 +3001,23 @@ class DatasetProcessor:
 
 
 
+
+
+
+
             output_dir,
 
 
 
+
+
+
+
             shard_size_tokens=1_000_000,
+
+
+
+
 
 
 
@@ -1541,7 +3029,19 @@ class DatasetProcessor:
 
 
 
+
+
+
+
+
+
+
+
         for split_name, tokens in splits.items():
+
+
+
+
 
 
 
@@ -1549,7 +3049,15 @@ class DatasetProcessor:
 
 
 
+
+
+
+
                 paths = sharder.create_shards(tokens, prefix=split_name)
+
+
+
+
 
 
 
@@ -1557,7 +3065,19 @@ class DatasetProcessor:
 
 
 
+
+
+
+
                 stats[f"{split_name}_tokens"] = len(tokens)
+
+
+
+
+
+
+
+
 
 
 
@@ -1573,7 +3093,19 @@ class DatasetProcessor:
 
 
 
+
+
+
+
+
+
+
+
                                
+
+
+
+
 
 
 
@@ -1581,7 +3113,15 @@ class DatasetProcessor:
 
 
 
+
+
+
+
         with open(stats_path, 'w') as f:
+
+
+
+
 
 
 
@@ -1593,7 +3133,19 @@ class DatasetProcessor:
 
 
 
+
+
+
+
+
+
+
+
         logger.info(f"Processing complete: {json.dumps(stats, indent=2)}")
+
+
+
+
 
 
 
@@ -1609,7 +3161,23 @@ class DatasetProcessor:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class StreamingDataset(MemoryMappedDataset):
+
+
+
+
 
 
 
@@ -1625,7 +3193,19 @@ class StreamingDataset(MemoryMappedDataset):
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, data_dir: str, split: str = "train", seq_length: int = 8192,
+
+
+
+
 
 
 
@@ -1633,11 +3213,23 @@ class StreamingDataset(MemoryMappedDataset):
 
 
 
+
+
+
+
         super().__init__(data_dir=data_dir, split=split, seq_length=seq_length)
 
 
 
+
+
+
+
         self.rank = rank
+
+
+
+
 
 
 
@@ -1649,7 +3241,19 @@ class StreamingDataset(MemoryMappedDataset):
 
 
 
+
+
+
+
+
+
+
+
     def __iter__(self):
+
+
+
+
 
 
 
@@ -1657,7 +3261,15 @@ class StreamingDataset(MemoryMappedDataset):
 
 
 
+
+
+
+
         idxs = [i for i in range(n) if i % max(self.world_size, 1) == self.rank]
+
+
+
+
 
 
 
@@ -1665,11 +3277,23 @@ class StreamingDataset(MemoryMappedDataset):
 
 
 
+
+
+
+
             tokens = self[i]
 
 
 
+
+
+
+
             yield {"input_ids": tokens[:-1], "labels": tokens[1:]}
+
+
+
+
 
 
 

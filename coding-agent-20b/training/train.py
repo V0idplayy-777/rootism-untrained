@@ -26,7 +26,19 @@ Usage:
 
 
 
+
+
+
+
+
+
+
+
 import os
+
+
+
+
 
 
 
@@ -34,7 +46,15 @@ import sys
 
 
 
+
+
+
+
 import json
+
+
+
+
 
 
 
@@ -42,7 +62,15 @@ import time
 
 
 
+
+
+
+
 import math
+
+
+
+
 
 
 
@@ -50,7 +78,15 @@ import argparse
 
 
 
+
+
+
+
 import logging
+
+
+
+
 
 
 
@@ -58,7 +94,15 @@ from pathlib import Path
 
 
 
+
+
+
+
 from typing import Dict, Any, Optional, Tuple
+
+
+
+
 
 
 
@@ -70,7 +114,19 @@ from dataclasses import dataclass
 
 
 
+
+
+
+
+
+
+
+
 import numpy as np
+
+
+
+
 
 
 
@@ -78,7 +134,15 @@ import torch
 
 
 
+
+
+
+
 import torch.distributed as dist
+
+
+
+
 
 
 
@@ -90,7 +154,19 @@ from torch.utils.data import DataLoader
 
 
 
+
+
+
+
+
+
+
+
                               
+
+
+
+
 
 
 
@@ -102,11 +178,27 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 
+
+
+
+
+
+
+
+
 from model.config import CodingAgentConfig, get_20b_config, get_7b_config, get_1b_config
 
 
 
+
+
+
+
 from model.model import CodingAgentModel
+
+
+
+
 
 
 
@@ -118,7 +210,19 @@ from dataset.processor import MemoryMappedDataset
 
 
 
+
+
+
+
+
+
+
+
                                                       
+
+
+
+
 
 
 
@@ -126,7 +230,15 @@ try:
 
 
 
+
+
+
+
     import deepspeed
+
+
+
+
 
 
 
@@ -134,7 +246,15 @@ try:
 
 
 
+
+
+
+
     DEEPSPEED_AVAILABLE = True
+
+
+
+
 
 
 
@@ -142,7 +262,15 @@ except ImportError:
 
 
 
+
+
+
+
     DEEPSPEED_AVAILABLE = False
+
+
+
+
 
 
 
@@ -158,7 +286,23 @@ except ImportError:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -166,7 +310,19 @@ except ImportError:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -178,7 +334,15 @@ def setup_logging(rank: int = 0, log_dir: str = "logs"):
 
 
 
+
+
+
+
     """Setup logging with file and console handlers."""
+
+
+
+
 
 
 
@@ -190,7 +354,19 @@ def setup_logging(rank: int = 0, log_dir: str = "logs"):
 
 
 
+
+
+
+
+
+
+
+
     log_level = logging.INFO if rank == 0 else logging.WARNING
+
+
+
+
 
 
 
@@ -198,7 +374,15 @@ def setup_logging(rank: int = 0, log_dir: str = "logs"):
 
 
 
+
+
+
+
         level=log_level,
+
+
+
+
 
 
 
@@ -206,7 +390,15 @@ def setup_logging(rank: int = 0, log_dir: str = "logs"):
 
 
 
+
+
+
+
         datefmt="%Y-%m-%d %H:%M:%S",
+
+
+
+
 
 
 
@@ -214,7 +406,15 @@ def setup_logging(rank: int = 0, log_dir: str = "logs"):
 
 
 
+
+
+
+
             logging.FileHandler(os.path.join(log_dir, f"train_rank{rank}.log")),
+
+
+
+
 
 
 
@@ -222,11 +422,23 @@ def setup_logging(rank: int = 0, log_dir: str = "logs"):
 
 
 
+
+
+
+
         ],
 
 
 
+
+
+
+
     )
+
+
+
+
 
 
 
@@ -242,7 +454,23 @@ def setup_logging(rank: int = 0, log_dir: str = "logs"):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -250,7 +478,19 @@ def setup_logging(rank: int = 0, log_dir: str = "logs"):
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -259,6 +499,10 @@ def setup_logging(rank: int = 0, log_dir: str = "logs"):
 
 
 class CosineDecayWithWarmup:
+
+
+
+
 
 
 
@@ -276,7 +520,19 @@ class CosineDecayWithWarmup:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(
+
+
+
+
 
 
 
@@ -284,7 +540,15 @@ class CosineDecayWithWarmup:
 
 
 
+
+
+
+
         max_lr: float,
+
+
+
+
 
 
 
@@ -292,7 +556,15 @@ class CosineDecayWithWarmup:
 
 
 
+
+
+
+
         warmup_steps: int,
+
+
+
+
 
 
 
@@ -300,7 +572,15 @@ class CosineDecayWithWarmup:
 
 
 
+
+
+
+
     ):
+
+
+
+
 
 
 
@@ -308,11 +588,23 @@ class CosineDecayWithWarmup:
 
 
 
+
+
+
+
         self.min_lr = min_lr
 
 
 
+
+
+
+
         self.warmup_steps = warmup_steps
+
+
+
+
 
 
 
@@ -324,7 +616,19 @@ class CosineDecayWithWarmup:
 
 
 
+
+
+
+
+
+
+
+
     def get_lr(self, step: int) -> float:
+
+
+
+
 
 
 
@@ -332,7 +636,15 @@ class CosineDecayWithWarmup:
 
 
 
+
+
+
+
                            
+
+
+
+
 
 
 
@@ -344,7 +656,19 @@ class CosineDecayWithWarmup:
 
 
 
+
+
+
+
+
+
+
+
         if step >= self.total_steps:
+
+
+
+
 
 
 
@@ -356,11 +680,27 @@ class CosineDecayWithWarmup:
 
 
 
+
+
+
+
+
+
+
+
                       
 
 
 
+
+
+
+
         progress = (step - self.warmup_steps) / (self.total_steps - self.warmup_steps)
+
+
+
+
 
 
 
@@ -376,7 +716,23 @@ class CosineDecayWithWarmup:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -384,7 +740,19 @@ class CosineDecayWithWarmup:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -396,7 +764,15 @@ class CosineDecayWithWarmup:
 
 
 
+
+
+
+
 class TrainingState:
+
+
+
+
 
 
 
@@ -404,7 +780,15 @@ class TrainingState:
 
 
 
+
+
+
+
     step: int = 0
+
+
+
+
 
 
 
@@ -412,7 +796,15 @@ class TrainingState:
 
 
 
+
+
+
+
     epoch: int = 0
+
+
+
+
 
 
 
@@ -420,7 +812,15 @@ class TrainingState:
 
 
 
+
+
+
+
     train_loss_history: list = None
+
+
+
+
 
 
 
@@ -428,7 +828,15 @@ class TrainingState:
 
 
 
+
+
+
+
     throughput_history: list = None
+
+
+
+
 
 
 
@@ -440,7 +848,19 @@ class TrainingState:
 
 
 
+
+
+
+
+
+
+
+
     def __post_init__(self):
+
+
+
+
 
 
 
@@ -448,7 +868,15 @@ class TrainingState:
 
 
 
+
+
+
+
             self.train_loss_history = []
+
+
+
+
 
 
 
@@ -456,11 +884,23 @@ class TrainingState:
 
 
 
+
+
+
+
             self.val_loss_history = []
 
 
 
+
+
+
+
         if self.throughput_history is None:
+
+
+
+
 
 
 
@@ -476,7 +916,23 @@ class TrainingState:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -484,7 +940,19 @@ class TrainingState:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -493,6 +961,10 @@ class TrainingState:
 
 
 class StreamingDataLoader:
+
+
+
+
 
 
 
@@ -511,7 +983,19 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(
+
+
+
+
 
 
 
@@ -519,7 +1003,15 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
         dataset: MemoryMappedDataset,
+
+
+
+
 
 
 
@@ -527,7 +1019,15 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
         rank: int = 0,
+
+
+
+
 
 
 
@@ -535,7 +1035,15 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
         shuffle: bool = True,
+
+
+
+
 
 
 
@@ -543,7 +1051,15 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
     ):
+
+
+
+
 
 
 
@@ -551,7 +1067,15 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
         self.batch_size = batch_size
+
+
+
+
 
 
 
@@ -559,7 +1083,15 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
         self.world_size = world_size
+
+
+
+
 
 
 
@@ -567,7 +1099,15 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
         self.seed = seed
+
+
+
+
 
 
 
@@ -579,7 +1119,19 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
+
+
+
+
                                           
+
+
+
+
 
 
 
@@ -587,11 +1139,23 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
         self.sequences_per_rank = self.total_sequences // world_size
 
 
 
+
+
+
+
         self.start_idx = rank * self.sequences_per_rank
+
+
+
+
 
 
 
@@ -603,7 +1167,19 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
+
+
+
+
     def __iter__(self):
+
+
+
+
 
 
 
@@ -615,11 +1191,27 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
+
+
+
+
         if self.shuffle:
 
 
 
+
+
+
+
             rng = np.random.RandomState(self.seed + self.epoch)
+
+
+
+
 
 
 
@@ -631,7 +1223,19 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
+
+
+
+
         for i in range(0, len(indices), self.batch_size):
+
+
+
+
 
 
 
@@ -639,7 +1243,15 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
             if len(batch_indices) < self.batch_size:
+
+
+
+
 
 
 
@@ -651,7 +1263,19 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
+
+
+
+
             inputs, targets = self.dataset.get_batch(self.batch_size, batch_indices)
+
+
+
+
 
 
 
@@ -659,7 +1283,15 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
                 "input_ids": torch.from_numpy(inputs).long(),
+
+
+
+
 
 
 
@@ -667,7 +1299,19 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
             }
+
+
+
+
+
+
+
+
 
 
 
@@ -683,7 +1327,19 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
+
+
+
+
     def __len__(self) -> int:
+
+
+
+
 
 
 
@@ -699,7 +1355,23 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -707,7 +1379,19 @@ class StreamingDataLoader:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -719,7 +1403,15 @@ def create_model(config: CodingAgentConfig) -> CodingAgentModel:
 
 
 
+
+
+
+
     """Create and initialize the model."""
+
+
+
+
 
 
 
@@ -731,11 +1423,31 @@ def create_model(config: CodingAgentConfig) -> CodingAgentModel:
 
 
 
+
+
+
+
+
+
+
+
     if config.use_gradient_checkpointing:
 
 
 
+
+
+
+
         model.enable_gradient_checkpointing(config.gradient_checkpointing_ratio)
+
+
+
+
+
+
+
+
 
 
 
@@ -755,7 +1467,23 @@ def create_model(config: CodingAgentConfig) -> CodingAgentModel:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def initialize_deepspeed(
+
+
+
+
 
 
 
@@ -763,7 +1491,15 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
     config: Dict[str, Any],
+
+
+
+
 
 
 
@@ -771,11 +1507,23 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
     args: argparse.Namespace,
 
 
 
+
+
+
+
 ):
+
+
+
+
 
 
 
@@ -786,11 +1534,23 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
                            
 
 
 
+
+
+
+
     with open(ds_config_path) as f:
+
+
+
+
 
 
 
@@ -802,11 +1562,27 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
+
+
+
+
                                           
 
 
 
+
+
+
+
     training_config = config.get("training", {})
+
+
+
+
 
 
 
@@ -818,7 +1594,19 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
+
+
+
+
     ds_config["train_micro_batch_size_per_gpu"] = batching_config.get("micro_batch_size_per_gpu", 2)
+
+
+
+
 
 
 
@@ -826,7 +1614,15 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
     ds_config["train_batch_size"] = (
+
+
+
+
 
 
 
@@ -834,7 +1630,15 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
         * ds_config["gradient_accumulation_steps"]
+
+
+
+
 
 
 
@@ -842,7 +1646,19 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
     )
+
+
+
+
+
+
+
+
 
 
 
@@ -854,7 +1670,15 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
     if "optimizer" in ds_config:
+
+
+
+
 
 
 
@@ -866,7 +1690,19 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
+
+
+
+
                    
+
+
+
+
 
 
 
@@ -874,7 +1710,15 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
         total_steps = config.get("training", {}).get("total_steps", 100000)
+
+
+
+
 
 
 
@@ -882,11 +1726,23 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
         ds_config["scheduler"]["params"]["warmup_num_steps"] = warmup_steps
 
 
 
+
+
+
+
         ds_config["scheduler"]["params"]["total_num_steps"] = total_steps
+
+
+
+
 
 
 
@@ -898,7 +1754,19 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
+
+
+
+
                         
+
+
+
+
 
 
 
@@ -906,7 +1774,15 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
     if precision == "bf16":
+
+
+
+
 
 
 
@@ -914,7 +1790,15 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
         ds_config["fp16"] = {"enabled": False}
+
+
+
+
 
 
 
@@ -922,7 +1806,15 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
         ds_config["bf16"] = {"enabled": False}
+
+
+
+
 
 
 
@@ -930,7 +1822,15 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
             "enabled": True,
+
+
+
+
 
 
 
@@ -938,11 +1838,23 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
             "loss_scale_window": 1000,
 
 
 
+
+
+
+
             "initial_scale_power": 16,
+
+
+
+
 
 
 
@@ -954,7 +1866,19 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
+
+
+
+
                                                  
+
+
+
+
 
 
 
@@ -966,7 +1890,19 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
+
+
+
+
                           
+
+
+
+
 
 
 
@@ -974,7 +1910,15 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
         model=model,
+
+
+
+
 
 
 
@@ -982,11 +1926,27 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
         config=ds_config,
 
 
 
+
+
+
+
     )
+
+
+
+
+
+
+
+
 
 
 
@@ -1006,7 +1966,23 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -1014,7 +1990,19 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -1026,7 +2014,15 @@ def initialize_deepspeed(
 
 
 
+
+
+
+
 def evaluate(
+
+
+
+
 
 
 
@@ -1034,7 +2030,15 @@ def evaluate(
 
 
 
+
+
+
+
     eval_loader: StreamingDataLoader,
+
+
+
+
 
 
 
@@ -1042,7 +2046,15 @@ def evaluate(
 
 
 
+
+
+
+
     device: torch.device = None,
+
+
+
+
 
 
 
@@ -1050,7 +2062,15 @@ def evaluate(
 
 
 
+
+
+
+
     """Run evaluation and compute metrics."""
+
+
+
+
 
 
 
@@ -1062,11 +2082,27 @@ def evaluate(
 
 
 
+
+
+
+
+
+
+
+
     total_loss = 0.0
 
 
 
+
+
+
+
     total_tokens = 0
+
+
+
+
 
 
 
@@ -1078,11 +2114,27 @@ def evaluate(
 
 
 
+
+
+
+
+
+
+
+
     for batch in eval_loader:
 
 
 
+
+
+
+
         if num_batches >= max_batches:
+
+
+
+
 
 
 
@@ -1094,7 +2146,19 @@ def evaluate(
 
 
 
+
+
+
+
+
+
+
+
         input_ids = batch["input_ids"].to(device)
+
+
+
+
 
 
 
@@ -1106,7 +2170,19 @@ def evaluate(
 
 
 
+
+
+
+
+
+
+
+
                       
+
+
+
+
 
 
 
@@ -1114,7 +2190,15 @@ def evaluate(
 
 
 
+
+
+
+
             output = model.module(input_ids=input_ids, labels=labels)
+
+
+
+
 
 
 
@@ -1122,7 +2206,19 @@ def evaluate(
 
 
 
+
+
+
+
             output = model(input_ids=input_ids, labels=labels)
+
+
+
+
+
+
+
+
 
 
 
@@ -1138,7 +2234,19 @@ def evaluate(
 
 
 
+
+
+
+
+
+
+
+
         total_loss += loss.item() * labels.numel()
+
+
+
+
 
 
 
@@ -1146,7 +2254,19 @@ def evaluate(
 
 
 
+
+
+
+
         num_batches += 1
+
+
+
+
+
+
+
+
 
 
 
@@ -1162,7 +2282,19 @@ def evaluate(
 
 
 
+
+
+
+
+
+
+
+
     avg_loss = total_loss / max(total_tokens, 1)
+
+
+
+
 
 
 
@@ -1174,7 +2306,19 @@ def evaluate(
 
 
 
+
+
+
+
+
+
+
+
     return {
+
+
+
+
 
 
 
@@ -1182,7 +2326,15 @@ def evaluate(
 
 
 
+
+
+
+
         "eval_perplexity": perplexity,
+
+
+
+
 
 
 
@@ -1190,7 +2342,15 @@ def evaluate(
 
 
 
+
+
+
+
         "eval_batches": num_batches,
+
+
+
+
 
 
 
@@ -1206,7 +2366,23 @@ def evaluate(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -1214,7 +2390,19 @@ def evaluate(
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -1226,7 +2414,19 @@ class CheckpointManager:
 
 
 
+
+
+
+
     """Manages model checkpoints with rotation."""
+
+
+
+
+
+
+
+
 
 
 
@@ -1238,7 +2438,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
         self,
+
+
+
+
 
 
 
@@ -1246,7 +2454,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
         keep_last_n: int = 5,
+
+
+
+
 
 
 
@@ -1254,7 +2470,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
     ):
+
+
+
+
 
 
 
@@ -1262,11 +2486,23 @@ class CheckpointManager:
 
 
 
+
+
+
+
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
 
 
+
+
+
+
         self.keep_last_n = keep_last_n
+
+
+
+
 
 
 
@@ -1278,7 +2514,19 @@ class CheckpointManager:
 
 
 
+
+
+
+
+
+
+
+
     def save(
+
+
+
+
 
 
 
@@ -1286,7 +2534,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
         model,
+
+
+
+
 
 
 
@@ -1294,7 +2550,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
         state: TrainingState,
+
+
+
+
 
 
 
@@ -1302,7 +2566,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
         step: int,
+
+
+
+
 
 
 
@@ -1310,11 +2582,23 @@ class CheckpointManager:
 
 
 
+
+
+
+
         """Save a checkpoint."""
 
 
 
+
+
+
+
         if self.rank != 0:
+
+
+
+
 
 
 
@@ -1326,7 +2610,19 @@ class CheckpointManager:
 
 
 
+
+
+
+
+
+
+
+
         ckpt_dir = self.save_dir / f"step_{step:08d}"
+
+
+
+
 
 
 
@@ -1338,7 +2634,19 @@ class CheckpointManager:
 
 
 
+
+
+
+
+
+
+
+
                     
+
+
+
+
 
 
 
@@ -1346,7 +2654,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
                              
+
+
+
+
 
 
 
@@ -1354,7 +2670,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
         else:
+
+
+
+
 
 
 
@@ -1366,7 +2690,19 @@ class CheckpointManager:
 
 
 
+
+
+
+
+
+
+
+
                              
+
+
+
+
 
 
 
@@ -1374,7 +2710,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
             "step": state.step,
+
+
+
+
 
 
 
@@ -1382,7 +2726,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
             "epoch": state.epoch,
+
+
+
+
 
 
 
@@ -1390,7 +2742,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
             "train_loss_history": state.train_loss_history[-1000:],
+
+
+
+
 
 
 
@@ -1398,7 +2758,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -1410,7 +2778,19 @@ class CheckpointManager:
 
 
 
+
+
+
+
+
+
+
+
                      
+
+
+
+
 
 
 
@@ -1422,11 +2802,31 @@ class CheckpointManager:
 
 
 
+
+
+
+
+
+
+
+
                                 
 
 
 
+
+
+
+
         self._rotate_checkpoints()
+
+
+
+
+
+
+
+
 
 
 
@@ -1442,7 +2842,19 @@ class CheckpointManager:
 
 
 
+
+
+
+
+
+
+
+
     def _rotate_checkpoints(self):
+
+
+
+
 
 
 
@@ -1450,7 +2862,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
         checkpoints = sorted(self.save_dir.glob("step_*"))
+
+
+
+
 
 
 
@@ -1458,7 +2878,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
             old = checkpoints.pop(0)
+
+
+
+
 
 
 
@@ -1466,7 +2894,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
             shutil.rmtree(old)
+
+
+
+
 
 
 
@@ -1478,7 +2914,19 @@ class CheckpointManager:
 
 
 
+
+
+
+
+
+
+
+
     def load_latest(self, model, optimizer=None) -> Optional[TrainingState]:
+
+
+
+
 
 
 
@@ -1486,7 +2934,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
         checkpoints = sorted(self.save_dir.glob("step_*"))
+
+
+
+
 
 
 
@@ -1494,7 +2950,19 @@ class CheckpointManager:
 
 
 
+
+
+
+
             return None
+
+
+
+
+
+
+
+
 
 
 
@@ -1510,7 +2978,19 @@ class CheckpointManager:
 
 
 
+
+
+
+
+
+
+
+
                     
+
+
+
+
 
 
 
@@ -1518,7 +2998,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
             model.load_checkpoint(str(latest))
+
+
+
+
 
 
 
@@ -1526,11 +3014,23 @@ class CheckpointManager:
 
 
 
+
+
+
+
             model_path = latest / "model.pt"
 
 
 
+
+
+
+
             if model_path.exists():
+
+
+
+
 
 
 
@@ -1542,7 +3042,19 @@ class CheckpointManager:
 
 
 
+
+
+
+
+
+
+
+
                              
+
+
+
+
 
 
 
@@ -1550,7 +3062,15 @@ class CheckpointManager:
 
 
 
+
+
+
+
         if state_path.exists():
+
+
+
+
 
 
 
@@ -1558,11 +3078,27 @@ class CheckpointManager:
 
 
 
+
+
+
+
             state = TrainingState(**state_dict)
 
 
 
+
+
+
+
             return state
+
+
+
+
+
+
+
+
 
 
 
@@ -1582,7 +3118,23 @@ class CheckpointManager:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -1590,7 +3142,19 @@ class CheckpointManager:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -1602,7 +3166,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     """Main training function."""
+
+
+
+
 
 
 
@@ -1610,7 +3182,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     if DEEPSPEED_AVAILABLE:
+
+
+
+
 
 
 
@@ -1622,7 +3202,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
     rank = int(os.environ.get("RANK", 0))
+
+
+
+
 
 
 
@@ -1630,7 +3222,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
+
+
+
+
+
+
+
+
 
 
 
@@ -1646,11 +3250,27 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
     if rank == 0:
 
 
 
+
+
+
+
         logger.info("=" * 60)
+
+
+
+
 
 
 
@@ -1658,7 +3278,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         logger.info("=" * 60)
+
+
+
+
+
+
+
+
 
 
 
@@ -1670,7 +3302,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     with open(args.config) as f:
+
+
+
+
 
 
 
@@ -1682,7 +3322,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                          
+
+
+
+
 
 
 
@@ -1690,11 +3342,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     if model_size == "20B":
 
 
 
+
+
+
+
         model_config = get_20b_config()
+
+
+
+
 
 
 
@@ -1702,7 +3366,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         model_config = get_7b_config()
+
+
+
+
 
 
 
@@ -1710,7 +3382,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         model_config = get_1b_config()
+
+
+
+
 
 
 
@@ -1718,7 +3398,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         model_config = get_20b_config()
+
+
+
+
+
+
+
+
 
 
 
@@ -1730,7 +3422,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     model_config.mixed_precision = config["training"]["precision"]
+
+
+
+
 
 
 
@@ -1742,11 +3442,27 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
     if rank == 0:
 
 
 
+
+
+
+
         model_config.print_summary()
+
+
+
+
 
 
 
@@ -1758,11 +3474,27 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                   
 
 
 
+
+
+
+
     logger.info("Creating model...")
+
+
+
+
 
 
 
@@ -1774,11 +3506,27 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
     if rank == 0:
 
 
 
+
+
+
+
         total_params = model.num_parameters()
+
+
+
+
 
 
 
@@ -1790,7 +3538,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                        
+
+
+
+
 
 
 
@@ -1798,7 +3558,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -1806,7 +3574,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 model,
+
+
+
+
 
 
 
@@ -1814,7 +3590,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 num_nodes=world_size // args.num_gpus,
+
+
+
+
 
 
 
@@ -1822,7 +3606,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         except Exception as e:
+
+
+
+
 
 
 
@@ -1834,7 +3626,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                           
+
+
+
+
 
 
 
@@ -1842,7 +3646,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         os.path.dirname(args.config),
+
+
+
+
 
 
 
@@ -1850,11 +3662,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     )
 
 
 
+
+
+
+
     if not os.path.isabs(ds_config_path):
+
+
+
+
 
 
 
@@ -1866,7 +3690,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
     logger.info(f"Initializing DeepSpeed with config: {ds_config_path}")
+
+
+
+
 
 
 
@@ -1874,11 +3710,27 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         model, config, ds_config_path, args
 
 
 
+
+
+
+
     )
+
+
+
+
+
+
+
+
 
 
 
@@ -1894,11 +3746,27 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                    
 
 
 
+
+
+
+
     logger.info("Loading datasets...")
+
+
+
+
 
 
 
@@ -1910,7 +3778,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
     train_dataset = MemoryMappedDataset(data_dir, split="train", seq_length=config["batching"]["sequence_length"])
+
+
+
+
 
 
 
@@ -1922,7 +3802,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
     train_loader = StreamingDataLoader(
+
+
+
+
 
 
 
@@ -1930,7 +3822,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         batch_size=config["batching"]["micro_batch_size_per_gpu"],
+
+
+
+
 
 
 
@@ -1938,7 +3838,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         world_size=world_size,
+
+
+
+
 
 
 
@@ -1946,7 +3854,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     )
+
+
+
+
+
+
+
+
 
 
 
@@ -1958,7 +3878,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         eval_dataset,
+
+
+
+
 
 
 
@@ -1966,7 +3894,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         rank=rank,
+
+
+
+
 
 
 
@@ -1974,11 +3910,27 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         shuffle=False,
 
 
 
+
+
+
+
     )
+
+
+
+
+
+
+
+
 
 
 
@@ -1990,7 +3942,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     training_config = config["training"]
+
+
+
+
 
 
 
@@ -1998,7 +3958,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     seq_length = config["batching"]["sequence_length"]
+
+
+
+
 
 
 
@@ -2006,11 +3974,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     tokens_per_step = global_batch_size * seq_length
 
 
 
+
+
+
+
     total_steps = total_tokens // tokens_per_step
+
+
+
+
 
 
 
@@ -2022,7 +4002,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
     lr_scheduler = CosineDecayWithWarmup(
+
+
+
+
 
 
 
@@ -2030,7 +4022,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         min_lr=training_config["min_learning_rate"],
+
+
+
+
 
 
 
@@ -2038,11 +4038,27 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         total_steps=total_steps,
 
 
 
+
+
+
+
     )
+
+
+
+
+
+
+
+
 
 
 
@@ -2054,11 +4070,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         logger.info(f"Total training steps: {total_steps:,}")
 
 
 
+
+
+
+
         logger.info(f"Warmup steps: {warmup_steps:,}")
+
+
+
+
 
 
 
@@ -2070,7 +4098,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                         
+
+
+
+
 
 
 
@@ -2078,7 +4118,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         save_dir=config["checkpointing"]["save_dir"],
+
+
+
+
 
 
 
@@ -2086,7 +4134,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         rank=rank,
+
+
+
+
 
 
 
@@ -2098,7 +4154,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                     
+
+
+
+
 
 
 
@@ -2110,7 +4178,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                                    
+
+
+
+
 
 
 
@@ -2118,7 +4198,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         loaded_state = ckpt_manager.load_latest(model_engine, optimizer)
+
+
+
+
 
 
 
@@ -2126,7 +4214,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             state = loaded_state
+
+
+
+
 
 
 
@@ -2138,11 +4234,27 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                                              
 
 
 
+
+
+
+
     logger.info("Starting training loop...")
+
+
+
+
 
 
 
@@ -2154,7 +4266,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
     tokens_per_batch = config["batching"]["micro_batch_size_per_gpu"] * seq_length * world_size
+
+
+
+
 
 
 
@@ -2166,11 +4290,31 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
     train_iter = iter(train_loader)
 
 
 
+
+
+
+
     step_start_time = time.time()
+
+
+
+
+
+
+
+
 
 
 
@@ -2186,7 +4330,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
     while state.step < max_steps:
+
+
+
+
 
 
 
@@ -2194,11 +4350,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         try:
 
 
 
+
+
+
+
             batch = next(train_iter)
+
+
+
+
 
 
 
@@ -2206,7 +4374,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             state.epoch += 1
+
+
+
+
 
 
 
@@ -2214,7 +4390,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             batch = next(train_iter)
+
+
+
+
+
+
+
+
 
 
 
@@ -2226,7 +4414,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         input_ids = batch["input_ids"].to(device)
+
+
+
+
 
 
 
@@ -2238,7 +4434,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                               
+
+
+
+
 
 
 
@@ -2246,7 +4454,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         for param_group in optimizer.param_groups:
+
+
+
+
 
 
 
@@ -2258,11 +4474,27 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                       
 
 
 
+
+
+
+
         output = model_engine(input_ids=input_ids, labels=labels)
+
+
+
+
 
 
 
@@ -2274,7 +4506,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                                               
+
+
+
+
 
 
 
@@ -2286,7 +4530,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                        
+
+
+
+
 
 
 
@@ -2298,11 +4554,27 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                                                                              
 
 
 
+
+
+
+
         if (state.step + 1) % grad_accum_steps == 0:
+
+
+
+
 
 
 
@@ -2314,7 +4586,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                       
+
+
+
+
 
 
 
@@ -2322,11 +4606,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         state.tokens_processed += tokens_per_batch
 
 
 
+
+
+
+
         loss_value = loss.item() * grad_accum_steps
+
+
+
+
 
 
 
@@ -2338,7 +4634,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                  
+
+
+
+
 
 
 
@@ -2346,11 +4654,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             elapsed = time.time() - step_start_time
 
 
 
+
+
+
+
             tokens_per_sec = tokens_per_batch * config["logging"]["log_every_steps"] / elapsed
+
+
+
+
 
 
 
@@ -2362,7 +4682,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
             throughput = tokens_per_sec / 1e6                
+
+
+
+
 
 
 
@@ -2374,11 +4706,27 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                                  
 
 
 
+
+
+
+
             recent_losses = state.train_loss_history[-100:]
+
+
+
+
 
 
 
@@ -2390,7 +4738,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
             elapsed_total = time.time() - state.start_time
+
+
+
+
 
 
 
@@ -2398,7 +4758,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             steps_remaining = max_steps - state.step
+
+
+
+
 
 
 
@@ -2410,7 +4778,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
             logger.info(
+
+
+
+
 
 
 
@@ -2418,7 +4798,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 f"Loss: {loss_value:.4f} (avg: {avg_loss:.4f}) | "
+
+
+
+
 
 
 
@@ -2426,7 +4814,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 f"Throughput: {throughput:.2f}M tok/s | "
+
+
+
+
 
 
 
@@ -2434,7 +4830,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 f"Epoch: {state.epoch} | "
+
+
+
+
 
 
 
@@ -2442,7 +4846,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             )
+
+
+
+
+
+
+
+
 
 
 
@@ -2454,7 +4870,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         if state.step % config["logging"]["eval_every_steps"] == 0:
+
+
+
+
 
 
 
@@ -2462,7 +4886,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 model_engine,
+
+
+
+
 
 
 
@@ -2470,7 +4902,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 max_batches=config["evaluation"]["eval_tokens"] // (config["evaluation"]["eval_batch_size"] * seq_length),
+
+
+
+
 
 
 
@@ -2478,7 +4918,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             )
+
+
+
+
+
+
+
+
 
 
 
@@ -2494,7 +4946,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
             if rank == 0:
+
+
+
+
 
 
 
@@ -2502,7 +4966,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     f"EVAL Step {state.step} | "
+
+
+
+
 
 
 
@@ -2510,7 +4982,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     f"Perplexity: {eval_metrics['eval_perplexity']:.2f}"
+
+
+
+
 
 
 
@@ -2522,7 +5002,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                 if eval_metrics["eval_loss"] < state.best_val_loss:
+
+
+
+
 
 
 
@@ -2530,7 +5022,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     logger.info(f"New best validation loss: {state.best_val_loss:.4f}")
+
+
+
+
+
+
+
+
 
 
 
@@ -2546,7 +5050,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                        
+
+
+
+
 
 
 
@@ -2554,7 +5070,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         if save_every > 0 and state.step % save_every == 0:
+
+
+
+
 
 
 
@@ -2566,7 +5090,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
                       
+
+
+
+
 
 
 
@@ -2574,7 +5110,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         logger.info("Training complete! Saving final checkpoint...")
+
+
+
+
 
 
 
@@ -2586,7 +5130,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
         total_time = time.time() - state.start_time
+
+
+
+
 
 
 
@@ -2594,7 +5150,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         logger.info(f"Total tokens processed: {state.tokens_processed / 1e9:.2f}B")
+
+
+
+
 
 
 
@@ -2602,7 +5166,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         if state.val_loss_history:
+
+
+
+
 
 
 
@@ -2618,7 +5190,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -2626,7 +5214,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -2638,7 +5238,19 @@ def parse_args():
 
 
 
+
+
+
+
     parser = argparse.ArgumentParser(description="Train the Coding Agent Model")
+
+
+
+
+
+
+
+
 
 
 
@@ -2650,7 +5262,15 @@ def parse_args():
 
 
 
+
+
+
+
                         help="Path to training configuration file")
+
+
+
+
 
 
 
@@ -2658,7 +5278,15 @@ def parse_args():
 
 
 
+
+
+
+
                         help="Override model size")
+
+
+
+
 
 
 
@@ -2666,7 +5294,15 @@ def parse_args():
 
 
 
+
+
+
+
                         help="Maximum training steps (overrides config)")
+
+
+
+
 
 
 
@@ -2674,7 +5310,15 @@ def parse_args():
 
 
 
+
+
+
+
                         help="Resume from latest checkpoint")
+
+
+
+
 
 
 
@@ -2682,11 +5326,23 @@ def parse_args():
 
 
 
+
+
+
+
                         help="Number of GPUs per node")
 
 
 
+
+
+
+
     parser.add_argument("--local_rank", type=int, default=-1,
+
+
+
+
 
 
 
@@ -2698,7 +5354,19 @@ def parse_args():
 
 
 
+
+
+
+
+
+
+
+
                                           
+
+
+
+
 
 
 
@@ -2706,7 +5374,19 @@ def parse_args():
 
 
 
+
+
+
+
         parser = deepspeed.add_config_arguments(parser)
+
+
+
+
+
+
+
+
 
 
 
@@ -2726,7 +5406,23 @@ def parse_args():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
+
+
+
+
 
 
 
@@ -2734,7 +5430,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
     train(args)
+
+
+
+
 
 
 

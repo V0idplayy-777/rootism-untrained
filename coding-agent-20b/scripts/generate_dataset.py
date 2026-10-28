@@ -2,6 +2,10 @@
 
 
 
+
+
+
+
 """
 Generate and Process the Complete Training Dataset.
 
@@ -21,7 +25,19 @@ Usage:
 
 
 
+
+
+
+
+
+
+
+
 import os
+
+
+
+
 
 
 
@@ -29,7 +45,15 @@ import sys
 
 
 
+
+
+
+
 import argparse
+
+
+
+
 
 
 
@@ -37,7 +61,15 @@ import logging
 
 
 
+
+
+
+
 import time
+
+
+
+
 
 
 
@@ -49,7 +81,19 @@ from pathlib import Path
 
 
 
+
+
+
+
+
+
+
+
                     
+
+
+
+
 
 
 
@@ -61,11 +105,27 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 
+
+
+
+
+
+
+
+
 from model.tokenizer import CodeTokenizer, BPETrainer
 
 
 
+
+
+
+
 from dataset.generator import DatasetGenerator
+
+
+
+
 
 
 
@@ -81,7 +141,23 @@ from dataset.processor import DatasetConfig, DatasetProcessor
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def setup_logging():
+
+
+
+
 
 
 
@@ -89,7 +165,15 @@ def setup_logging():
 
 
 
+
+
+
+
         level=logging.INFO,
+
+
+
+
 
 
 
@@ -97,7 +181,15 @@ def setup_logging():
 
 
 
+
+
+
+
         datefmt="%H:%M:%S",
+
+
+
+
 
 
 
@@ -113,11 +205,31 @@ def setup_logging():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
     """Generate a sample corpus for training the BPE tokenizer."""
+
+
+
+
 
 
 
@@ -129,7 +241,19 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
+
+
+
+
     gen = PythonCodeGenerator()
+
+
+
+
 
 
 
@@ -141,7 +265,19 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
+
+
+
+
     complexities = ["beginner", "intermediate", "advanced", "expert"]
+
+
+
+
 
 
 
@@ -153,7 +289,19 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
+
+
+
+
     for i in range(num_samples):
+
+
+
+
 
 
 
@@ -161,7 +309,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
         domain = domains[i % len(domains)]
+
+
+
+
 
 
 
@@ -169,7 +325,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
             sample = gen.generate(complexity, domain)
+
+
+
+
 
 
 
@@ -177,7 +341,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
             if sample.description:
+
+
+
+
 
 
 
@@ -185,7 +357,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
         except Exception:
+
+
+
+
 
 
 
@@ -197,7 +377,19 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
+
+
+
+
                                          
+
+
+
+
 
 
 
@@ -205,7 +397,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
         "def __init__(self, ",
+
+
+
+
 
 
 
@@ -213,7 +413,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
         "from typing import List, Dict, Optional, Tuple",
+
+
+
+
 
 
 
@@ -221,7 +429,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
         "import torch",
+
+
+
+
 
 
 
@@ -229,7 +445,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
         "class Config:",
+
+
+
+
 
 
 
@@ -237,7 +461,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
         "try:\n    result = process()\nexcept Exception as e:\n    logger.error(str(e))",
+
+
+
+
 
 
 
@@ -245,7 +477,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
         "SELECT * FROM users WHERE",
+
+
+
+
 
 
 
@@ -253,7 +493,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
         "console.log(JSON.stringify(",
+
+
+
+
 
 
 
@@ -261,7 +509,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
         "pub fn new(",
+
+
+
+
 
 
 
@@ -269,7 +525,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
         "package main\nimport (",
+
+
+
+
 
 
 
@@ -277,7 +541,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
         "template<typename T>",
+
+
+
+
 
 
 
@@ -285,7 +557,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
         "kubectl apply -f",
+
+
+
+
 
 
 
@@ -293,7 +573,15 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
         "npm install",
+
+
+
+
 
 
 
@@ -301,11 +589,27 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
     ]
 
 
 
+
+
+
+
     texts.extend(extra_patterns * 100)
+
+
+
+
+
+
+
+
 
 
 
@@ -325,7 +629,23 @@ def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def main():
+
+
+
+
 
 
 
@@ -333,7 +653,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--output_dir", type=str, default="data/processed")
+
+
+
+
 
 
 
@@ -341,7 +669,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--tokenizer_dir", type=str, default="data/tokenizer")
+
+
+
+
 
 
 
@@ -349,7 +685,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--vocab_size", type=int, default=128256)
+
+
+
+
 
 
 
@@ -357,7 +701,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--train_tokenizer", action="store_true", default=True)
+
+
+
+
 
 
 
@@ -365,7 +717,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--skip_tokenization", action="store_true")
+
+
+
+
 
 
 
@@ -377,11 +737,31 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
     setup_logging()
 
 
 
+
+
+
+
     logger = logging.getLogger(__name__)
+
+
+
+
+
+
+
+
 
 
 
@@ -397,7 +777,19 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
                                               
+
+
+
+
 
 
 
@@ -405,7 +797,15 @@ def main():
 
 
 
+
+
+
+
                                               
+
+
+
+
 
 
 
@@ -413,7 +813,15 @@ def main():
 
 
 
+
+
+
+
         logger.info("=" * 60)
+
+
+
+
 
 
 
@@ -421,7 +829,19 @@ def main():
 
 
 
+
+
+
+
         logger.info("=" * 60)
+
+
+
+
+
+
+
+
 
 
 
@@ -433,11 +853,23 @@ def main():
 
 
 
+
+
+
+
         logger.info("Generating corpus for tokenizer training...")
 
 
 
+
+
+
+
         corpus = generate_sample_corpus_for_tokenizer(num_samples=50000)
+
+
+
+
 
 
 
@@ -449,7 +881,19 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
                    
+
+
+
+
 
 
 
@@ -457,7 +901,15 @@ def main():
 
 
 
+
+
+
+
         trainer = BPETrainer(
+
+
+
+
 
 
 
@@ -465,11 +917,23 @@ def main():
 
 
 
+
+
+
+
             min_frequency=2,
 
 
 
+
+
+
+
         )
+
+
+
+
 
 
 
@@ -481,7 +945,19 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
                         
+
+
+
+
 
 
 
@@ -489,11 +965,23 @@ def main():
 
 
 
+
+
+
+
         tokenizer.save(args.tokenizer_dir)
 
 
 
+
+
+
+
         logger.info(f"Tokenizer saved to {args.tokenizer_dir}")
+
+
+
+
 
 
 
@@ -505,7 +993,19 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
                         
+
+
+
+
 
 
 
@@ -513,7 +1013,15 @@ def main():
 
 
 
+
+
+
+
         tokens = tokenizer.encode(test_text)
+
+
+
+
 
 
 
@@ -521,7 +1029,15 @@ def main():
 
 
 
+
+
+
+
         logger.info(f"Tokenizer test: {len(tokens)} tokens for '{test_text[:30]}...'")
+
+
+
+
 
 
 
@@ -529,7 +1045,15 @@ def main():
 
 
 
+
+
+
+
         logger.info("Loading existing tokenizer...")
+
+
+
+
 
 
 
@@ -541,7 +1065,19 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
                                               
+
+
+
+
 
 
 
@@ -549,7 +1085,15 @@ def main():
 
 
 
+
+
+
+
                                               
+
+
+
+
 
 
 
@@ -557,11 +1101,23 @@ def main():
 
 
 
+
+
+
+
         logger.info("")
 
 
 
+
+
+
+
         logger.info("=" * 60)
+
+
+
+
 
 
 
@@ -569,7 +1125,19 @@ def main():
 
 
 
+
+
+
+
         logger.info("=" * 60)
+
+
+
+
+
+
+
+
 
 
 
@@ -581,7 +1149,15 @@ def main():
 
 
 
+
+
+
+
         gen_stats = generator.generate_full_dataset(
+
+
+
+
 
 
 
@@ -589,7 +1165,15 @@ def main():
 
 
 
+
+
+
+
             output_dir=args.raw_dir,
+
+
+
+
 
 
 
@@ -601,7 +1185,19 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
         logger.info(f"Generation stats:")
+
+
+
+
 
 
 
@@ -609,11 +1205,23 @@ def main():
 
 
 
+
+
+
+
             logger.info(f"  {k}: {v:,}" if isinstance(v, int) else f"  {k}: {v}")
 
 
 
+
+
+
+
     else:
+
+
+
+
 
 
 
@@ -625,7 +1233,19 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
                                               
+
+
+
+
 
 
 
@@ -633,7 +1253,15 @@ def main():
 
 
 
+
+
+
+
                                               
+
+
+
+
 
 
 
@@ -641,11 +1269,23 @@ def main():
 
 
 
+
+
+
+
         logger.info("")
 
 
 
+
+
+
+
         logger.info("=" * 60)
+
+
+
+
 
 
 
@@ -653,7 +1293,19 @@ def main():
 
 
 
+
+
+
+
         logger.info("=" * 60)
+
+
+
+
+
+
+
+
 
 
 
@@ -669,7 +1321,19 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
         config = DatasetConfig(
+
+
+
+
 
 
 
@@ -677,7 +1341,15 @@ def main():
 
 
 
+
+
+
+
             train_split=0.95,
+
+
+
+
 
 
 
@@ -685,7 +1357,15 @@ def main():
 
 
 
+
+
+
+
             test_split=0.01,
+
+
+
+
 
 
 
@@ -693,7 +1373,19 @@ def main():
 
 
 
+
+
+
+
         )
+
+
+
+
+
+
+
+
 
 
 
@@ -705,7 +1397,15 @@ def main():
 
 
 
+
+
+
+
         proc_stats = generator.tokenize_and_shard(
+
+
+
+
 
 
 
@@ -713,7 +1413,15 @@ def main():
 
 
 
+
+
+
+
             output_dir=args.output_dir,
+
+
+
+
 
 
 
@@ -721,7 +1429,15 @@ def main():
 
 
 
+
+
+
+
             config=config,
+
+
+
+
 
 
 
@@ -733,7 +1449,19 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
         logger.info(f"Processing stats:")
+
+
+
+
 
 
 
@@ -741,11 +1469,23 @@ def main():
 
 
 
+
+
+
+
             logger.info(f"  {k}: {v:,}" if isinstance(v, int) else f"  {k}: {v}")
 
 
 
+
+
+
+
     else:
+
+
+
+
 
 
 
@@ -757,7 +1497,19 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
                                               
+
+
+
+
 
 
 
@@ -765,7 +1517,15 @@ def main():
 
 
 
+
+
+
+
                                               
+
+
+
+
 
 
 
@@ -773,11 +1533,23 @@ def main():
 
 
 
+
+
+
+
     logger.info("")
 
 
 
+
+
+
+
     logger.info("=" * 60)
+
+
+
+
 
 
 
@@ -785,7 +1557,15 @@ def main():
 
 
 
+
+
+
+
     logger.info("=" * 60)
+
+
+
+
 
 
 
@@ -793,7 +1573,15 @@ def main():
 
 
 
+
+
+
+
     logger.info(f"  Raw data:  {args.raw_dir}")
+
+
+
+
 
 
 
@@ -801,7 +1589,15 @@ def main():
 
 
 
+
+
+
+
     logger.info(f"  Vocab:     {tokenizer.vocab_size:,}")
+
+
+
+
 
 
 
@@ -809,7 +1605,15 @@ def main():
 
 
 
+
+
+
+
     logger.info("Ready for training! Run:")
+
+
+
+
 
 
 
@@ -825,11 +1629,31 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
 
 
 
+
+
+
+
     main()
+
+
+
+
 
 
 

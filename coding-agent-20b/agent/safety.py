@@ -2,7 +2,19 @@
 
 
 
+
+
+
+
 from __future__ import annotations
+
+
+
+
+
+
+
+
 
 
 
@@ -14,7 +26,19 @@ import re
 
 
 
+
+
+
+
 from typing import Tuple
+
+
+
+
+
+
+
+
 
 
 
@@ -26,7 +50,15 @@ _SECRET_PATTERNS = [
 
 
 
+
+
+
+
     (re.compile(r"(?i)(api[_-]?key|secret|token|password|passwd|aws_secret_access_key)\s*[:=]\s*\S+"), r"\1=<redacted>"),
+
+
+
+
 
 
 
@@ -34,7 +66,15 @@ _SECRET_PATTERNS = [
 
 
 
+
+
+
+
     (re.compile(r"sk-[A-Za-z0-9]{20,}"), "<redacted-api-key>"),
+
+
+
+
 
 
 
@@ -42,11 +82,23 @@ _SECRET_PATTERNS = [
 
 
 
+
+
+
+
     (re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"), "-----BEGIN REDACTED KEY-----"),
 
 
 
+
+
+
+
 ]
+
+
+
+
 
 
 
@@ -54,7 +106,15 @@ _DANGEROUS = [
 
 
 
+
+
+
+
     re.compile(r"rm\s+(-[a-z]*f[a-z]*\s+)?/(?:\s|$)"),                    
+
+
+
+
 
 
 
@@ -62,7 +122,15 @@ _DANGEROUS = [
 
 
 
+
+
+
+
     re.compile(r"(curl|wget)\s+[^\n|]*\|\s*(sudo\s+)?(sh|bash)"),                 
+
+
+
+
 
 
 
@@ -70,11 +138,31 @@ _DANGEROUS = [
 
 
 
+
+
+
+
     re.compile(r">\s*/dev/sd[a-z]"), re.compile(r"shutdown|reboot|init\s+0"),
 
 
 
+
+
+
+
 ]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -90,7 +178,15 @@ def redact_secrets(text: str) -> str:
 
 
 
+
+
+
+
     out = str(text)
+
+
+
+
 
 
 
@@ -98,7 +194,15 @@ def redact_secrets(text: str) -> str:
 
 
 
+
+
+
+
         out = pat.sub(repl, out)
+
+
+
+
 
 
 
@@ -114,7 +218,23 @@ def redact_secrets(text: str) -> str:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def check_code_safety(code: str) -> Tuple[bool, str]:
+
+
+
+
 
 
 
@@ -123,7 +243,15 @@ def check_code_safety(code: str) -> Tuple[bool, str]:
 
 
 
+
+
+
+
     for pat in _DANGEROUS:
+
+
+
+
 
 
 
@@ -131,7 +259,15 @@ def check_code_safety(code: str) -> Tuple[bool, str]:
 
 
 
+
+
+
+
             return False, f"Blocked dangerous pattern: {pat.pattern[:60]}"
+
+
+
+
 
 
 
@@ -147,7 +283,23 @@ def check_code_safety(code: str) -> Tuple[bool, str]:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def sanitize_observation(text: str, max_chars: int = 8000) -> str:
+
+
+
+
 
 
 
@@ -155,7 +307,15 @@ def sanitize_observation(text: str, max_chars: int = 8000) -> str:
 
 
 
+
+
+
+
     cleaned = redact_secrets(text)
+
+
+
+
 
 
 
@@ -163,7 +323,15 @@ def sanitize_observation(text: str, max_chars: int = 8000) -> str:
 
 
 
+
+
+
+
     cleaned = re.compile(r"\x1b\[[0-9;]*m").sub("", cleaned)
+
+
+
+
 
 
 
@@ -171,11 +339,23 @@ def sanitize_observation(text: str, max_chars: int = 8000) -> str:
 
 
 
+
+
+
+
         cleaned = cleaned[:max_chars] + f"\n...[truncated {len(cleaned) - max_chars} chars]"
 
 
 
+
+
+
+
     return cleaned
+
+
+
+
 
 
 

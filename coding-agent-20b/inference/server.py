@@ -11,7 +11,19 @@ Run:  python -m inference.server --checkpoint checkpoints/final --port 8000
 
 
 
+
+
+
+
 from __future__ import annotations
+
+
+
+
+
+
+
+
 
 
 
@@ -23,7 +35,15 @@ import argparse
 
 
 
+
+
+
+
 import queue
+
+
+
+
 
 
 
@@ -31,7 +51,15 @@ import threading
 
 
 
+
+
+
+
 import time
+
+
+
+
 
 
 
@@ -39,7 +67,15 @@ import uuid
 
 
 
+
+
+
+
 from dataclasses import dataclass, field
+
+
+
+
 
 
 
@@ -55,7 +91,23 @@ from typing import Callable, Dict, List, Optional
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @dataclass
+
+
+
+
 
 
 
@@ -63,7 +115,15 @@ class _Request:
 
 
 
+
+
+
+
     prompt_ids: List[int]
+
+
+
+
 
 
 
@@ -71,11 +131,23 @@ class _Request:
 
 
 
+
+
+
+
     done: threading.Event = field(default_factory=threading.Event)
 
 
 
+
+
+
+
     result: Optional[List[int]] = None
+
+
+
+
 
 
 
@@ -91,7 +163,23 @@ class _Request:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class ContinuousBatcher:
+
+
+
+
 
 
 
@@ -103,7 +191,19 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, generate_fn: Callable, max_batch: int = 8):
+
+
+
+
 
 
 
@@ -111,7 +211,15 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
         self.max_batch = max_batch
+
+
+
+
 
 
 
@@ -119,7 +227,15 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
         self._stop = threading.Event()
+
+
+
+
 
 
 
@@ -127,7 +243,15 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
         self.stats = {"requests": 0, "tokens": 0}
+
+
+
+
 
 
 
@@ -139,7 +263,19 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
+
+
+
+
     def _loop(self):
+
+
+
+
 
 
 
@@ -147,7 +283,15 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
             try:
+
+
+
+
 
 
 
@@ -155,7 +299,15 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
             except queue.Empty:
+
+
+
+
 
 
 
@@ -163,7 +315,15 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
             wave = [first]
+
+
+
+
 
 
 
@@ -171,7 +331,15 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
                 try:
+
+
+
+
 
 
 
@@ -179,7 +347,15 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
                 except queue.Empty:
+
+
+
+
 
 
 
@@ -187,7 +363,15 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
             for req in wave:                                                              
+
+
+
+
 
 
 
@@ -195,7 +379,15 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
                     req.result = self.generate_fn(req.prompt_ids, req.gen_kwargs)
+
+
+
+
 
 
 
@@ -203,7 +395,15 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
                     self.stats["tokens"] += len(req.result or [])
+
+
+
+
 
 
 
@@ -211,11 +411,23 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
                     req.error = str(e)
 
 
 
+
+
+
+
                 finally:
+
+
+
+
 
 
 
@@ -227,7 +439,19 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
+
+
+
+
     def submit(self, prompt_ids: List[int], gen_kwargs: Dict, timeout: float = 300) -> List[int]:
+
+
+
+
 
 
 
@@ -235,7 +459,15 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
         self.queue.put(req)
+
+
+
+
 
 
 
@@ -243,7 +475,15 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
             raise TimeoutError("generation timed out in queue")
+
+
+
+
 
 
 
@@ -251,7 +491,15 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
             raise RuntimeError(req.error)
+
+
+
+
 
 
 
@@ -263,7 +511,19 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
+
+
+
+
     def close(self):
+
+
+
+
 
 
 
@@ -279,7 +539,23 @@ class ContinuousBatcher:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def build_app(model, tokenizer):
+
+
+
+
 
 
 
@@ -287,7 +563,15 @@ def build_app(model, tokenizer):
 
 
 
+
+
+
+
     from fastapi import FastAPI
+
+
+
+
 
 
 
@@ -299,7 +583,19 @@ def build_app(model, tokenizer):
 
 
 
+
+
+
+
+
+
+
+
     app = FastAPI(title="CodingAgent-20B", version="1.0.0")
+
+
+
+
 
 
 
@@ -309,7 +605,15 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
     def _generate(prompt_ids, kwargs):
+
+
+
+
 
 
 
@@ -317,7 +621,15 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
         from model.generation import GenerationConfig
+
+
+
+
 
 
 
@@ -325,7 +637,15 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
                                   if k in GenerationConfig.__dataclass_fields__})
+
+
+
+
 
 
 
@@ -333,11 +653,27 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
         out = model.generate(ids, generation_config=cfg, tokenizer=tokenizer)
 
 
 
+
+
+
+
         return out[0][len(prompt_ids):].tolist()
+
+
+
+
+
+
+
+
 
 
 
@@ -353,7 +689,19 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
+
+
+
+
     class ChatRequest(BaseModel):
+
+
+
+
 
 
 
@@ -361,7 +709,15 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
         max_new_tokens: int = 512
+
+
+
+
 
 
 
@@ -369,7 +725,15 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
         top_p: float = 0.95
+
+
+
+
 
 
 
@@ -377,7 +741,15 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
         min_p: float = 0.0
+
+
+
+
 
 
 
@@ -389,11 +761,27 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
+
+
+
+
     @app.get("/health")
 
 
 
+
+
+
+
     def health():
+
+
+
+
 
 
 
@@ -405,11 +793,27 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
+
+
+
+
     @app.get("/v1/models")
 
 
 
+
+
+
+
     def models():
+
+
+
+
 
 
 
@@ -421,7 +825,19 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
+
+
+
+
     @app.post("/v1/chat/completions")
+
+
+
+
 
 
 
@@ -429,7 +845,15 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
         prompt = "\n".join(f"<|{m['role']}|>\n{m['content']}" for m in req.messages)
+
+
+
+
 
 
 
@@ -437,7 +861,15 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
         out_ids = batcher.submit(prompt_ids, {
+
+
+
+
 
 
 
@@ -445,7 +877,15 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
             "top_p": req.top_p, "top_k": req.top_k, "min_p": req.min_p,
+
+
+
+
 
 
 
@@ -453,7 +893,15 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
         text = tokenizer.decode(out_ids, skip_special_tokens=True)
+
+
+
+
 
 
 
@@ -461,7 +909,15 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
                 "created": int(time.time()), "model": "coding-agent-20b",
+
+
+
+
 
 
 
@@ -469,7 +925,19 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
                              "finish_reason": "stop"}]}
+
+
+
+
+
+
+
+
 
 
 
@@ -489,7 +957,23 @@ FUCK!! IT'S BROKEN!!
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def main():
+
+
+
+
 
 
 
@@ -497,7 +981,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--checkpoint", required=True)
+
+
+
+
 
 
 
@@ -505,7 +997,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--host", default="0.0.0.0")
+
+
+
+
 
 
 
@@ -513,7 +1013,15 @@ def main():
 
 
 
+
+
+
+
     args = parser.parse_args()
+
+
+
+
 
 
 
@@ -521,7 +1029,15 @@ def main():
 
 
 
+
+
+
+
     import uvicorn
+
+
+
+
 
 
 
@@ -529,7 +1045,15 @@ def main():
 
 
 
+
+
+
+
     from model.model import CodingAgentModel
+
+
+
+
 
 
 
@@ -537,7 +1061,15 @@ def main():
 
 
 
+
+
+
+
     from training.checkpoint import load_verified
+
+
+
+
 
 
 
@@ -545,7 +1077,15 @@ def main():
 
 
 
+
+
+
+
     state = load_verified(args.checkpoint)
+
+
+
+
 
 
 
@@ -553,7 +1093,15 @@ def main():
 
 
 
+
+
+
+
     model = CodingAgentModel(cfg)
+
+
+
+
 
 
 
@@ -561,7 +1109,15 @@ def main():
 
 
 
+
+
+
+
     model.eval()
+
+
+
+
 
 
 
@@ -577,11 +1133,31 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
 
 
 
+
+
+
+
     main()
+
+
+
+
 
 
 

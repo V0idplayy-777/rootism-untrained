@@ -8,7 +8,19 @@ Utility functions for training and evaluation.
 
 
 
+
+
+
+
+
+
+
+
 import os
+
+
+
+
 
 
 
@@ -16,7 +28,15 @@ import json
 
 
 
+
+
+
+
 import time
+
+
+
+
 
 
 
@@ -24,7 +44,15 @@ import math
 
 
 
+
+
+
+
 import random
+
+
+
+
 
 
 
@@ -32,7 +60,15 @@ import numpy as np
 
 
 
+
+
+
+
 import torch
+
+
+
+
 
 
 
@@ -48,7 +84,23 @@ from typing import Dict, Any
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def set_seed(seed: int):
+
+
+
+
 
 
 
@@ -56,7 +108,15 @@ def set_seed(seed: int):
 
 
 
+
+
+
+
     random.seed(seed)
+
+
+
+
 
 
 
@@ -64,11 +124,23 @@ def set_seed(seed: int):
 
 
 
+
+
+
+
     torch.manual_seed(seed)
 
 
 
+
+
+
+
     if torch.cuda.is_available():
+
+
+
+
 
 
 
@@ -84,7 +156,23 @@ def set_seed(seed: int):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def get_device() -> torch.device:
+
+
+
+
 
 
 
@@ -92,7 +180,15 @@ def get_device() -> torch.device:
 
 
 
+
+
+
+
         return torch.device('cuda')
+
+
+
+
 
 
 
@@ -108,7 +204,23 @@ def get_device() -> torch.device:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def count_parameters(model: torch.nn.Module) -> Dict[str, int]:
+
+
+
+
 
 
 
@@ -116,7 +228,15 @@ def count_parameters(model: torch.nn.Module) -> Dict[str, int]:
 
 
 
+
+
+
+
     for name, param in model.named_parameters():
+
+
+
+
 
 
 
@@ -124,7 +244,15 @@ def count_parameters(model: torch.nn.Module) -> Dict[str, int]:
 
 
 
+
+
+
+
         counts['total'] += numel
+
+
+
+
 
 
 
@@ -132,7 +260,15 @@ def count_parameters(model: torch.nn.Module) -> Dict[str, int]:
 
 
 
+
+
+
+
             counts['trainable'] += numel
+
+
+
+
 
 
 
@@ -140,7 +276,15 @@ def count_parameters(model: torch.nn.Module) -> Dict[str, int]:
 
 
 
+
+
+
+
         if 'embed' in name_lower or 'lm_head' in name_lower:
+
+
+
+
 
 
 
@@ -148,7 +292,15 @@ def count_parameters(model: torch.nn.Module) -> Dict[str, int]:
 
 
 
+
+
+
+
         elif 'attn' in name_lower:
+
+
+
+
 
 
 
@@ -156,7 +308,15 @@ def count_parameters(model: torch.nn.Module) -> Dict[str, int]:
 
 
 
+
+
+
+
         elif 'mlp' in name_lower or 'gate' in name_lower:
+
+
+
+
 
 
 
@@ -164,11 +324,23 @@ def count_parameters(model: torch.nn.Module) -> Dict[str, int]:
 
 
 
+
+
+
+
         elif 'norm' in name_lower:
 
 
 
+
+
+
+
             counts['norm'] += numel
+
+
+
+
 
 
 
@@ -184,7 +356,23 @@ def count_parameters(model: torch.nn.Module) -> Dict[str, int]:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def format_number(n: float) -> str:
+
+
+
+
 
 
 
@@ -192,7 +380,15 @@ def format_number(n: float) -> str:
 
 
 
+
+
+
+
     elif n >= 1e9: return f"{n/1e9:.2f}B"
+
+
+
+
 
 
 
@@ -200,7 +396,15 @@ def format_number(n: float) -> str:
 
 
 
+
+
+
+
     elif n >= 1e3: return f"{n/1e3:.2f}K"
+
+
+
+
 
 
 
@@ -216,7 +420,23 @@ def format_number(n: float) -> str:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def estimate_training_time(num_params, num_tokens, tokens_per_second, num_gpus):
+
+
+
+
 
 
 
@@ -224,7 +444,15 @@ def estimate_training_time(num_params, num_tokens, tokens_per_second, num_gpus):
 
 
 
+
+
+
+
     total_hours = total_seconds / 3600
+
+
+
+
 
 
 
@@ -232,7 +460,15 @@ def estimate_training_time(num_params, num_tokens, tokens_per_second, num_gpus):
 
 
 
+
+
+
+
         "total_flops": 6 * num_params * num_tokens,
+
+
+
+
 
 
 
@@ -240,11 +476,23 @@ def estimate_training_time(num_params, num_tokens, tokens_per_second, num_gpus):
 
 
 
+
+
+
+
         "total_days": total_hours / 24,
 
 
 
+
+
+
+
         "gpu_hours": total_hours * num_gpus,
+
+
+
+
 
 
 
@@ -260,7 +508,23 @@ def estimate_training_time(num_params, num_tokens, tokens_per_second, num_gpus):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def compute_perplexity(loss: float) -> float:
+
+
+
+
 
 
 
@@ -276,7 +540,23 @@ def compute_perplexity(loss: float) -> float:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class Timer:
+
+
+
+
 
 
 
@@ -284,7 +564,15 @@ class Timer:
 
 
 
+
+
+
+
         self.name = name
+
+
+
+
 
 
 
@@ -292,7 +580,15 @@ class Timer:
 
 
 
+
+
+
+
     def __enter__(self):
+
+
+
+
 
 
 
@@ -300,11 +596,23 @@ class Timer:
 
 
 
+
+
+
+
         return self
 
 
 
+
+
+
+
     def __exit__(self, *args):
+
+
+
+
 
 
 
@@ -320,7 +628,23 @@ class Timer:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class MetricsTracker:
+
+
+
+
 
 
 
@@ -328,7 +652,15 @@ class MetricsTracker:
 
 
 
+
+
+
+
         self.window_size = window_size
+
+
+
+
 
 
 
@@ -336,7 +668,15 @@ class MetricsTracker:
 
 
 
+
+
+
+
     def update(self, **kwargs):
+
+
+
+
 
 
 
@@ -344,7 +684,15 @@ class MetricsTracker:
 
 
 
+
+
+
+
             if k not in self.metrics:
+
+
+
+
 
 
 
@@ -352,7 +700,15 @@ class MetricsTracker:
 
 
 
+
+
+
+
             self.metrics[k].append(v)
+
+
+
+
 
 
 
@@ -360,7 +716,15 @@ class MetricsTracker:
 
 
 
+
+
+
+
                 self.metrics[k] = self.metrics[k][-self.window_size:]
+
+
+
+
 
 
 
@@ -368,11 +732,23 @@ class MetricsTracker:
 
 
 
+
+
+
+
         vals = self.metrics.get(key, [])
 
 
 
+
+
+
+
         if not vals: return {"mean": 0, "count": 0}
+
+
+
+
 
 
 
@@ -388,7 +764,23 @@ class MetricsTracker:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def save_training_log(log_data, filepath):
+
+
+
+
 
 
 
@@ -396,7 +788,15 @@ def save_training_log(log_data, filepath):
 
 
 
+
+
+
+
     with open(filepath, 'a') as f:
+
+
+
+
 
 
 
@@ -412,7 +812,23 @@ def save_training_log(log_data, filepath):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def get_gpu_memory_info():
+
+
+
+
 
 
 
@@ -420,7 +836,15 @@ def get_gpu_memory_info():
 
 
 
+
+
+
+
         return {"error": "CUDA not available"}
+
+
+
+
 
 
 
@@ -428,7 +852,15 @@ def get_gpu_memory_info():
 
 
 
+
+
+
+
     for i in range(torch.cuda.device_count()):
+
+
+
+
 
 
 
@@ -436,7 +868,15 @@ def get_gpu_memory_info():
 
 
 
+
+
+
+
         total = torch.cuda.get_device_properties(i).total_memory / 1024**3
+
+
+
+
 
 
 
@@ -444,7 +884,15 @@ def get_gpu_memory_info():
 
 
 
+
+
+
+
             "allocated_gb": round(allocated, 2),
+
+
+
+
 
 
 
@@ -452,7 +900,15 @@ def get_gpu_memory_info():
 
 
 
+
+
+
+
             "utilization_pct": round(allocated / total * 100, 1),
+
+
+
+
 
 
 
@@ -460,7 +916,15 @@ def get_gpu_memory_info():
 
 
 
+
+
+
+
     return info
+
+
+
+
 
 
 

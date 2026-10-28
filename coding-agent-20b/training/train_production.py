@@ -22,7 +22,19 @@ Usage:
 
 
 
+
+
+
+
+
+
+
+
 import os
+
+
+
+
 
 
 
@@ -30,7 +42,15 @@ import sys
 
 
 
+
+
+
+
 import json
+
+
+
+
 
 
 
@@ -38,7 +58,15 @@ import time
 
 
 
+
+
+
+
 import logging
+
+
+
+
 
 
 
@@ -46,7 +74,15 @@ import argparse
 
 
 
+
+
+
+
 from pathlib import Path
+
+
+
+
 
 
 
@@ -58,7 +94,19 @@ from typing import Dict, Any, Optional
 
 
 
+
+
+
+
+
+
+
+
 import torch
+
+
+
+
 
 
 
@@ -66,7 +114,19 @@ import torch.distributed as dist
 
 
 
+
+
+
+
 from torch.utils.data import DataLoader
+
+
+
+
+
+
+
+
 
 
 
@@ -82,7 +142,19 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 
+
+
+
+
+
+
+
+
 from model.config import CodingAgentConfig
+
+
+
+
 
 
 
@@ -90,7 +162,15 @@ from model.model import CodingAgentModel
 
 
 
+
+
+
+
 from dataset.processor import StreamingDataset
+
+
+
+
 
 
 
@@ -98,7 +178,15 @@ from training.monitor import (
 
 
 
+
+
+
+
     TrainingMonitor, TrainingMetrics, RecoveryManager, RecoveryPolicy
+
+
+
+
 
 
 
@@ -106,7 +194,15 @@ from training.monitor import (
 
 
 
+
+
+
+
 from training.checkpoint import save_checkpoint_atomic, latest_valid_checkpoint
+
+
+
+
 
 
 
@@ -118,7 +214,19 @@ from training.schedules import seq_length_at, wsd_lr
 
 
 
+
+
+
+
+
+
+
+
 try:
+
+
+
+
 
 
 
@@ -126,7 +234,15 @@ try:
 
 
 
+
+
+
+
     HAS_DEEPSPEED = True
+
+
+
+
 
 
 
@@ -134,11 +250,27 @@ except ImportError:
 
 
 
+
+
+
+
     HAS_DEEPSPEED = False
 
 
 
+
+
+
+
     print("WARNING: DeepSpeed not installed")
+
+
+
+
+
+
+
+
 
 
 
@@ -158,7 +290,23 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def setup_logging(rank: int, log_dir: str):
+
+
+
+
 
 
 
@@ -166,7 +314,15 @@ def setup_logging(rank: int, log_dir: str):
 
 
 
+
+
+
+
     log_file = Path(log_dir) / f"train_rank{rank}.log"
+
+
+
+
 
 
 
@@ -174,7 +330,15 @@ def setup_logging(rank: int, log_dir: str):
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -182,7 +346,15 @@ def setup_logging(rank: int, log_dir: str):
 
 
 
+
+
+
+
         level=logging.INFO if rank == 0 else logging.WARNING,
+
+
+
+
 
 
 
@@ -190,7 +362,15 @@ def setup_logging(rank: int, log_dir: str):
 
 
 
+
+
+
+
         handlers=[
+
+
+
+
 
 
 
@@ -198,7 +378,15 @@ def setup_logging(rank: int, log_dir: str):
 
 
 
+
+
+
+
             logging.StreamHandler() if rank == 0 else logging.NullHandler(),
+
+
+
+
 
 
 
@@ -206,7 +394,23 @@ def setup_logging(rank: int, log_dir: str):
 
 
 
+
+
+
+
     )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -222,11 +426,23 @@ def load_config(config_path: str) -> Dict[str, Any]:
 
 
 
+
+
+
+
     """Load training configuration."""
 
 
 
+
+
+
+
     with open(config_path) as f:
+
+
+
+
 
 
 
@@ -242,7 +458,23 @@ def load_config(config_path: str) -> Dict[str, Any]:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def create_model(config: CodingAgentConfig) -> CodingAgentModel:
+
+
+
+
 
 
 
@@ -250,11 +482,23 @@ def create_model(config: CodingAgentConfig) -> CodingAgentModel:
 
 
 
+
+
+
+
     model = CodingAgentModel(config)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -262,11 +506,23 @@ def create_model(config: CodingAgentConfig) -> CodingAgentModel:
 
 
 
+
+
+
+
         model.gradient_checkpointing_enable()
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -282,7 +538,23 @@ def create_model(config: CodingAgentConfig) -> CodingAgentModel:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def create_dataloader(
+
+
+
+
 
 
 
@@ -290,7 +562,15 @@ def create_dataloader(
 
 
 
+
+
+
+
     batch_size: int,
+
+
+
+
 
 
 
@@ -298,7 +578,15 @@ def create_dataloader(
 
 
 
+
+
+
+
     rank: int = 0,
+
+
+
+
 
 
 
@@ -306,7 +594,15 @@ def create_dataloader(
 
 
 
+
+
+
+
 ) -> DataLoader:
+
+
+
+
 
 
 
@@ -314,7 +610,15 @@ def create_dataloader(
 
 
 
+
+
+
+
     dataset = StreamingDataset(
+
+
+
+
 
 
 
@@ -322,7 +626,15 @@ def create_dataloader(
 
 
 
+
+
+
+
         seq_length=seq_length,
+
+
+
+
 
 
 
@@ -330,11 +642,23 @@ def create_dataloader(
 
 
 
+
+
+
+
         world_size=world_size,
 
 
 
+
+
+
+
     )
+
+
+
+
 
 
 
@@ -342,7 +666,15 @@ def create_dataloader(
 
 
 
+
+
+
+
     return DataLoader(
+
+
+
+
 
 
 
@@ -350,7 +682,15 @@ def create_dataloader(
 
 
 
+
+
+
+
         batch_size=batch_size,
+
+
+
+
 
 
 
@@ -358,7 +698,15 @@ def create_dataloader(
 
 
 
+
+
+
+
         num_workers=4,
+
+
+
+
 
 
 
@@ -366,7 +714,23 @@ def create_dataloader(
 
 
 
+
+
+
+
     )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -382,7 +746,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     """Main training function."""
+
+
+
+
 
 
 
@@ -390,7 +762,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     if HAS_DEEPSPEED:
+
+
+
+
 
 
 
@@ -398,7 +778,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -406,7 +794,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     world_size = int(os.environ.get('WORLD_SIZE', 1))
+
+
+
+
 
 
 
@@ -414,11 +810,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     
 
 
 
+
+
+
+
                    
+
+
+
+
 
 
 
@@ -426,7 +834,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -434,7 +850,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         logger.info("=" * 60)
+
+
+
+
 
 
 
@@ -442,11 +866,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         logger.info("=" * 60)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -454,7 +890,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     config_dict = load_config(args.config)
+
+
+
+
 
 
 
@@ -462,7 +906,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     train_config = config_dict['training']
+
+
+
+
 
 
 
@@ -470,7 +922,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     if rank == 0:
+
+
+
+
 
 
 
@@ -478,11 +938,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         logger.info(f"World size: {world_size} GPUs")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -490,7 +962,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     logger.info("Creating model...")
+
+
+
+
 
 
 
@@ -498,11 +978,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     
 
 
 
+
+
+
+
     if rank == 0:
+
+
+
+
 
 
 
@@ -510,11 +1002,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         logger.info(f"Total parameters: {total_params:,} ({total_params/1e9:.2f}B)")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -522,7 +1026,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     logger.info("Creating dataloader...")
+
+
+
+
 
 
 
@@ -530,7 +1042,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         data_dir=args.data_dir,
+
+
+
+
 
 
 
@@ -538,7 +1058,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         seq_length=model_config.max_seq_length,
+
+
+
+
 
 
 
@@ -546,7 +1074,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         world_size=world_size,
+
+
+
+
 
 
 
@@ -554,11 +1090,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     
 
 
 
+
+
+
+
                           
+
+
+
+
 
 
 
@@ -566,7 +1114,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         logger.info("Initializing DeepSpeed...")
+
+
+
+
 
 
 
@@ -574,7 +1130,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -582,7 +1146,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             model=model,
+
+
+
+
 
 
 
@@ -590,11 +1162,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             config=str(ds_config_path),
 
 
 
+
+
+
+
         )
+
+
+
+
 
 
 
@@ -602,7 +1186,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                                       
+
+
+
+
 
 
 
@@ -610,7 +1202,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         model_engine = model.to(local_rank)
+
+
+
+
 
 
 
@@ -618,11 +1218,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         scheduler = None
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -630,7 +1242,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     monitor = None
+
+
+
+
 
 
 
@@ -638,7 +1258,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         monitor = TrainingMonitor(
+
+
+
+
 
 
 
@@ -646,7 +1274,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             project_name=args.project_name,
+
+
+
+
 
 
 
@@ -654,7 +1290,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             use_tensorboard=True,
+
+
+
+
 
 
 
@@ -662,7 +1306,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -670,7 +1322,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                                  
+
+
+
+
 
 
 
@@ -678,7 +1338,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         checkpoint_dir=args.output_dir,
+
+
+
+
 
 
 
@@ -686,11 +1354,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     )
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -698,7 +1378,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     logger.info("Starting training...")
+
+
+
+
 
 
 
@@ -706,7 +1394,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     tokens_processed = 0
+
+
+
+
 
 
 
@@ -714,7 +1410,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -722,7 +1426,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         if rank == 0:
+
+
+
+
 
 
 
@@ -730,7 +1442,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -738,11 +1458,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             batch_start = time.time()
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -750,7 +1482,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             input_ids = batch['input_ids'].to(model_engine.device)
+
+
+
+
 
 
 
@@ -758,7 +1498,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -766,7 +1514,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             outputs = model_engine(input_ids=input_ids, labels=labels)
+
+
+
+
 
 
 
@@ -774,7 +1530,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -782,7 +1546,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             if HAS_DEEPSPEED:
+
+
+
+
 
 
 
@@ -790,7 +1562,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 model_engine.step()
+
+
+
+
 
 
 
@@ -798,7 +1578,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 loss.backward()
+
+
+
+
 
 
 
@@ -806,7 +1594,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 optimizer.zero_grad()
+
+
+
+
 
 
 
@@ -814,7 +1610,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     scheduler.step()
+
+
+
+
 
 
 
@@ -822,7 +1626,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                                
+
+
+
+
 
 
 
@@ -830,7 +1642,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             tokens_in_batch = input_ids.numel()
+
+
+
+
 
 
 
@@ -838,7 +1658,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -846,7 +1674,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             tokens_processed += tokens_in_batch
+
+
+
+
 
 
 
@@ -854,7 +1690,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                                
+
+
+
+
 
 
 
@@ -862,7 +1706,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             if hasattr(model_engine, 'get_global_grad_norm'):
+
+
+
+
 
 
 
@@ -870,7 +1722,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             elif hasattr(optimizer, 'param_groups'):
+
+
+
+
 
 
 
@@ -878,7 +1738,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 for p in model.parameters():
+
+
+
+
 
 
 
@@ -886,7 +1754,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                         total_norm += p.grad.data.norm(2).item() ** 2
+
+
+
+
 
 
 
@@ -894,7 +1770,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -902,7 +1786,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             lr = optimizer.param_groups[0]['lr'] if hasattr(optimizer, 'param_groups') else train_config['learning_rate']
+
+
+
+
 
 
 
@@ -910,7 +1802,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                                        
+
+
+
+
 
 
 
@@ -918,7 +1818,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 metrics = TrainingMetrics(
+
+
+
+
 
 
 
@@ -926,7 +1834,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     loss=loss.item(),
+
+
+
+
 
 
 
@@ -934,7 +1850,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     grad_norm=grad_norm,
+
+
+
+
 
 
 
@@ -942,7 +1866,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     tokens_processed=tokens_processed,
+
+
+
+
 
 
 
@@ -950,11 +1882,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 )
 
 
 
+
+
+
+
                 
+
+
+
+
 
 
 
@@ -962,7 +1906,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 
+
+
+
+
 
 
 
@@ -970,7 +1922,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 if action == "skip_batch":
+
+
+
+
 
 
 
@@ -978,7 +1938,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     continue
+
+
+
+
 
 
 
@@ -986,7 +1954,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     latest = latest_valid_checkpoint(args.output_dir)
+
+
+
+
 
 
 
@@ -994,7 +1970,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     if latest:
+
+
+
+
 
 
 
@@ -1002,7 +1986,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                         state = load_verified(latest)
+
+
+
+
 
 
 
@@ -1010,7 +2002,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 if action == "reduce_lr":
+
+
+
+
 
 
 
@@ -1018,7 +2018,19 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                         param_group['lr'] *= 0.5
+
+
+
+
+
+
+
+
 
 
 
@@ -1030,7 +2042,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 if recommendations['should_checkpoint']:
+
+
+
+
 
 
 
@@ -1038,7 +2058,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     save_checkpoint(
+
+
+
+
 
 
 
@@ -1046,7 +2074,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                         args.output_dir, rank
+
+
+
+
 
 
 
@@ -1054,7 +2090,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 
+
+
+
+
 
 
 
@@ -1062,7 +2106,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     logger.info("Reducing learning rate due to loss spike")
+
+
+
+
 
 
 
@@ -1070,7 +2122,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                         param_group['lr'] *= 0.5
+
+
+
+
 
 
 
@@ -1078,7 +2138,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                                           
+
+
+
+
 
 
 
@@ -1086,11 +2154,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     monitor.log_summary(global_step)
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1098,7 +2178,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
             if global_step % train_config['checkpoint_steps'] == 0:
+
+
+
+
 
 
 
@@ -1106,7 +2194,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     model_engine, optimizer, global_step,
+
+
+
+
 
 
 
@@ -1114,11 +2210,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 )
 
 
 
+
+
+
+
                 
+
+
+
+
 
 
 
@@ -1126,7 +2234,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     recovery.reset_retries()
+
+
+
+
 
 
 
@@ -1134,7 +2250,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                           
+
+
+
+
 
 
 
@@ -1142,7 +2266,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 elapsed = time.time() - start_time
+
+
+
+
 
 
 
@@ -1150,7 +2282,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 
+
+
+
+
 
 
 
@@ -1158,7 +2298,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     f"Step {global_step}: "
+
+
+
+
 
 
 
@@ -1166,7 +2314,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     f"lr={lr:.2e}, "
+
+
+
+
 
 
 
@@ -1174,7 +2330,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                     f"tokens/s={tokens_per_second:.0f}, "
+
+
+
+
 
 
 
@@ -1182,11 +2346,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
                 )
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1194,7 +2370,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     save_checkpoint(
+
+
+
+
 
 
 
@@ -1202,7 +2386,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         args.output_dir, rank
+
+
+
+
 
 
 
@@ -1210,7 +2402,15 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1218,11 +2418,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
         logger.info("Training complete!")
 
 
 
+
+
+
+
         if monitor:
+
+
+
+
 
 
 
@@ -1238,7 +2450,23 @@ def train(args: argparse.Namespace):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def save_checkpoint(
+
+
+
+
 
 
 
@@ -1246,7 +2474,15 @@ def save_checkpoint(
 
 
 
+
+
+
+
     optimizer,
+
+
+
+
 
 
 
@@ -1254,7 +2490,15 @@ def save_checkpoint(
 
 
 
+
+
+
+
     output_dir: str,
+
+
+
+
 
 
 
@@ -1262,7 +2506,15 @@ def save_checkpoint(
 
 
 
+
+
+
+
 ):
+
+
+
+
 
 
 
@@ -1270,7 +2522,15 @@ def save_checkpoint(
 
 
 
+
+
+
+
     if rank != 0:
+
+
+
+
 
 
 
@@ -1278,7 +2538,15 @@ def save_checkpoint(
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1286,11 +2554,23 @@ def save_checkpoint(
 
 
 
+
+
+
+
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1298,7 +2578,15 @@ def save_checkpoint(
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1306,7 +2594,15 @@ def save_checkpoint(
 
 
 
+
+
+
+
         model_engine.save_checkpoint(str(checkpoint_dir), tag=f"step_{step}")
+
+
+
+
 
 
 
@@ -1314,7 +2610,15 @@ def save_checkpoint(
 
 
 
+
+
+
+
         save_checkpoint_atomic({
+
+
+
+
 
 
 
@@ -1322,7 +2626,15 @@ def save_checkpoint(
 
 
 
+
+
+
+
             'model_state_dict': model_engine.state_dict(),
+
+
+
+
 
 
 
@@ -1330,7 +2642,15 @@ def save_checkpoint(
 
 
 
+
+
+
+
         }, str(checkpoint_dir), step, keep_last=5)
+
+
+
+
 
 
 
@@ -1338,7 +2658,15 @@ def save_checkpoint(
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1346,7 +2674,15 @@ def save_checkpoint(
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1354,7 +2690,15 @@ def save_checkpoint(
 
 
 
+
+
+
+
     checkpoints = sorted(checkpoint_dir.glob("checkpoint_*.pt"))
+
+
+
+
 
 
 
@@ -1362,7 +2706,15 @@ def save_checkpoint(
 
 
 
+
+
+
+
         for old_ckpt in checkpoints[:-5]:
+
+
+
+
 
 
 
@@ -1378,7 +2730,23 @@ def save_checkpoint(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def main():
+
+
+
+
 
 
 
@@ -1386,7 +2754,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--config", type=str, required=True, help="Config file")
+
+
+
+
 
 
 
@@ -1394,7 +2770,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--output_dir", type=str, required=True, help="Output directory")
+
+
+
+
 
 
 
@@ -1402,7 +2786,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--project_name", type=str, default="coding-agent-20b")
+
+
+
+
 
 
 
@@ -1410,7 +2802,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1418,11 +2818,23 @@ def main():
 
 
 
+
+
+
+
         parser = deepspeed.add_config_arguments(parser)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1430,7 +2842,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1446,11 +2866,31 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == '__main__':
 
 
 
+
+
+
+
     main()
+
+
+
+
 
 
 

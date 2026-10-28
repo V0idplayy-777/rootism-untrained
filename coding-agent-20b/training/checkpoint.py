@@ -2,7 +2,19 @@
 
 
 
+
+
+
+
 from __future__ import annotations
+
+
+
+
+
+
+
+
 
 
 
@@ -14,7 +26,15 @@ import hashlib
 
 
 
+
+
+
+
 import json
+
+
+
+
 
 
 
@@ -22,11 +42,23 @@ import os
 
 
 
+
+
+
+
 import shutil
 
 
 
+
+
+
+
 from pathlib import Path
+
+
+
+
 
 
 
@@ -42,7 +74,23 @@ from typing import Dict, Optional
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def _sha256(path: Path) -> str:
+
+
+
+
 
 
 
@@ -50,7 +98,15 @@ def _sha256(path: Path) -> str:
 
 
 
+
+
+
+
     with open(path, "rb") as f:
+
+
+
+
 
 
 
@@ -58,7 +114,15 @@ def _sha256(path: Path) -> str:
 
 
 
+
+
+
+
             h.update(chunk)
+
+
+
+
 
 
 
@@ -74,7 +138,23 @@ def _sha256(path: Path) -> str:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def save_checkpoint_atomic(state: Dict, out_dir: str, step: int, keep_last: int = 5) -> Path:
+
+
+
+
 
 
 
@@ -83,7 +163,15 @@ def save_checkpoint_atomic(state: Dict, out_dir: str, step: int, keep_last: int 
 
 
 
+
+
+
+
     import torch
+
+
+
+
 
 
 
@@ -91,7 +179,15 @@ def save_checkpoint_atomic(state: Dict, out_dir: str, step: int, keep_last: int 
 
 
 
+
+
+
+
     out.mkdir(parents=True, exist_ok=True)
+
+
+
+
 
 
 
@@ -99,7 +195,15 @@ def save_checkpoint_atomic(state: Dict, out_dir: str, step: int, keep_last: int 
 
 
 
+
+
+
+
     tmp = out / f".checkpoint_{step:08d}.pt.tmp"
+
+
+
+
 
 
 
@@ -107,7 +211,15 @@ def save_checkpoint_atomic(state: Dict, out_dir: str, step: int, keep_last: int 
 
 
 
+
+
+
+
     with open(tmp, "rb") as f:
+
+
+
+
 
 
 
@@ -115,7 +227,15 @@ def save_checkpoint_atomic(state: Dict, out_dir: str, step: int, keep_last: int 
 
 
 
+
+
+
+
     os.replace(tmp, final)
+
+
+
+
 
 
 
@@ -123,7 +243,15 @@ def save_checkpoint_atomic(state: Dict, out_dir: str, step: int, keep_last: int 
 
 
 
+
+
+
+
     (out / f"checkpoint_{step:08d}.manifest.json").write_text(json.dumps(manifest, indent=2))
+
+
+
+
 
 
 
@@ -131,7 +259,15 @@ def save_checkpoint_atomic(state: Dict, out_dir: str, step: int, keep_last: int 
 
 
 
+
+
+
+
     for old in ckpts[: max(0, len(ckpts) - keep_last)]:
+
+
+
+
 
 
 
@@ -139,7 +275,15 @@ def save_checkpoint_atomic(state: Dict, out_dir: str, step: int, keep_last: int 
 
 
 
+
+
+
+
         old.with_suffix(".manifest.json").unlink(missing_ok=True)
+
+
+
+
 
 
 
@@ -147,7 +291,15 @@ def save_checkpoint_atomic(state: Dict, out_dir: str, step: int, keep_last: int 
 
 
 
+
+
+
+
         (out / (old.stem + ".manifest.json")).unlink(missing_ok=True)
+
+
+
+
 
 
 
@@ -163,7 +315,23 @@ def save_checkpoint_atomic(state: Dict, out_dir: str, step: int, keep_last: int 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def verify_checkpoint(path: str) -> Dict:
+
+
+
+
 
 
 
@@ -171,7 +339,15 @@ def verify_checkpoint(path: str) -> Dict:
 
 
 
+
+
+
+
     manifest_path = p.with_name(p.stem + ".manifest.json")
+
+
+
+
 
 
 
@@ -179,7 +355,15 @@ def verify_checkpoint(path: str) -> Dict:
 
 
 
+
+
+
+
         manifest_path = Path(str(p) + ".manifest.json")
+
+
+
+
 
 
 
@@ -187,7 +371,15 @@ def verify_checkpoint(path: str) -> Dict:
 
 
 
+
+
+
+
         return {"valid": False, "error": f"missing file {p}"}
+
+
+
+
 
 
 
@@ -195,7 +387,15 @@ def verify_checkpoint(path: str) -> Dict:
 
 
 
+
+
+
+
         manifest = json.loads(manifest_path.read_text())
+
+
+
+
 
 
 
@@ -203,7 +403,15 @@ def verify_checkpoint(path: str) -> Dict:
 
 
 
+
+
+
+
         if actual != manifest.get("sha256"):
+
+
+
+
 
 
 
@@ -211,7 +419,15 @@ def verify_checkpoint(path: str) -> Dict:
 
 
 
+
+
+
+
         return {"valid": True, "manifest": manifest}
+
+
+
+
 
 
 
@@ -219,7 +435,15 @@ def verify_checkpoint(path: str) -> Dict:
 
 
 
+
+
+
+
     try:
+
+
+
+
 
 
 
@@ -227,7 +451,15 @@ def verify_checkpoint(path: str) -> Dict:
 
 
 
+
+
+
+
         ckpt = torch.load(p, map_location="cpu")
+
+
+
+
 
 
 
@@ -235,11 +467,23 @@ def verify_checkpoint(path: str) -> Dict:
 
 
 
+
+
+
+
         return {"valid": ok, "error": None if ok else "checkpoint is not a dict"}
 
 
 
+
+
+
+
     except Exception as e:
+
+
+
+
 
 
 
@@ -255,7 +499,23 @@ def verify_checkpoint(path: str) -> Dict:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def load_verified(path: str, map_location: str = "cpu") -> Dict:
+
+
+
+
 
 
 
@@ -263,7 +523,15 @@ def load_verified(path: str, map_location: str = "cpu") -> Dict:
 
 
 
+
+
+
+
     if not result["valid"]:
+
+
+
+
 
 
 
@@ -271,7 +539,15 @@ def load_verified(path: str, map_location: str = "cpu") -> Dict:
 
 
 
+
+
+
+
     import torch
+
+
+
+
 
 
 
@@ -287,7 +563,23 @@ def load_verified(path: str, map_location: str = "cpu") -> Dict:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def latest_valid_checkpoint(out_dir: str) -> Optional[str]:
+
+
+
+
 
 
 
@@ -295,7 +587,15 @@ def latest_valid_checkpoint(out_dir: str) -> Optional[str]:
 
 
 
+
+
+
+
     for ckpt in sorted(out.glob("checkpoint_*.pt"), reverse=True):
+
+
+
+
 
 
 
@@ -303,11 +603,23 @@ def latest_valid_checkpoint(out_dir: str) -> Optional[str]:
 
 
 
+
+
+
+
             return str(ckpt)
 
 
 
+
+
+
+
     return None
+
+
+
+
 
 
 

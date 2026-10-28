@@ -15,7 +15,19 @@ across many programming languages. It uses:
 
 
 
+
+
+
+
+
+
+
+
 import random
+
+
+
+
 
 
 
@@ -23,7 +35,15 @@ import hashlib
 
 
 
+
+
+
+
 from typing import List, Dict, Optional, Tuple
+
+
+
+
 
 
 
@@ -39,7 +59,23 @@ from dataclasses import dataclass
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @dataclass
+
+
+
+
 
 
 
@@ -47,7 +83,15 @@ class CodeSample:
 
 
 
+
+
+
+
     """A generated code sample with metadata."""
+
+
+
+
 
 
 
@@ -55,7 +99,15 @@ class CodeSample:
 
 
 
+
+
+
+
     code: str
+
+
+
+
 
 
 
@@ -63,11 +115,23 @@ class CodeSample:
 
 
 
+
+
+
+
     complexity: str                                                    
 
 
 
+
+
+
+
     domain: str                                                           
+
+
+
+
 
 
 
@@ -83,7 +147,23 @@ class CodeSample:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -91,7 +171,19 @@ class CodeSample:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -103,7 +195,19 @@ class NameGenerator:
 
 
 
+
+
+
+
     """Generate realistic variable, function, and class names."""
+
+
+
+
+
+
+
+
 
 
 
@@ -115,7 +219,15 @@ class NameGenerator:
 
 
 
+
+
+
+
     VARIABLE_NAMES = {
+
+
+
+
 
 
 
@@ -123,7 +235,15 @@ class NameGenerator:
 
 
 
+
+
+
+
                     "count", "index", "total", "current", "previous", "next_val", "buffer",
+
+
+
+
 
 
 
@@ -131,7 +251,15 @@ class NameGenerator:
 
 
 
+
+
+
+
         "web": ["request", "response", "session", "user", "token", "cookie", "headers",
+
+
+
+
 
 
 
@@ -139,7 +267,15 @@ class NameGenerator:
 
 
 
+
+
+
+
         "data": ["dataset", "dataframe", "series", "array", "matrix", "tensor", "batch",
+
+
+
+
 
 
 
@@ -147,7 +283,15 @@ class NameGenerator:
 
 
 
+
+
+
+
         "algorithms": ["node", "edge", "graph", "tree", "heap", "stack", "queue",
+
+
+
+
 
 
 
@@ -155,7 +299,15 @@ class NameGenerator:
 
 
 
+
+
+
+
         "systems": ["buffer", "socket", "connection", "process", "thread", "mutex",
+
+
+
+
 
 
 
@@ -163,7 +315,19 @@ class NameGenerator:
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -175,7 +339,15 @@ class NameGenerator:
 
 
 
+
+
+
+
         "get", "set", "create", "delete", "update", "find", "search", "sort",
+
+
+
+
 
 
 
@@ -183,7 +355,15 @@ class NameGenerator:
 
 
 
+
+
+
+
         "validate", "check", "compute", "calculate", "generate", "build",
+
+
+
+
 
 
 
@@ -191,11 +371,27 @@ class NameGenerator:
 
 
 
+
+
+
+
         "transform", "merge", "split", "join", "connect", "disconnect",
 
 
 
+
+
+
+
     ]
+
+
+
+
+
+
+
+
 
 
 
@@ -207,7 +403,15 @@ class NameGenerator:
 
 
 
+
+
+
+
         "data", "value", "item", "list", "map", "result", "output", "input",
+
+
+
+
 
 
 
@@ -215,7 +419,15 @@ class NameGenerator:
 
 
 
+
+
+
+
         "user", "session", "token", "request", "response", "buffer",
+
+
+
+
 
 
 
@@ -227,7 +439,19 @@ class NameGenerator:
 
 
 
+
+
+
+
+
+
+
+
     CLASS_NAMES = {
+
+
+
+
 
 
 
@@ -235,7 +459,15 @@ class NameGenerator:
 
 
 
+
+
+
+
                 "Authenticator", "RateLimiter", "CacheManager", "SessionStore"],
+
+
+
+
 
 
 
@@ -243,7 +475,15 @@ class NameGenerator:
 
 
 
+
+
+
+
                 "Trainer", "Evaluator", "Metrics", "DataStore", "FeatureExtractor"],
+
+
+
+
 
 
 
@@ -251,7 +491,15 @@ class NameGenerator:
 
 
 
+
+
+
+
                       "Queue", "Trie", "BloomFilter", "DisjointSet"],
+
+
+
+
 
 
 
@@ -259,7 +507,15 @@ class NameGenerator:
 
 
 
+
+
+
+
                    "MessageQueue", "FileSystem", "MemoryManager", "Scheduler"],
+
+
+
+
 
 
 
@@ -267,7 +523,15 @@ class NameGenerator:
 
 
 
+
+
+
+
                    "Decorator", "Proxy", "Facade", "Command", "Iterator"],
+
+
+
+
 
 
 
@@ -279,7 +543,19 @@ class NameGenerator:
 
 
 
+
+
+
+
+
+
+
+
     @classmethod
+
+
+
+
 
 
 
@@ -287,7 +563,15 @@ class NameGenerator:
 
 
 
+
+
+
+
         names = cls.VARIABLE_NAMES.get(domain, cls.VARIABLE_NAMES["general"])
+
+
+
+
 
 
 
@@ -295,6 +579,10 @@ class NameGenerator:
 
 
 
+
+
+
+
         return cls._apply_style(name, style)
 
 
@@ -303,7 +591,19 @@ class NameGenerator:
 
 
 
+
+
+
+
+
+
+
+
     @classmethod
+
+
+
+
 
 
 
@@ -311,7 +611,15 @@ class NameGenerator:
 
 
 
+
+
+
+
         prefix = random.choice(cls.FUNCTION_PREFIXES)
+
+
+
+
 
 
 
@@ -319,7 +627,15 @@ class NameGenerator:
 
 
 
+
+
+
+
         name = f"{prefix}_{suffix}"
+
+
+
+
 
 
 
@@ -331,7 +647,19 @@ class NameGenerator:
 
 
 
+
+
+
+
+
+
+
+
     @classmethod
+
+
+
+
 
 
 
@@ -339,7 +667,15 @@ class NameGenerator:
 
 
 
+
+
+
+
         names = cls.CLASS_NAMES.get(domain, cls.CLASS_NAMES["general"])
+
+
+
+
 
 
 
@@ -351,7 +687,19 @@ class NameGenerator:
 
 
 
+
+
+
+
+
+
+
+
     @classmethod
+
+
+
+
 
 
 
@@ -359,7 +707,15 @@ class NameGenerator:
 
 
 
+
+
+
+
         if style == "snake_case":
+
+
+
+
 
 
 
@@ -367,7 +723,15 @@ class NameGenerator:
 
 
 
+
+
+
+
         elif style == "camelCase":
+
+
+
+
 
 
 
@@ -375,7 +739,15 @@ class NameGenerator:
 
 
 
+
+
+
+
             return parts[0].lower() + "".join(p.capitalize() for p in parts[1:])
+
+
+
+
 
 
 
@@ -383,7 +755,15 @@ class NameGenerator:
 
 
 
+
+
+
+
             return "".join(p.capitalize() for p in name.split("_"))
+
+
+
+
 
 
 
@@ -391,7 +771,15 @@ class NameGenerator:
 
 
 
+
+
+
+
             return name.upper().replace("-", "_")
+
+
+
+
 
 
 
@@ -407,7 +795,23 @@ class NameGenerator:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -415,7 +819,19 @@ class NameGenerator:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -427,7 +843,19 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
     """Generate Python code samples at various complexity levels."""
+
+
+
+
+
+
+
+
 
 
 
@@ -439,7 +867,19 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
         self.names = NameGenerator()
+
+
+
+
+
+
+
+
 
 
 
@@ -451,6 +891,10 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
         """Generate a code sample for the given complexity and domain.
         
         Falls back to any available generator if the exact combination
@@ -459,7 +903,15 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
                                        
+
+
+
+
 
 
 
@@ -467,7 +919,15 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
             ("beginner", "algorithms"): self._beginner_algorithms,
+
+
+
+
 
 
 
@@ -475,7 +935,15 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
             ("intermediate", "data"): self._intermediate_data,
+
+
+
+
 
 
 
@@ -483,7 +951,15 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
             ("intermediate", "testing"): self._intermediate_testing,
+
+
+
+
 
 
 
@@ -491,7 +967,15 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
             ("advanced", "data"): self._advanced_data,
+
+
+
+
 
 
 
@@ -499,7 +983,15 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
             ("advanced", "systems"): self._advanced_systems,
+
+
+
+
 
 
 
@@ -507,11 +999,23 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
             ("expert", "systems"): self._expert_systems,
 
 
 
+
+
+
+
             ("expert", "data"): self._expert_data,
+
+
+
+
 
 
 
@@ -523,7 +1027,19 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
+
+
+
+
         gen_func = generators.get((complexity, domain))
+
+
+
+
 
 
 
@@ -531,7 +1047,15 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
                                                                   
+
+
+
+
 
 
 
@@ -539,7 +1063,19 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
             gen_func = random.choice(all_gens)
+
+
+
+
+
+
+
+
 
 
 
@@ -555,7 +1091,19 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
+
+
+
+
     def _beginner_algorithms(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -563,7 +1111,15 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
             self._gen_binary_search,
+
+
+
+
 
 
 
@@ -571,7 +1127,15 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
             self._gen_fibonacci,
+
+
+
+
 
 
 
@@ -579,7 +1143,15 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
             self._gen_palindrome_check,
+
+
+
+
 
 
 
@@ -587,7 +1159,15 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
             self._gen_string_manipulation,
+
+
+
+
 
 
 
@@ -595,7 +1175,15 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
         ]
+
+
+
+
 
 
 
@@ -607,7 +1195,19 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
+
+
+
+
     def _gen_binary_search(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -652,7 +1252,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -660,7 +1272,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -668,7 +1288,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="beginner",
+
+
+
+
 
 
 
@@ -676,7 +1304,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["binary_search", "search", "arrays", "type_hints"],
+
+
+
+
 
 
 
@@ -688,7 +1324,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _gen_bubble_sort(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -758,7 +1406,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -766,7 +1426,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -774,7 +1442,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="beginner",
+
+
+
+
 
 
 
@@ -782,7 +1458,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["bubble_sort", "sorting", "arrays", "optimization"],
+
+
+
+
 
 
 
@@ -794,7 +1478,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _gen_fibonacci(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -916,7 +1612,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -924,7 +1632,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -932,7 +1648,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="beginner",
+
+
+
+
 
 
 
@@ -940,7 +1664,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["fibonacci", "recursion", "memoization", "matrix_exponentiation", "generators"],
+
+
+
+
 
 
 
@@ -952,7 +1684,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _gen_factorial(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -1038,7 +1782,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -1046,7 +1802,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -1054,7 +1818,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="beginner",
+
+
+
+
 
 
 
@@ -1062,7 +1834,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["factorial", "recursion", "math", "number_theory"],
+
+
+
+
 
 
 
@@ -1074,7 +1854,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _gen_palindrome_check(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -1199,7 +1991,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -1207,7 +2011,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -1215,7 +2027,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="beginner",
+
+
+
+
 
 
 
@@ -1223,7 +2043,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["palindrome", "two_pointers", "strings", "dynamic_programming"],
+
+
+
+
 
 
 
@@ -1235,7 +2063,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _gen_list_operations(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -1413,7 +2253,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -1421,7 +2273,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -1429,7 +2289,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="beginner",
+
+
+
+
 
 
 
@@ -1437,7 +2305,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["linked_list", "data_structures", "cycle_detection", "floyd_algorithm"],
+
+
+
+
 
 
 
@@ -1449,7 +2325,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _gen_string_manipulation(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -1603,7 +2491,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -1611,7 +2511,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -1619,7 +2527,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="beginner",
+
+
+
+
 
 
 
@@ -1627,7 +2543,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["strings", "anagrams", "compression", "sliding_window", "cipher"],
+
+
+
+
 
 
 
@@ -1639,7 +2563,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _gen_matrix_operations(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -1779,7 +2715,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -1787,7 +2735,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -1795,7 +2751,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="beginner",
+
+
+
+
 
 
 
@@ -1803,11 +2767,27 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["matrix", "2d_arrays", "spiral", "rotation", "search"],
 
 
 
+
+
+
+
         )
+
+
+
+
+
+
+
+
 
 
 
@@ -1823,7 +2803,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _intermediate_algorithms(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -1831,7 +2823,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             self._gen_merge_sort,
+
+
+
+
 
 
 
@@ -1839,7 +2839,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             self._gen_tree_traversals,
+
+
+
+
 
 
 
@@ -1847,11 +2855,23 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             self._gen_hash_map_design,
 
 
 
+
+
+
+
         ]
+
+
+
+
 
 
 
@@ -1863,7 +2883,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _gen_merge_sort(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -2053,7 +3085,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -2061,7 +3105,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -2069,7 +3121,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="intermediate",
+
+
+
+
 
 
 
@@ -2077,7 +3137,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["merge_sort", "divide_and_conquer", "inversions", "heap", "k_way_merge"],
+
+
+
+
 
 
 
@@ -2089,7 +3157,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _gen_dijkstra(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -2305,7 +3385,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -2313,7 +3405,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -2321,7 +3421,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="intermediate",
+
+
+
+
 
 
 
@@ -2329,7 +3437,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["dijkstra", "shortest_path", "graph", "bellman_ford", "priority_queue"],
+
+
+
+
 
 
 
@@ -2341,7 +3457,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _gen_tree_traversals(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -2579,7 +3707,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -2587,7 +3727,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -2595,7 +3743,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="intermediate",
+
+
+
+
 
 
 
@@ -2603,7 +3759,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["binary_tree", "traversal", "dfs", "bfs", "bst", "data_structures"],
+
+
+
+
 
 
 
@@ -2615,7 +3779,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _gen_dynamic_programming(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -2855,7 +4031,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -2863,7 +4051,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -2871,7 +4067,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="intermediate",
+
+
+
+
 
 
 
@@ -2879,7 +4083,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["dynamic_programming", "knapsack", "lcs", "edit_distance", "coin_change", "lis"],
+
+
+
+
 
 
 
@@ -2891,7 +4103,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _gen_hash_map_design(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -3144,7 +4368,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -3152,7 +4388,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -3160,7 +4404,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="intermediate",
+
+
+
+
 
 
 
@@ -3168,7 +4420,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["hash_map", "lru_cache", "data_structures", "chaining", "linked_list"],
+
+
+
+
 
 
 
@@ -3180,7 +4440,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _intermediate_data(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -3378,7 +4650,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -3386,7 +4670,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -3394,7 +4686,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="intermediate",
+
+
+
+
 
 
 
@@ -3402,7 +4702,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["dataframe", "data_manipulation", "csv", "json", "aggregation"],
+
+
+
+
 
 
 
@@ -3414,7 +4722,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _intermediate_web(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -3715,7 +5035,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -3723,7 +5055,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -3731,7 +5071,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="intermediate",
+
+
+
+
 
 
 
@@ -3739,7 +5087,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["web_framework", "routing", "middleware", "rest_api", "http"],
+
+
+
+
 
 
 
@@ -3751,7 +5107,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _intermediate_testing(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -4002,7 +5370,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -4010,7 +5390,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -4018,7 +5406,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="intermediate",
+
+
+
+
 
 
 
@@ -4026,11 +5422,27 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["unit_testing", "mocking", "tdd", "fixtures", "test_patterns"],
 
 
 
+
+
+
+
         )
+
+
+
+
+
+
+
+
 
 
 
@@ -4046,7 +5458,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _advanced_algorithms(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -4054,7 +5478,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             self._gen_segment_tree,
+
+
+
+
 
 
 
@@ -4062,11 +5494,23 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             self._gen_a_star,
 
 
 
+
+
+
+
         ]
+
+
+
+
 
 
 
@@ -4078,7 +5522,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _gen_segment_tree(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -4271,7 +5727,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -4279,7 +5747,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -4287,7 +5763,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="advanced",
+
+
+
+
 
 
 
@@ -4295,7 +5779,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["segment_tree", "fenwick_tree", "lazy_propagation", "range_queries"],
+
+
+
+
 
 
 
@@ -4307,7 +5799,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _gen_red_black_tree(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -4655,7 +6159,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -4663,7 +6179,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -4671,7 +6195,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="advanced",
+
+
+
+
 
 
 
@@ -4679,7 +6211,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["red_black_tree", "balanced_bst", "data_structures", "rotations"],
+
+
+
+
 
 
 
@@ -4691,7 +6231,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _gen_a_star(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -4950,7 +6502,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -4958,7 +6522,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -4966,7 +6538,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="advanced",
+
+
+
+
 
 
 
@@ -4974,7 +6554,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["a_star", "pathfinding", "heuristic", "ida_star", "grid_search"],
+
+
+
+
 
 
 
@@ -4986,7 +6574,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _advanced_data(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -5327,7 +6927,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -5335,7 +6947,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -5343,7 +6963,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="advanced",
+
+
+
+
 
 
 
@@ -5351,7 +6979,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["mapreduce", "distributed", "streaming", "data_pipeline", "parallel"],
+
+
+
+
 
 
 
@@ -5363,7 +6999,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _advanced_web(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -5808,7 +7456,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -5816,7 +7476,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -5824,7 +7492,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="advanced",
+
+
+
+
 
 
 
@@ -5832,7 +7508,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["rest_api", "jwt", "rate_limiting", "caching", "authentication", "validation"],
+
+
+
+
 
 
 
@@ -5844,7 +7528,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _advanced_systems(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -6313,7 +8009,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -6321,7 +8029,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -6329,7 +8045,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="advanced",
+
+
+
+
 
 
 
@@ -6337,11 +8061,27 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["task_queue", "event_bus", "circuit_breaker", "pub_sub", "distributed"],
 
 
 
+
+
+
+
         )
+
+
+
+
+
+
+
+
 
 
 
@@ -6357,7 +8097,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _expert_algorithms(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -6798,7 +8550,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -6806,7 +8570,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -6814,7 +8586,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="expert",
+
+
+
+
 
 
 
@@ -6822,7 +8602,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["max_flow", "hungarian", "topological_sort", "community_detection", "graph"],
+
+
+
+
 
 
 
@@ -6834,7 +8622,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _expert_systems(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -7359,7 +9159,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -7367,7 +9179,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -7375,7 +9195,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="expert",
+
+
+
+
 
 
 
@@ -7383,7 +9211,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["connection_pool", "orm", "query_builder", "migrations", "database"],
+
+
+
+
 
 
 
@@ -7395,7 +9231,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
     def _expert_data(self) -> CodeSample:
+
+
+
+
 
 
 
@@ -8031,7 +9879,19 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
         return CodeSample(
+
+
+
+
 
 
 
@@ -8039,7 +9899,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             code=code,
+
+
+
+
 
 
 
@@ -8047,7 +9915,15 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             complexity="expert",
+
+
+
+
 
 
 
@@ -8055,11 +9931,23 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
             tags=["neural_network", "autograd", "deep_learning", "adam", "backpropagation"],
 
 
 
+
+
+
+
         )
+
+
+
+
 
 
 

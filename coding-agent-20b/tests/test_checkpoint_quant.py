@@ -2,7 +2,19 @@ import pytest
 
 
 
+
+
+
+
 from conftest import requires_torch
+
+
+
+
+
+
+
+
 
 
 
@@ -22,7 +34,23 @@ torch = pytest.importorskip("torch")
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @requires_torch
+
+
+
+
 
 
 
@@ -30,7 +58,15 @@ def test_checkpoint_integrity_roundtrip(tmp_path, tiny_model):
 
 
 
+
+
+
+
     from training.checkpoint import load_verified, save_checkpoint_atomic, verify_checkpoint
+
+
+
+
 
 
 
@@ -38,7 +74,15 @@ def test_checkpoint_integrity_roundtrip(tmp_path, tiny_model):
 
 
 
+
+
+
+
                                    "optimizer_state_dict": {}}, str(tmp_path), 1)
+
+
+
+
 
 
 
@@ -46,7 +90,15 @@ def test_checkpoint_integrity_roundtrip(tmp_path, tiny_model):
 
 
 
+
+
+
+
     state = load_verified(str(path))
+
+
+
+
 
 
 
@@ -54,7 +106,15 @@ def test_checkpoint_integrity_roundtrip(tmp_path, tiny_model):
 
 
 
+
+
+
+
                                                     
+
+
+
+
 
 
 
@@ -62,7 +122,15 @@ def test_checkpoint_integrity_roundtrip(tmp_path, tiny_model):
 
 
 
+
+
+
+
         f.write(b"corrupt")
+
+
+
+
 
 
 
@@ -78,7 +146,23 @@ def test_checkpoint_integrity_roundtrip(tmp_path, tiny_model):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @requires_torch
+
+
+
+
 
 
 
@@ -86,7 +170,15 @@ def test_quantization_and_distillation(tiny_model):
 
 
 
+
+
+
+
     from inference.quantize import load_weight_only_int8, weight_only_int8_state_dict
+
+
+
+
 
 
 
@@ -94,7 +186,15 @@ def test_quantization_and_distillation(tiny_model):
 
 
 
+
+
+
+
     packed = weight_only_int8_state_dict(tiny_model)
+
+
+
+
 
 
 
@@ -102,7 +202,15 @@ def test_quantization_and_distillation(tiny_model):
 
 
 
+
+
+
+
     student = type(tiny_model)(tiny_model.config)
+
+
+
+
 
 
 
@@ -110,11 +218,23 @@ def test_quantization_and_distillation(tiny_model):
 
 
 
+
+
+
+
     out = distillation_loss(torch.randn(2, 4, 320), torch.randn(2, 4, 320))
 
 
 
+
+
+
+
     assert torch.isfinite(out["loss"])
+
+
+
+
 
 
 

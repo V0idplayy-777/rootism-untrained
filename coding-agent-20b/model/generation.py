@@ -6,7 +6,19 @@ logits with -inf for removed tokens. Kept dependency-light (torch only).
 
 
 
+
+
+
+
 from __future__ import annotations
+
+
+
+
+
+
+
+
 
 
 
@@ -18,7 +30,15 @@ import json
 
 
 
+
+
+
+
 from dataclasses import dataclass, field
+
+
+
+
 
 
 
@@ -30,7 +50,19 @@ from typing import Callable, List, Optional, Sequence
 
 
 
+
+
+
+
+
+
+
+
 import torch
+
+
+
+
 
 
 
@@ -46,7 +78,23 @@ import torch.nn.functional as F
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @dataclass
+
+
+
+
 
 
 
@@ -54,7 +102,15 @@ class GenerationConfig:
 
 
 
+
+
+
+
     max_new_tokens: int = 512
+
+
+
+
 
 
 
@@ -62,7 +118,15 @@ class GenerationConfig:
 
 
 
+
+
+
+
     top_p: float = 0.95
+
+
+
+
 
 
 
@@ -70,7 +134,15 @@ class GenerationConfig:
 
 
 
+
+
+
+
     min_p: float = 0.0                                               
+
+
+
+
 
 
 
@@ -78,7 +150,15 @@ class GenerationConfig:
 
 
 
+
+
+
+
     repetition_penalty: float = 1.0
+
+
+
+
 
 
 
@@ -86,7 +166,15 @@ class GenerationConfig:
 
 
 
+
+
+
+
     presence_penalty: float = 0.0
+
+
+
+
 
 
 
@@ -94,7 +182,15 @@ class GenerationConfig:
 
 
 
+
+
+
+
     seed: Optional[int] = None
+
+
+
+
 
 
 
@@ -102,11 +198,23 @@ class GenerationConfig:
 
 
 
+
+
+
+
     stop_token_ids: List[int] = field(default_factory=list)
 
 
 
+
+
+
+
     json_mode: bool = False                                            
+
+
+
+
 
 
 
@@ -122,7 +230,23 @@ class GenerationConfig:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def apply_penalties(logits: torch.Tensor, generated_ids: Sequence[int],
+
+
+
+
 
 
 
@@ -130,7 +254,15 @@ def apply_penalties(logits: torch.Tensor, generated_ids: Sequence[int],
 
 
 
+
+
+
+
     logits = logits.clone()
+
+
+
+
 
 
 
@@ -138,7 +270,15 @@ def apply_penalties(logits: torch.Tensor, generated_ids: Sequence[int],
 
 
 
+
+
+
+
         return logits
+
+
+
+
 
 
 
@@ -146,7 +286,15 @@ def apply_penalties(logits: torch.Tensor, generated_ids: Sequence[int],
 
 
 
+
+
+
+
     for t in generated_ids:
+
+
+
+
 
 
 
@@ -154,7 +302,15 @@ def apply_penalties(logits: torch.Tensor, generated_ids: Sequence[int],
 
 
 
+
+
+
+
     for tid, c in counts.items():
+
+
+
+
 
 
 
@@ -162,7 +318,15 @@ def apply_penalties(logits: torch.Tensor, generated_ids: Sequence[int],
 
 
 
+
+
+
+
             logits[..., tid] = logits[..., tid] / cfg.repetition_penalty if logits[..., tid] > 0 else logits[..., tid] * cfg.repetition_penalty
+
+
+
+
 
 
 
@@ -170,7 +334,15 @@ def apply_penalties(logits: torch.Tensor, generated_ids: Sequence[int],
 
 
 
+
+
+
+
             logits[..., tid] -= cfg.frequency_penalty * c
+
+
+
+
 
 
 
@@ -178,11 +350,31 @@ def apply_penalties(logits: torch.Tensor, generated_ids: Sequence[int],
 
 
 
+
+
+
+
             logits[..., tid] -= cfg.presence_penalty
 
 
 
+
+
+
+
     return logits
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -198,7 +390,15 @@ def filter_top_k(logits: torch.Tensor, k: int) -> torch.Tensor:
 
 
 
+
+
+
+
     if k <= 0:
+
+
+
+
 
 
 
@@ -206,11 +406,23 @@ def filter_top_k(logits: torch.Tensor, k: int) -> torch.Tensor:
 
 
 
+
+
+
+
     k = min(k, logits.size(-1))
 
 
 
+
+
+
+
     thresh = torch.topk(logits, k, dim=-1).values[..., -1, None]
+
+
+
+
 
 
 
@@ -226,7 +438,23 @@ def filter_top_k(logits: torch.Tensor, k: int) -> torch.Tensor:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def filter_top_p(logits: torch.Tensor, p: float) -> torch.Tensor:
+
+
+
+
 
 
 
@@ -234,7 +462,15 @@ def filter_top_p(logits: torch.Tensor, p: float) -> torch.Tensor:
 
 
 
+
+
+
+
         return logits
+
+
+
+
 
 
 
@@ -242,7 +478,15 @@ def filter_top_p(logits: torch.Tensor, p: float) -> torch.Tensor:
 
 
 
+
+
+
+
     cum = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+
+
+
+
 
 
 
@@ -250,7 +494,15 @@ def filter_top_p(logits: torch.Tensor, p: float) -> torch.Tensor:
 
 
 
+
+
+
+
     remove[..., 0] = False
+
+
+
+
 
 
 
@@ -258,11 +510,31 @@ def filter_top_p(logits: torch.Tensor, p: float) -> torch.Tensor:
 
 
 
+
+
+
+
     out.scatter_(-1, sorted_idx, torch.where(remove, torch.full_like(sorted_logits, float("-inf")), sorted_logits))
 
 
 
+
+
+
+
     return out
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -278,7 +550,15 @@ def filter_min_p(logits: torch.Tensor, min_p: float) -> torch.Tensor:
 
 
 
+
+
+
+
     if min_p <= 0:
+
+
+
+
 
 
 
@@ -286,11 +566,23 @@ def filter_min_p(logits: torch.Tensor, min_p: float) -> torch.Tensor:
 
 
 
+
+
+
+
     probs = F.softmax(logits, dim=-1)
 
 
 
+
+
+
+
     thresh = probs.max(dim=-1, keepdim=True).values * min_p
+
+
+
+
 
 
 
@@ -306,7 +598,23 @@ def filter_min_p(logits: torch.Tensor, min_p: float) -> torch.Tensor:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def filter_typical(logits: torch.Tensor, typical_p: float) -> torch.Tensor:
+
+
+
+
 
 
 
@@ -314,7 +622,15 @@ def filter_typical(logits: torch.Tensor, typical_p: float) -> torch.Tensor:
 
 
 
+
+
+
+
         return logits
+
+
+
+
 
 
 
@@ -322,7 +638,15 @@ def filter_typical(logits: torch.Tensor, typical_p: float) -> torch.Tensor:
 
 
 
+
+
+
+
     entropy = -(probs * torch.log(probs.clamp_min(1e-12))).sum(-1, keepdim=True)
+
+
+
+
 
 
 
@@ -330,7 +654,15 @@ def filter_typical(logits: torch.Tensor, typical_p: float) -> torch.Tensor:
 
 
 
+
+
+
+
     sorted_shifted, sorted_idx = torch.sort(shifted, dim=-1)
+
+
+
+
 
 
 
@@ -338,7 +670,15 @@ def filter_typical(logits: torch.Tensor, typical_p: float) -> torch.Tensor:
 
 
 
+
+
+
+
     cum = torch.cumsum(sorted_probs, dim=-1)
+
+
+
+
 
 
 
@@ -346,7 +686,15 @@ def filter_typical(logits: torch.Tensor, typical_p: float) -> torch.Tensor:
 
 
 
+
+
+
+
     remove[..., 0] = False
+
+
+
+
 
 
 
@@ -354,7 +702,15 @@ def filter_typical(logits: torch.Tensor, typical_p: float) -> torch.Tensor:
 
 
 
+
+
+
+
     out.scatter_(-1, sorted_idx, torch.where(remove, torch.full_like(logits, float("-inf")), logits))
+
+
+
+
 
 
 
@@ -370,7 +726,23 @@ def filter_typical(logits: torch.Tensor, typical_p: float) -> torch.Tensor:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def apply_sampling_filters(logits: torch.Tensor, cfg: GenerationConfig) -> torch.Tensor:
+
+
+
+
 
 
 
@@ -378,7 +750,15 @@ def apply_sampling_filters(logits: torch.Tensor, cfg: GenerationConfig) -> torch
 
 
 
+
+
+
+
         logits = logits / cfg.temperature
+
+
+
+
 
 
 
@@ -386,7 +766,15 @@ def apply_sampling_filters(logits: torch.Tensor, cfg: GenerationConfig) -> torch
 
 
 
+
+
+
+
     logits = filter_min_p(logits, cfg.min_p)
+
+
+
+
 
 
 
@@ -394,7 +782,15 @@ def apply_sampling_filters(logits: torch.Tensor, cfg: GenerationConfig) -> torch
 
 
 
+
+
+
+
     logits = filter_top_p(logits, cfg.top_p)
+
+
+
+
 
 
 
@@ -410,7 +806,23 @@ def apply_sampling_filters(logits: torch.Tensor, cfg: GenerationConfig) -> torch
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def sample_next(logits: torch.Tensor, generated_ids: Sequence[int],
+
+
+
+
 
 
 
@@ -418,7 +830,15 @@ def sample_next(logits: torch.Tensor, generated_ids: Sequence[int],
 
 
 
+
+
+
+
     logits = apply_penalties(logits.float(), generated_ids, cfg)
+
+
+
+
 
 
 
@@ -426,7 +846,15 @@ def sample_next(logits: torch.Tensor, generated_ids: Sequence[int],
 
 
 
+
+
+
+
         return int(torch.argmax(logits, dim=-1).item())
+
+
+
+
 
 
 
@@ -434,7 +862,15 @@ def sample_next(logits: torch.Tensor, generated_ids: Sequence[int],
 
 
 
+
+
+
+
     probs = F.softmax(filtered, dim=-1)
+
+
+
+
 
 
 
@@ -450,7 +886,23 @@ def sample_next(logits: torch.Tensor, generated_ids: Sequence[int],
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def find_stop(text: str, stop_strings: Sequence[str]) -> Optional[int]:
+
+
+
+
 
 
 
@@ -458,7 +910,15 @@ def find_stop(text: str, stop_strings: Sequence[str]) -> Optional[int]:
 
 
 
+
+
+
+
     best = None
+
+
+
+
 
 
 
@@ -466,7 +926,15 @@ def find_stop(text: str, stop_strings: Sequence[str]) -> Optional[int]:
 
 
 
+
+
+
+
         if s and s in text:
+
+
+
+
 
 
 
@@ -474,7 +942,15 @@ def find_stop(text: str, stop_strings: Sequence[str]) -> Optional[int]:
 
 
 
+
+
+
+
             best = i if best is None else min(best, i)
+
+
+
+
 
 
 
@@ -490,7 +966,23 @@ def find_stop(text: str, stop_strings: Sequence[str]) -> Optional[int]:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def validate_structured(text: str, cfg: GenerationConfig) -> bool:
+
+
+
+
 
 
 
@@ -498,7 +990,15 @@ def validate_structured(text: str, cfg: GenerationConfig) -> bool:
 
 
 
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -506,7 +1006,15 @@ def validate_structured(text: str, cfg: GenerationConfig) -> bool:
 
 
 
+
+
+
+
         except Exception:
+
+
+
+
 
 
 
@@ -514,7 +1022,15 @@ def validate_structured(text: str, cfg: GenerationConfig) -> bool:
 
 
 
+
+
+
+
     if cfg.grammar_validator is not None:
+
+
+
+
 
 
 
@@ -522,7 +1038,15 @@ def validate_structured(text: str, cfg: GenerationConfig) -> bool:
 
 
 
+
+
+
+
     return True
+
+
+
+
 
 
 

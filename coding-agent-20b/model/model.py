@@ -17,7 +17,19 @@ Implements:
 
 
 
+
+
+
+
+
+
+
+
 import math
+
+
+
+
 
 
 
@@ -25,7 +37,15 @@ import torch
 
 
 
+
+
+
+
 import torch.nn as nn
+
+
+
+
 
 
 
@@ -33,7 +53,15 @@ import torch.nn.functional as F
 
 
 
+
+
+
+
 from torch.utils.checkpoint import checkpoint
+
+
+
+
 
 
 
@@ -41,7 +69,19 @@ from typing import Optional, Tuple, List
 
 
 
+
+
+
+
 from dataclasses import dataclass
+
+
+
+
+
+
+
+
 
 
 
@@ -61,7 +101,23 @@ from .config import CodingAgentConfig
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -69,7 +125,19 @@ from .config import CodingAgentConfig
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -78,6 +146,10 @@ from .config import CodingAgentConfig
 
 
 class RotaryEmbedding(nn.Module):
+
+
+
+
 
 
 
@@ -93,7 +165,19 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, dim: int, max_position_embeddings: int = 8192, theta: float = 500000.0,
+
+
+
+
 
 
 
@@ -101,7 +185,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
                  original_max_position_embeddings: int = 8192):
+
+
+
+
 
 
 
@@ -109,7 +201,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
         self.dim = dim
+
+
+
+
 
 
 
@@ -117,7 +217,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
         self.theta = theta
+
+
+
+
 
 
 
@@ -125,7 +233,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
         self.scaling_factor = scaling_factor
+
+
+
+
 
 
 
@@ -133,7 +249,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
         inv_freq = 1.0 / (theta ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
+
+
+
+
 
 
 
@@ -141,7 +265,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
             ntk_theta = theta * scaling_factor ** (dim / max(dim - 2, 1))
+
+
+
+
 
 
 
@@ -149,7 +281,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
         elif scaling_type == "yarn" and scaling_factor > 1.0:
+
+
+
+
 
 
 
@@ -157,7 +297,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
             n = dim // 2
+
+
+
+
 
 
 
@@ -165,7 +313,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
             low = (original_max_position_embeddings / wavelen / 32).floor()
+
+
+
+
 
 
 
@@ -173,7 +329,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
             ramp = torch.clamp((torch.arange(n, dtype=torch.float32) - low) / (high - low).clamp(min=1e-6), 0, 1)
+
+
+
+
 
 
 
@@ -181,7 +345,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
             self.attention_scaling = 0.1 * math.log(scaling_factor) + 1.0
+
+
+
+
 
 
 
@@ -193,7 +365,19 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                              
+
+
+
+
 
 
 
@@ -205,7 +389,19 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def _build_cache(self, seq_len: int):
+
+
+
+
 
 
 
@@ -213,7 +409,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
         t = torch.arange(seq_len, dtype=torch.float32, device=self.inv_freq.device)
+
+
+
+
 
 
 
@@ -221,7 +425,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
                         
+
+
+
+
 
 
 
@@ -229,7 +441,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
         self.register_buffer("cos_cached", emb.cos(), persistent=False)
+
+
+
+
 
 
 
@@ -241,7 +461,19 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def forward(self, x: torch.Tensor, position_ids: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor]:
+
+
+
+
 
 
 
@@ -258,7 +490,19 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
         seq_len = x.shape[1]
+
+
+
+
+
+
+
+
 
 
 
@@ -270,7 +514,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
         if seq_len > self.cos_cached.shape[0]:
+
+
+
+
 
 
 
@@ -282,7 +534,19 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
         if position_ids is not None:
+
+
+
+
 
 
 
@@ -290,7 +554,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
             cos = self.cos_cached[position_ids].unsqueeze(2)                
+
+
+
+
 
 
 
@@ -298,7 +570,15 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
         else:
+
+
+
+
 
 
 
@@ -306,7 +586,19 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
             sin = self.sin_cached[:seq_len].unsqueeze(0).unsqueeze(2)
+
+
+
+
+
+
+
+
 
 
 
@@ -326,7 +618,23 @@ class RotaryEmbedding(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def rotate_half(x: torch.Tensor) -> torch.Tensor:
+
+
+
+
 
 
 
@@ -334,11 +642,23 @@ def rotate_half(x: torch.Tensor) -> torch.Tensor:
 
 
 
+
+
+
+
     x1 = x[..., : x.shape[-1] // 2]
 
 
 
+
+
+
+
     x2 = x[..., x.shape[-1] // 2:]
+
+
+
+
 
 
 
@@ -354,7 +674,23 @@ def rotate_half(x: torch.Tensor) -> torch.Tensor:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def apply_rotary_pos_emb(
+
+
+
+
 
 
 
@@ -362,7 +698,15 @@ def apply_rotary_pos_emb(
 
 
 
+
+
+
+
     k: torch.Tensor,
+
+
+
+
 
 
 
@@ -370,7 +714,15 @@ def apply_rotary_pos_emb(
 
 
 
+
+
+
+
     sin: torch.Tensor,
+
+
+
+
 
 
 
@@ -378,7 +730,15 @@ def apply_rotary_pos_emb(
 
 
 
+
+
+
+
     """Apply rotary position embeddings to query and key tensors."""
+
+
+
+
 
 
 
@@ -386,11 +746,23 @@ def apply_rotary_pos_emb(
 
 
 
+
+
+
+
                                                           
 
 
 
+
+
+
+
     cos = cos.transpose(1, 2)                       
+
+
+
+
 
 
 
@@ -402,11 +774,27 @@ def apply_rotary_pos_emb(
 
 
 
+
+
+
+
+
+
+
+
     q_embed = (q * cos) + (rotate_half(q) * sin)
 
 
 
+
+
+
+
     k_embed = (k * cos) + (rotate_half(k) * sin)
+
+
+
+
 
 
 
@@ -422,7 +810,23 @@ def apply_rotary_pos_emb(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -430,7 +834,19 @@ def apply_rotary_pos_emb(
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -439,6 +855,10 @@ def apply_rotary_pos_emb(
 
 
 class RMSNorm(nn.Module):
+
+
+
+
 
 
 
@@ -453,7 +873,19 @@ class RMSNorm(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, hidden_size: int, eps: float = 1e-5):
+
+
+
+
 
 
 
@@ -461,7 +893,15 @@ class RMSNorm(nn.Module):
 
 
 
+
+
+
+
         self.weight = nn.Parameter(torch.ones(hidden_size))
+
+
+
+
 
 
 
@@ -473,7 +913,19 @@ class RMSNorm(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def _norm(self, x: torch.Tensor) -> torch.Tensor:
+
+
+
+
 
 
 
@@ -485,7 +937,19 @@ class RMSNorm(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+
+
+
+
 
 
 
@@ -493,7 +957,15 @@ class RMSNorm(nn.Module):
 
 
 
+
+
+
+
         output = self._norm(x.float()).type_as(x)
+
+
+
+
 
 
 
@@ -509,7 +981,23 @@ class RMSNorm(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -517,7 +1005,19 @@ class RMSNorm(nn.Module):
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -526,6 +1026,10 @@ class RMSNorm(nn.Module):
 
 
 class GroupedQueryAttention(nn.Module):
+
+
+
+
 
 
 
@@ -547,7 +1051,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, config: CodingAgentConfig, layer_idx: int = 0):
+
+
+
+
 
 
 
@@ -555,7 +1071,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         self.config = config
+
+
+
+
 
 
 
@@ -567,7 +1091,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
         self.hidden_size = config.hidden_size
+
+
+
+
 
 
 
@@ -575,11 +1111,23 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         self.num_kv_heads = config.num_kv_heads
 
 
 
+
+
+
+
         self.head_dim = config.head_dim
+
+
+
+
 
 
 
@@ -591,7 +1139,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                            
+
+
+
+
 
 
 
@@ -599,11 +1159,23 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         self.k_proj = nn.Linear(self.hidden_size, self.num_kv_heads * self.head_dim, bias=config.attention_bias)
 
 
 
+
+
+
+
         self.v_proj = nn.Linear(self.hidden_size, self.num_kv_heads * self.head_dim, bias=config.attention_bias)
+
+
+
+
 
 
 
@@ -615,7 +1187,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                                             
+
+
+
+
 
 
 
@@ -623,7 +1207,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
             dim=self.head_dim,
+
+
+
+
 
 
 
@@ -631,7 +1223,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
             theta=config.rope_theta,
+
+
+
+
 
 
 
@@ -639,11 +1239,23 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
             scaling_factor=getattr(config, "rope_scaling_factor", 1.0),
 
 
 
+
+
+
+
             original_max_position_embeddings=getattr(config, "original_max_position_embeddings", 8192),
+
+
+
+
 
 
 
@@ -655,7 +1267,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                         
+
+
+
+
 
 
 
@@ -667,7 +1291,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def forward(
+
+
+
+
 
 
 
@@ -675,7 +1311,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         hidden_states: torch.Tensor,
+
+
+
+
 
 
 
@@ -683,7 +1327,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         position_ids: Optional[torch.Tensor] = None,
+
+
+
+
 
 
 
@@ -691,11 +1343,23 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         use_cache: bool = False,
 
 
 
+
+
+
+
     ) -> Tuple[torch.Tensor, Optional[Tuple[torch.Tensor, torch.Tensor]]]:
+
+
+
+
 
 
 
@@ -707,7 +1371,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                          
+
+
+
+
 
 
 
@@ -715,7 +1391,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         key_states = self.k_proj(hidden_states)
+
+
+
+
 
 
 
@@ -727,7 +1411,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                                          
+
+
+
+
 
 
 
@@ -735,7 +1431,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         key_states = key_states.view(batch_size, seq_length, self.num_kv_heads, self.head_dim).transpose(1, 2)
+
+
+
+
 
 
 
@@ -747,11 +1451,27 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                     
 
 
 
+
+
+
+
         cos, sin = self.rotary_emb(query_states, position_ids=position_ids)
+
+
+
+
 
 
 
@@ -763,7 +1483,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                   
+
+
+
+
 
 
 
@@ -771,11 +1503,27 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
             key_states = torch.cat([past_key_value[0], key_states], dim=2)
 
 
 
+
+
+
+
             value_states = torch.cat([past_key_value[1], value_states], dim=2)
+
+
+
+
+
+
+
+
 
 
 
@@ -791,7 +1539,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                            
+
+
+
+
 
 
 
@@ -803,7 +1563,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                     
+
+
+
+
 
 
 
@@ -811,7 +1583,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         attn_output = self.o_proj(attn_output)
+
+
+
+
+
+
+
+
 
 
 
@@ -827,7 +1611,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def _compute_attention(
+
+
+
+
 
 
 
@@ -835,7 +1631,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         query: torch.Tensor,                                   
+
+
+
+
 
 
 
@@ -843,7 +1647,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         value: torch.Tensor,                                       
+
+
+
+
 
 
 
@@ -851,7 +1663,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
     ) -> torch.Tensor:
+
+
+
+
 
 
 
@@ -859,7 +1679,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         batch_size, num_heads, seq_len_q, head_dim = query.shape
+
+
+
+
 
 
 
@@ -871,7 +1699,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                    
+
+
+
+
 
 
 
@@ -879,7 +1719,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
                                
+
+
+
+
 
 
 
@@ -887,7 +1735,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
                 key = self._repeat_kv(key, self.num_kv_groups)
+
+
+
+
 
 
 
@@ -899,7 +1755,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                            
+
+
+
+
 
 
 
@@ -907,7 +1775,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
             if attention_mask is not None:
+
+
+
+
 
 
 
@@ -919,7 +1795,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                                                                 
+
+
+
+
 
 
 
@@ -927,7 +1815,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
                 query, key, value,
+
+
+
+
 
 
 
@@ -935,7 +1831,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
                 dropout_p=self.config.attention_dropout if self.training else 0.0,
+
+
+
+
 
 
 
@@ -943,7 +1847,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
             )
+
+
+
+
 
 
 
@@ -955,11 +1867,27 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                                
 
 
 
+
+
+
+
         key = self._repeat_kv(key, self.num_kv_groups)
+
+
+
+
 
 
 
@@ -971,7 +1899,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                       
+
+
+
+
 
 
 
@@ -983,7 +1923,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                    
+
+
+
+
 
 
 
@@ -991,7 +1943,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
             window_mask = self._create_sliding_window_mask(seq_len_q, seq_len_kv, query.device)
+
+
+
+
 
 
 
@@ -1003,11 +1963,27 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                               
 
 
 
+
+
+
+
         if attention_mask is not None:
+
+
+
+
 
 
 
@@ -1019,7 +1995,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                              
+
+
+
+
 
 
 
@@ -1027,7 +2015,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         if self.config.attention_dropout > 0 and self.training:
+
+
+
+
 
 
 
@@ -1039,7 +2035,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
         attn_output = torch.matmul(attn_weights, value)
+
+
+
+
 
 
 
@@ -1051,7 +2059,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def _repeat_kv(self, x: torch.Tensor, n_rep: int) -> torch.Tensor:
+
+
+
+
 
 
 
@@ -1059,7 +2079,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         if n_rep == 1:
+
+
+
+
 
 
 
@@ -1067,11 +2095,23 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         batch, num_kv_heads, seq_len, head_dim = x.shape
 
 
 
+
+
+
+
         x = x[:, :, None, :, :].expand(batch, num_kv_heads, n_rep, seq_len, head_dim)
+
+
+
+
 
 
 
@@ -1083,7 +2123,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def _create_sliding_window_mask(self, seq_len_q: int, seq_len_kv: int, device: torch.device) -> torch.Tensor:
+
+
+
+
 
 
 
@@ -1091,7 +2143,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
                             
+
+
+
+
 
 
 
@@ -1099,7 +2159,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
         for i in range(seq_len_q):
+
+
+
+
 
 
 
@@ -1107,7 +2175,15 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
             mask[i, start:i + 1] = 0.0
+
+
+
+
 
 
 
@@ -1123,7 +2199,23 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -1131,7 +2223,19 @@ class GroupedQueryAttention(nn.Module):
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -1140,6 +2244,10 @@ class GroupedQueryAttention(nn.Module):
 
 
 class SwiGLUMLP(nn.Module):
+
+
+
+
 
 
 
@@ -1157,7 +2265,19 @@ class SwiGLUMLP(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, config: CodingAgentConfig):
+
+
+
+
 
 
 
@@ -1165,7 +2285,15 @@ class SwiGLUMLP(nn.Module):
 
 
 
+
+
+
+
         self.hidden_size = config.hidden_size
+
+
+
+
 
 
 
@@ -1177,7 +2305,19 @@ class SwiGLUMLP(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
         self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+
+
+
+
 
 
 
@@ -1185,7 +2325,15 @@ class SwiGLUMLP(nn.Module):
 
 
 
+
+
+
+
         self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
+
+
+
+
 
 
 
@@ -1197,7 +2345,19 @@ class SwiGLUMLP(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+
+
+
+
 
 
 
@@ -1205,11 +2365,23 @@ class SwiGLUMLP(nn.Module):
 
 
 
+
+
+
+
         gate = self.act_fn(self.gate_proj(x))
 
 
 
+
+
+
+
         up = self.up_proj(x)
+
+
+
+
 
 
 
@@ -1225,7 +2397,23 @@ class SwiGLUMLP(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -1233,7 +2421,19 @@ class SwiGLUMLP(nn.Module):
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -1242,6 +2442,10 @@ class SwiGLUMLP(nn.Module):
 
 
 class TransformerBlock(nn.Module):
+
+
+
+
 
 
 
@@ -1259,7 +2463,19 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, config: CodingAgentConfig, layer_idx: int):
+
+
+
+
 
 
 
@@ -1267,7 +2483,15 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
         self.hidden_size = config.hidden_size
+
+
+
+
 
 
 
@@ -1279,11 +2503,27 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                    
 
 
 
+
+
+
+
         self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+
+
+
+
 
 
 
@@ -1295,11 +2535,27 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
              
 
 
 
+
+
+
+
         self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+
+
+
+
 
 
 
@@ -1311,7 +2567,19 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def forward(
+
+
+
+
 
 
 
@@ -1319,7 +2587,15 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
         hidden_states: torch.Tensor,
+
+
+
+
 
 
 
@@ -1327,7 +2603,15 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
         position_ids: Optional[torch.Tensor] = None,
+
+
+
+
 
 
 
@@ -1335,7 +2619,15 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
         use_cache: bool = False,
+
+
+
+
 
 
 
@@ -1343,7 +2635,15 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
                                       
+
+
+
+
 
 
 
@@ -1351,7 +2651,15 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
         hidden_states = self.input_layernorm(hidden_states)
+
+
+
+
 
 
 
@@ -1359,7 +2667,15 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
             hidden_states,
+
+
+
+
 
 
 
@@ -1367,7 +2683,15 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
             position_ids=position_ids,
+
+
+
+
 
 
 
@@ -1375,7 +2699,15 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
             use_cache=use_cache,
+
+
+
+
 
 
 
@@ -1383,7 +2715,19 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
         hidden_states = residual + hidden_states
+
+
+
+
+
+
+
+
 
 
 
@@ -1395,7 +2739,15 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
         residual = hidden_states
+
+
+
+
 
 
 
@@ -1403,11 +2755,27 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
         hidden_states = self.mlp(hidden_states)
 
 
 
+
+
+
+
         hidden_states = residual + hidden_states
+
+
+
+
+
+
+
+
 
 
 
@@ -1427,7 +2795,23 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -1435,7 +2819,19 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -1447,7 +2843,15 @@ class TransformerBlock(nn.Module):
 
 
 
+
+
+
+
 class ModelOutput:
+
+
+
+
 
 
 
@@ -1455,7 +2859,15 @@ class ModelOutput:
 
 
 
+
+
+
+
     logits: torch.Tensor
+
+
+
+
 
 
 
@@ -1463,7 +2875,15 @@ class ModelOutput:
 
 
 
+
+
+
+
     past_key_values: Optional[List[Tuple[torch.Tensor, torch.Tensor]]] = None
+
+
+
+
 
 
 
@@ -1479,7 +2899,23 @@ class ModelOutput:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class PagedKVCache:
+
+
+
+
 
 
 
@@ -1497,11 +2933,27 @@ class PagedKVCache:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, max_tokens: int = 32768, sink_tokens: int = 4):
 
 
 
+
+
+
+
         self.max_tokens = max_tokens
+
+
+
+
 
 
 
@@ -1513,7 +2965,19 @@ class PagedKVCache:
 
 
 
+
+
+
+
+
+
+
+
     def trim(self, past_key_values):
+
+
+
+
 
 
 
@@ -1521,7 +2985,15 @@ class PagedKVCache:
 
 
 
+
+
+
+
             return past_key_values
+
+
+
+
 
 
 
@@ -1529,7 +3001,15 @@ class PagedKVCache:
 
 
 
+
+
+
+
         for k, v in past_key_values:
+
+
+
+
 
 
 
@@ -1537,7 +3017,15 @@ class PagedKVCache:
 
 
 
+
+
+
+
                 out.append((k, v))
+
+
+
+
 
 
 
@@ -1545,7 +3033,15 @@ class PagedKVCache:
 
 
 
+
+
+
+
                 excess = k.shape[2] - self.max_tokens
+
+
+
+
 
 
 
@@ -1553,11 +3049,23 @@ class PagedKVCache:
 
 
 
+
+
+
+
                 vs = torch.cat([v[:, :, : self.sink_tokens], v[:, :, self.sink_tokens + excess :]], dim=2)
 
 
 
+
+
+
+
                 out.append((ks, vs))
+
+
+
+
 
 
 
@@ -1569,11 +3077,27 @@ class PagedKVCache:
 
 
 
+
+
+
+
+
+
+
+
     @staticmethod
 
 
 
+
+
+
+
     def num_tokens(past_key_values) -> int:
+
+
+
+
 
 
 
@@ -1593,7 +3117,27 @@ class PagedKVCache:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class CodingAgentModel(nn.Module):
+
+
+
+
 
 
 
@@ -1619,11 +3163,27 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, config: CodingAgentConfig):
 
 
 
+
+
+
+
         super().__init__()
+
+
+
+
 
 
 
@@ -1635,7 +3195,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                           
+
+
+
+
 
 
 
@@ -1647,7 +3219,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                             
+
+
+
+
 
 
 
@@ -1655,11 +3239,23 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
             TransformerBlock(config, layer_idx=i)
 
 
 
+
+
+
+
             for i in range(config.num_hidden_layers)
+
+
+
+
 
 
 
@@ -1671,7 +3267,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                           
+
+
+
+
 
 
 
@@ -1683,7 +3291,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                              
+
+
+
+
 
 
 
@@ -1695,7 +3315,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                 
+
+
+
+
 
 
 
@@ -1707,7 +3339,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                             
+
+
+
+
 
 
 
@@ -1719,11 +3363,27 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def _init_weights(self, module: nn.Module):
 
 
 
+
+
+
+
         """Initialize weights with careful scaling for deep networks."""
+
+
+
+
 
 
 
@@ -1735,11 +3395,27 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
         if isinstance(module, nn.Linear):
 
 
 
+
+
+
+
             module.weight.data.normal_(mean=0.0, std=std)
+
+
+
+
 
 
 
@@ -1747,7 +3423,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 module.bias.data.zero_()
+
+
+
+
 
 
 
@@ -1755,11 +3439,23 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
             module.weight.data.normal_(mean=0.0, std=std)
 
 
 
+
+
+
+
             if module.padding_idx is not None:
+
+
+
+
 
 
 
@@ -1771,7 +3467,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                                                           
+
+
+
+
 
 
 
@@ -1779,11 +3487,23 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
             output_proj = getattr(module, 'o_proj', None) or getattr(module, 'down_proj', None)
 
 
 
+
+
+
+
             if output_proj is not None:
+
+
+
+
 
 
 
@@ -1795,7 +3515,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def get_input_embeddings(self) -> nn.Module:
+
+
+
+
 
 
 
@@ -1807,7 +3539,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def set_input_embeddings(self, value: nn.Module):
+
+
+
+
 
 
 
@@ -1819,7 +3563,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def forward(
+
+
+
+
 
 
 
@@ -1827,7 +3583,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         input_ids: torch.Tensor,
+
+
+
+
 
 
 
@@ -1835,7 +3599,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         position_ids: Optional[torch.Tensor] = None,
+
+
+
+
 
 
 
@@ -1843,7 +3615,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         inputs_embeds: Optional[torch.Tensor] = None,
+
+
+
+
 
 
 
@@ -1851,7 +3631,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         use_cache: bool = False,
+
+
+
+
 
 
 
@@ -1859,7 +3647,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
     ) -> ModelOutput:
+
+
+
+
 
 
 
@@ -1882,7 +3678,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         batch_size, seq_length = input_ids.shape if input_ids is not None else inputs_embeds.shape[:2]
+
+
+
+
+
+
+
+
 
 
 
@@ -1894,7 +3702,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         if inputs_embeds is not None:
+
+
+
+
 
 
 
@@ -1902,7 +3718,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         else:
+
+
+
+
 
 
 
@@ -1914,7 +3738,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                              
+
+
+
+
 
 
 
@@ -1922,7 +3758,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
             past_length = past_key_values[0][0].shape[2] if past_key_values else 0
+
+
+
+
 
 
 
@@ -1930,7 +3774,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 past_length, past_length + seq_length,
+
+
+
+
 
 
 
@@ -1938,7 +3790,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 device=hidden_states.device,
+
+
+
+
 
 
 
@@ -1950,7 +3810,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                       
+
+
+
+
 
 
 
@@ -1958,7 +3830,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         if attention_mask is not None:
+
+
+
+
 
 
 
@@ -1966,7 +3846,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
             attention_mask_4d = attention_mask[:, None, None, :].to(hidden_states.dtype)
+
+
+
+
 
 
 
@@ -1978,11 +3866,27 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                          
 
 
 
+
+
+
+
         all_hidden_states = [] if output_hidden_states else None
+
+
+
+
 
 
 
@@ -1994,7 +3898,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
         for idx, layer in enumerate(self.layers):
+
+
+
+
 
 
 
@@ -2002,7 +3918,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 all_hidden_states.append(hidden_states)
+
+
+
+
+
+
+
+
 
 
 
@@ -2018,7 +3946,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                     
+
+
+
+
 
 
 
@@ -2026,7 +3966,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 hidden_states, present_kv = checkpoint(
+
+
+
+
 
 
 
@@ -2034,7 +3982,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                     hidden_states,
+
+
+
+
 
 
 
@@ -2042,7 +3998,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                     position_ids,
+
+
+
+
 
 
 
@@ -2050,7 +4014,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                     use_cache,
+
+
+
+
 
 
 
@@ -2058,7 +4030,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 )
+
+
+
+
 
 
 
@@ -2066,7 +4046,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 hidden_states, present_kv = layer(
+
+
+
+
 
 
 
@@ -2074,7 +4062,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                     attention_mask=attention_mask_4d,
+
+
+
+
 
 
 
@@ -2082,7 +4078,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                     past_key_value=past_kv,
+
+
+
+
 
 
 
@@ -2090,7 +4094,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 )
+
+
+
+
+
+
+
+
 
 
 
@@ -2102,7 +4118,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 present_key_values.append(present_kv)
+
+
+
+
+
+
+
+
 
 
 
@@ -2114,7 +4142,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         hidden_states = self.norm(hidden_states)
+
+
+
+
+
+
+
+
 
 
 
@@ -2126,7 +4166,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
             all_hidden_states.append(hidden_states)
+
+
+
+
+
+
+
+
 
 
 
@@ -2138,7 +4190,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         logits = self.lm_head(hidden_states)
+
+
+
+
+
+
+
+
 
 
 
@@ -2150,7 +4214,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         loss = None
+
+
+
+
 
 
 
@@ -2158,11 +4230,23 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                                                                
 
 
 
+
+
+
+
             shift_logits = logits[..., :-1, :].contiguous()
+
+
+
+
 
 
 
@@ -2174,7 +4258,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
             loss = F.cross_entropy(
+
+
+
+
 
 
 
@@ -2182,11 +4278,23 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 shift_labels.view(-1),
 
 
 
+
+
+
+
                 ignore_index=-100,
+
+
+
+
 
 
 
@@ -2198,7 +4306,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
         return ModelOutput(
+
+
+
+
 
 
 
@@ -2206,7 +4326,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
             hidden_states=tuple(all_hidden_states) if all_hidden_states else None,
+
+
+
+
 
 
 
@@ -2214,7 +4342,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
             loss=loss,
+
+
+
+
 
 
 
@@ -2230,7 +4366,23 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     @torch.no_grad()
+
+
+
+
 
 
 
@@ -2238,7 +4390,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         self,
+
+
+
+
 
 
 
@@ -2246,7 +4406,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         max_new_tokens: int = 256,
+
+
+
+
 
 
 
@@ -2254,7 +4422,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         top_p: float = 0.9,
+
+
+
+
 
 
 
@@ -2262,7 +4438,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         repetition_penalty: float = 1.1,
+
+
+
+
 
 
 
@@ -2270,7 +4454,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         eos_token_id: Optional[int] = None,
+
+
+
+
 
 
 
@@ -2278,7 +4470,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         tokenizer=None,
+
+
+
+
 
 
 
@@ -2286,7 +4486,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
     ) -> torch.Tensor:
+
+
+
+
 
 
 
@@ -2300,7 +4508,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         from .generation import GenerationConfig, sample_next, find_stop
+
+
+
+
+
+
+
+
 
 
 
@@ -2312,7 +4532,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
             generation_config = GenerationConfig(
+
+
+
+
 
 
 
@@ -2320,7 +4548,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 top_k=top_k, repetition_penalty=repetition_penalty, do_sample=do_sample,
+
+
+
+
 
 
 
@@ -2328,7 +4564,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 stop_token_ids=list(kwargs.pop("stop_token_ids", []) or []),
+
+
+
+
 
 
 
@@ -2336,7 +4580,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 seed=kwargs.pop("seed", None),
+
+
+
+
 
 
 
@@ -2344,7 +4596,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                                                                   
+
+
+
+
 
 
 
@@ -2352,7 +4612,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
             eos_token_id = self.config.eos_token_id
+
+
+
+
 
 
 
@@ -2360,11 +4628,23 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         gen = None
 
 
 
+
+
+
+
         if generation_config.seed is not None:
+
+
+
+
 
 
 
@@ -2376,7 +4656,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
         self.eval()
+
+
+
+
 
 
 
@@ -2384,7 +4676,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         generated = input_ids.clone()
+
+
+
+
 
 
 
@@ -2392,7 +4692,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         prompt_len = input_ids.shape[1]
+
+
+
+
 
 
 
@@ -2400,7 +4708,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
             model_input = generated[:, -1:] if past_key_values is not None else generated
+
+
+
+
 
 
 
@@ -2408,7 +4724,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
             past_key_values = cache.trim(output.past_key_values)
+
+
+
+
 
 
 
@@ -2416,7 +4740,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
             next_id = sample_next(next_logits[0], generated[0].tolist(), generation_config, generator=gen)
+
+
+
+
 
 
 
@@ -2424,7 +4756,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
             generated = torch.cat([generated, next_token], dim=-1)
+
+
+
+
 
 
 
@@ -2432,7 +4772,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 break
+
+
+
+
 
 
 
@@ -2440,7 +4788,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 text = tokenizer.decode(generated[0][prompt_len:].tolist(), skip_special_tokens=True)
+
+
+
+
 
 
 
@@ -2448,11 +4804,23 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                 if cut is not None:
 
 
 
+
+
+
+
                     break
+
+
+
+
 
 
 
@@ -2464,7 +4832,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def enable_gradient_checkpointing(self, ratio: float = 1.0):
+
+
+
+
 
 
 
@@ -2472,7 +4852,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         self.gradient_checkpointing = True
+
+
+
+
 
 
 
@@ -2484,11 +4872,27 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def disable_gradient_checkpointing(self):
 
 
 
+
+
+
+
         """Disable gradient checkpointing."""
+
+
+
+
 
 
 
@@ -2500,11 +4904,27 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
                                                
 
 
 
+
+
+
+
     def gradient_checkpointing_enable(self, **kwargs):
+
+
+
+
 
 
 
@@ -2516,7 +4936,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def gradient_checkpointing_disable(self, **kwargs):
+
+
+
+
 
 
 
@@ -2528,11 +4960,27 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     @property
 
 
 
+
+
+
+
     def device(self):
+
+
+
+
 
 
 
@@ -2544,7 +4992,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def num_parameters(self, trainable_only: bool = False) -> int:
+
+
+
+
 
 
 
@@ -2552,11 +5012,23 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         if trainable_only:
 
 
 
+
+
+
+
             return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
+
+
 
 
 
@@ -2568,7 +5040,19 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
+
+
+
+
     def flops_per_token(self, seq_length: int) -> int:
+
+
+
+
 
 
 
@@ -2576,7 +5060,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
                                                                                    
+
+
+
+
 
 
 
@@ -2584,7 +5076,15 @@ class CodingAgentModel(nn.Module):
 
 
 
+
+
+
+
         return 6 * n * seq_length
+
+
+
+
 
 
 

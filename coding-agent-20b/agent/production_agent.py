@@ -17,7 +17,19 @@ Features:
 
 
 
+
+
+
+
+
+
+
+
 import os
+
+
+
+
 
 
 
@@ -25,7 +37,15 @@ import json
 
 
 
+
+
+
+
 import subprocess
+
+
+
+
 
 
 
@@ -33,7 +53,15 @@ import tempfile
 
 
 
+
+
+
+
 import shutil
+
+
+
+
 
 
 
@@ -41,7 +69,15 @@ import time
 
 
 
+
+
+
+
 import logging
+
+
+
+
 
 
 
@@ -49,7 +85,15 @@ from pathlib import Path
 
 
 
+
+
+
+
 from typing import List, Dict, Any, Optional, Callable
+
+
+
+
 
 
 
@@ -57,11 +101,23 @@ from dataclasses import dataclass, field
 
 
 
+
+
+
+
 from enum import Enum
 
 
 
+
+
+
+
 try:
+
+
+
+
 
 
 
@@ -69,7 +125,15 @@ try:
 
 
 
+
+
+
+
 except ImportError:
+
+
+
+
 
 
 
@@ -77,7 +141,15 @@ except ImportError:
 
 
 
+
+
+
+
 try:
+
+
+
+
 
 
 
@@ -85,7 +157,15 @@ try:
 
 
 
+
+
+
+
 except ImportError:
+
+
+
+
 
 
 
@@ -97,7 +177,19 @@ except ImportError:
 
 
 
+
+
+
+
+
+
+
+
 from .sandbox import DockerSandbox, HardenedSandbox, SandboxConfig, SandboxUnavailable              
+
+
+
+
 
 
 
@@ -105,11 +197,27 @@ from .tools import ToolExecutor
 
 
 
+
+
+
+
 from .parser import parse_tool_call, repair_prompt              
 
 
 
+
+
+
+
 from .safety import sanitize_observation              
+
+
+
+
+
+
+
+
 
 
 
@@ -125,7 +233,19 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
+
+
+
+
 try:
+
+
+
+
 
 
 
@@ -133,7 +253,15 @@ try:
 
 
 
+
+
+
+
 except ImportError:
+
+
+
+
 
 
 
@@ -149,7 +277,23 @@ except ImportError:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -157,7 +301,19 @@ except ImportError:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -169,7 +325,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
     "execute_code": {
+
+
+
+
 
 
 
@@ -177,7 +341,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "description": "Execute Python code in a sandboxed Docker container",
+
+
+
+
 
 
 
@@ -185,11 +357,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
             "type": "object",
 
 
 
+
+
+
+
             "properties": {
+
+
+
+
 
 
 
@@ -197,7 +381,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                     "type": "string",
+
+
+
+
 
 
 
@@ -205,7 +397,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                 },
+
+
+
+
 
 
 
@@ -213,7 +413,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                     "type": "integer",
+
+
+
+
 
 
 
@@ -221,11 +429,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                     "default": 30
 
 
 
+
+
+
+
                 },
+
+
+
+
 
 
 
@@ -233,7 +453,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                     "type": "array",
+
+
+
+
 
 
 
@@ -241,7 +469,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                     "description": "Python packages to install before execution"
+
+
+
+
 
 
 
@@ -249,7 +485,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
             },
+
+
+
+
 
 
 
@@ -257,11 +501,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         }
 
 
 
+
+
+
+
     },
+
+
+
+
 
 
 
@@ -269,7 +525,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "name": "read_file",
+
+
+
+
 
 
 
@@ -277,7 +541,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "parameters": {
+
+
+
+
 
 
 
@@ -285,7 +557,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
             "properties": {
+
+
+
+
 
 
 
@@ -293,7 +573,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                     "type": "string",
+
+
+
+
 
 
 
@@ -301,11 +589,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                 }
 
 
 
+
+
+
+
             },
+
+
+
+
 
 
 
@@ -313,11 +613,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         }
 
 
 
+
+
+
+
     },
+
+
+
+
 
 
 
@@ -325,7 +637,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "name": "write_file",
+
+
+
+
 
 
 
@@ -333,7 +653,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "parameters": {
+
+
+
+
 
 
 
@@ -341,7 +669,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
             "properties": {
+
+
+
+
 
 
 
@@ -349,7 +685,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                     "type": "string",
+
+
+
+
 
 
 
@@ -357,7 +701,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                 },
+
+
+
+
 
 
 
@@ -365,7 +717,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                     "type": "string",
+
+
+
+
 
 
 
@@ -373,11 +733,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                 }
 
 
 
+
+
+
+
             },
+
+
+
+
 
 
 
@@ -385,11 +757,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         }
 
 
 
+
+
+
+
     },
+
+
+
+
 
 
 
@@ -397,7 +781,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "name": "run_tests",
+
+
+
+
 
 
 
@@ -405,7 +797,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "parameters": {
+
+
+
+
 
 
 
@@ -413,7 +813,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
             "properties": {
+
+
+
+
 
 
 
@@ -421,7 +829,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                     "type": "string",
+
+
+
+
 
 
 
@@ -429,7 +845,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                     "default": "."
+
+
+
+
 
 
 
@@ -437,11 +861,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                 "verbose": {
 
 
 
+
+
+
+
                     "type": "boolean",
+
+
+
+
 
 
 
@@ -449,7 +885,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                     "default": False
+
+
+
+
 
 
 
@@ -457,7 +901,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
             }
+
+
+
+
 
 
 
@@ -465,7 +917,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
     },
+
+
+
+
 
 
 
@@ -473,7 +933,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "name": "git_status",
+
+
+
+
 
 
 
@@ -481,11 +949,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "parameters": {
 
 
 
+
+
+
+
             "type": "object",
+
+
+
+
 
 
 
@@ -493,11 +973,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         }
 
 
 
+
+
+
+
     },
+
+
+
+
 
 
 
@@ -505,7 +997,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "name": "git_diff",
+
+
+
+
 
 
 
@@ -513,7 +1013,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "parameters": {
+
+
+
+
 
 
 
@@ -521,7 +1029,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
             "properties": {
+
+
+
+
 
 
 
@@ -529,7 +1045,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                     "type": "boolean",
+
+
+
+
 
 
 
@@ -537,7 +1061,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                     "default": False
+
+
+
+
 
 
 
@@ -545,7 +1077,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
             }
+
+
+
+
 
 
 
@@ -553,7 +1093,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
     },
+
+
+
+
 
 
 
@@ -561,7 +1109,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "name": "search_code",
+
+
+
+
 
 
 
@@ -569,7 +1125,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "parameters": {
+
+
+
+
 
 
 
@@ -577,7 +1141,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
             "properties": {
+
+
+
+
 
 
 
@@ -585,7 +1157,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                 "file_pattern": {"type": "string", "description": "File glob pattern (e.g., '*.py')", "default": "*"}
+
+
+
+
 
 
 
@@ -593,7 +1173,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
             "required": ["pattern"]
+
+
+
+
 
 
 
@@ -601,7 +1189,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
     },
+
+
+
+
 
 
 
@@ -609,11 +1205,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "name": "list_files", "description": "List files in the workspace",
 
 
 
+
+
+
+
         "parameters": {"type": "object", "properties": {
+
+
+
+
 
 
 
@@ -621,11 +1229,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
             "pattern": {"type": "string", "default": "*"}}}
 
 
 
+
+
+
+
     },
+
+
+
+
 
 
 
@@ -633,11 +1253,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "name": "apply_patch", "description": "Apply a unified-diff patch (multi-file, atomic)",
 
 
 
+
+
+
+
         "parameters": {"type": "object", "properties": {
+
+
+
+
 
 
 
@@ -645,7 +1277,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
     },
+
+
+
+
 
 
 
@@ -653,11 +1293,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "name": "edit_function", "description": "Replace one Python function/class by name (AST-aware)",
 
 
 
+
+
+
+
         "parameters": {"type": "object", "properties": {
+
+
+
+
 
 
 
@@ -665,11 +1317,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
             "new_source": {"type": "string"}}, "required": ["path", "function", "new_source"]}
 
 
 
+
+
+
+
     },
+
+
+
+
 
 
 
@@ -677,7 +1341,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "name": "git_log", "description": "Show recent commit history",
+
+
+
+
 
 
 
@@ -685,7 +1357,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
     },
+
+
+
+
 
 
 
@@ -693,11 +1373,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "name": "git_commit", "description": "Stage and commit changes",
 
 
 
+
+
+
+
         "parameters": {"type": "object", "properties": {
+
+
+
+
 
 
 
@@ -705,7 +1397,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
     },
+
+
+
+
 
 
 
@@ -713,7 +1413,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "name": "git_branch", "description": "List branches, or create (optionally checkout) one",
+
+
+
+
 
 
 
@@ -721,11 +1429,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
             "name": {"type": "string"}, "checkout": {"type": "boolean", "default": False}}}
 
 
 
+
+
+
+
     },
+
+
+
+
 
 
 
@@ -733,7 +1453,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "name": "git_checkout", "description": "Check out a branch/commit",
+
+
+
+
 
 
 
@@ -741,7 +1469,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
     },
+
+
+
+
 
 
 
@@ -749,7 +1485,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
         "name": "git_show", "description": "Show a commit summary",
+
+
+
+
 
 
 
@@ -757,7 +1501,15 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -773,7 +1525,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -781,7 +1549,19 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -790,6 +1570,10 @@ TOOL_SCHEMAS = {
 
 
                                                                   
+
+
+
+
 
 
 
@@ -805,7 +1589,23 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -813,7 +1613,19 @@ TOOL_SCHEMAS = {
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -825,11 +1637,23 @@ class ProductionAgent:
 
 
 
+
+
+
+
     """Production-grade coding agent with structured tool use."""
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -837,7 +1661,15 @@ class ProductionAgent:
 
 
 
+
+
+
+
         self,
+
+
+
+
 
 
 
@@ -845,7 +1677,15 @@ class ProductionAgent:
 
 
 
+
+
+
+
         tokenizer,
+
+
+
+
 
 
 
@@ -853,7 +1693,15 @@ class ProductionAgent:
 
 
 
+
+
+
+
         max_steps: int = 20,
+
+
+
+
 
 
 
@@ -861,7 +1709,15 @@ class ProductionAgent:
 
 
 
+
+
+
+
         max_parse_retries: int = 3,
+
+
+
+
 
 
 
@@ -869,7 +1725,15 @@ class ProductionAgent:
 
 
 
+
+
+
+
         self.model = model
+
+
+
+
 
 
 
@@ -877,7 +1741,15 @@ class ProductionAgent:
 
 
 
+
+
+
+
         self.max_steps = max_steps
+
+
+
+
 
 
 
@@ -885,7 +1757,15 @@ class ProductionAgent:
 
 
 
+
+
+
+
         self.sandbox = sandbox if sandbox is not None else HardenedSandbox()
+
+
+
+
 
 
 
@@ -893,7 +1773,15 @@ class ProductionAgent:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -901,7 +1789,15 @@ class ProductionAgent:
 
 
 
+
+
+
+
         """Build system prompt with tool schemas."""
+
+
+
+
 
 
 
@@ -909,7 +1805,15 @@ class ProductionAgent:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -932,7 +1836,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -940,7 +1852,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
         """Parse + schema-validate a tool call. Returns (call, error)."""
+
+
+
+
 
 
 
@@ -952,7 +1872,19 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
+
+
+
+
     def run(self, task: str, verbose: bool = True) -> Dict[str, Any]:
+
+
+
+
 
 
 
@@ -969,7 +1901,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
         if verbose:
+
+
+
+
 
 
 
@@ -977,7 +1917,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
             print(f"Task: {task}")
+
+
+
+
 
 
 
@@ -985,7 +1933,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -993,7 +1949,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
             {"role": "system", "content": self._build_system_prompt()},
+
+
+
+
 
 
 
@@ -1001,11 +1965,23 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
         ]
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1013,7 +1989,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1021,7 +2005,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
             if verbose:
+
+
+
+
 
 
 
@@ -1029,7 +2021,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1037,7 +2037,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
             prompt = self._format_messages(messages)
+
+
+
+
 
 
 
@@ -1045,7 +2053,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1053,7 +2069,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 input_ids=torch.tensor([input_ids]),
+
+
+
+
 
 
 
@@ -1061,7 +2085,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 temperature=0.7,
+
+
+
+
 
 
 
@@ -1069,11 +2101,23 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
             )
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1081,7 +2125,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1089,11 +2141,23 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 print(f"Agent: {response[:200]}...")
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1101,7 +2165,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
             if "FINAL ANSWER:" in response:
+
+
+
+
 
 
 
@@ -1109,7 +2181,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 if verbose:
+
+
+
+
 
 
 
@@ -1117,7 +2197,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                     print(f"Final Answer: {answer}")
+
+
+
+
 
 
 
@@ -1125,7 +2213,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 
+
+
+
+
 
 
 
@@ -1133,7 +2229,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                     'answer': answer,
+
+
+
+
 
 
 
@@ -1141,7 +2245,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                     'success': True,
+
+
+
+
 
 
 
@@ -1149,7 +2261,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1157,7 +2277,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
             tool_call, parse_error = self._parse_tool_call(response)
+
+
+
+
 
 
 
@@ -1165,11 +2293,23 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                                                                                      
 
 
 
+
+
+
+
                 messages.append({"role": "assistant", "content": response})
+
+
+
+
 
 
 
@@ -1177,7 +2317,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 steps.append({'tool': None, 'arguments': {}, 'result': {'error': parse_error}, 'repaired': False})
+
+
+
+
 
 
 
@@ -1185,7 +2333,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
             if tool_call:
+
+
+
+
 
 
 
@@ -1193,7 +2349,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 arguments = tool_call['arguments']
+
+
+
+
 
 
 
@@ -1201,7 +2365,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 if verbose:
+
+
+
+
 
 
 
@@ -1209,11 +2381,23 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                     print(f"  Args: {arguments}")
 
 
 
+
+
+
+
                 
+
+
+
+
 
 
 
@@ -1221,11 +2405,23 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 result = self.executor.execute_tool(tool_name, arguments)
 
 
 
+
+
+
+
                 
+
+
+
+
 
 
 
@@ -1233,7 +2429,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                     result_str = json.dumps(result, indent=2)
+
+
+
+
 
 
 
@@ -1241,7 +2445,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 
+
+
+
+
 
 
 
@@ -1249,7 +2461,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 messages.append({"role": "assistant", "content": response})
+
+
+
+
 
 
 
@@ -1257,7 +2477,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                     "role": "tool",
+
+
+
+
 
 
 
@@ -1265,7 +2493,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 })
+
+
+
+
 
 
 
@@ -1273,7 +2509,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 steps.append({
+
+
+
+
 
 
 
@@ -1281,7 +2525,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                     'arguments': arguments,
+
+
+
+
 
 
 
@@ -1289,7 +2541,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 })
+
+
+
+
 
 
 
@@ -1297,7 +2557,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                                                    
+
+
+
+
 
 
 
@@ -1305,7 +2573,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1313,7 +2589,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
         return {
+
+
+
+
 
 
 
@@ -1321,7 +2605,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
             'steps': steps,
+
+
+
+
 
 
 
@@ -1329,7 +2621,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -1337,7 +2637,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
     def _format_messages(self, messages: List[Dict]) -> str:
+
+
+
+
 
 
 
@@ -1345,7 +2653,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
         parts = []
+
+
+
+
 
 
 
@@ -1353,7 +2669,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
             role = msg['role']
+
+
+
+
 
 
 
@@ -1361,7 +2685,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1369,7 +2701,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 parts.append(f"<|system|>\n{content}\n<eos>")
+
+
+
+
 
 
 
@@ -1377,7 +2717,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 parts.append(f"<|user|>\n{content}\n<eos>")
+
+
+
+
 
 
 
@@ -1385,7 +2733,15 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 parts.append(f"<|assistant|>\n{content}\n<eos>")
+
+
+
+
 
 
 
@@ -1393,11 +2749,23 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
                 parts.append(f"<|tool_result|>\n{content}\n<eos>")
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1413,7 +2781,23 @@ When the task is complete, respond with FINAL ANSWER: followed by your answer.
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == '__main__':
+
+
+
+
 
 
 
@@ -1421,7 +2805,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
     logging.basicConfig(level=logging.INFO)
+
+
+
+
 
 
 
@@ -1429,7 +2821,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
     print("Production Agent Example")
+
+
+
+
 
 
 
@@ -1437,7 +2837,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
     print("\nTo use the agent:")
+
+
+
+
 
 
 
@@ -1448,6 +2856,10 @@ agent = ProductionAgent(model, tokenizer, workspace_path='./my_project')
 result = agent.run("Create a Flask API with tests")
 print(result['answer'])
 """)
+
+
+
+
 
 
 

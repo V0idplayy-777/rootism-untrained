@@ -18,11 +18,27 @@ Architecture decisions:
 
 
 
+
+
+
+
+
+
+
+
 from dataclasses import dataclass, field
 
 
 
+
+
+
+
 from typing import Optional, Tuple
+
+
+
+
 
 
 
@@ -38,11 +54,31 @@ import json
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @dataclass
 
 
 
+
+
+
+
 class CodingAgentConfig:
+
+
+
+
 
 
 
@@ -54,7 +90,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
                               
+
+
+
+
 
 
 
@@ -62,7 +110,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
     hidden_size: int = 6144
+
+
+
+
 
 
 
@@ -70,7 +126,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
     num_hidden_layers: int = 60
+
+
+
+
 
 
 
@@ -78,7 +142,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
     num_kv_heads: int = 8                                       
+
+
+
+
 
 
 
@@ -90,11 +162,27 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
                       
 
 
 
+
+
+
+
     max_position_embeddings: int = 8192
+
+
+
+
 
 
 
@@ -106,11 +194,27 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
                            
 
 
 
+
+
+
+
     rms_norm_eps: float = 1e-5
+
+
+
+
 
 
 
@@ -122,7 +226,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
                         
+
+
+
+
 
 
 
@@ -134,7 +250,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
                        
+
+
+
+
 
 
 
@@ -142,7 +270,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
     attention_dropout: float = 0.0
+
+
+
+
 
 
 
@@ -150,7 +286,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
                                                                              
+
+
+
+
 
 
 
@@ -158,11 +302,23 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
     rope_scaling_type: Optional[str] = None
 
 
 
+
+
+
+
     rope_scaling_factor: float = 1.0
+
+
+
+
 
 
 
@@ -174,7 +330,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
                                    
+
+
+
+
 
 
 
@@ -182,7 +350,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
     tool_result_token_id: int = 49                      
+
+
+
+
 
 
 
@@ -194,11 +370,27 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
                             
 
 
 
+
+
+
+
     initializer_range: float = 0.02
+
+
+
+
 
 
 
@@ -210,11 +402,27 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
                       
 
 
 
+
+
+
+
     use_gradient_checkpointing: bool = True
+
+
+
+
 
 
 
@@ -226,7 +434,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
                        
+
+
+
+
 
 
 
@@ -234,7 +454,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
     eos_token_id: int = 2
+
+
+
+
 
 
 
@@ -246,11 +474,27 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
                        
 
 
 
+
+
+
+
     deepspeed_stage: int = 3
+
+
+
+
 
 
 
@@ -262,7 +506,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
                   
+
+
+
+
 
 
 
@@ -274,7 +530,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
     def __post_init__(self):
+
+
+
+
 
 
 
@@ -282,15 +550,35 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         assert self.hidden_size % self.num_attention_heads == 0,
+
+
 
             f"hidden_size ({self.hidden_size}) must be divisible by num_attention_heads ({self.num_attention_heads})"
 
 
 
+
+
+
+
         assert self.num_attention_heads % self.num_kv_heads == 0,
 
+
+
             f"num_attention_heads ({self.num_attention_heads}) must be divisible by num_kv_heads ({self.num_kv_heads})"
+
+
+
+
+
+
+
+
 
 
 
@@ -302,7 +590,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         self.head_dim = self.hidden_size // self.num_attention_heads
+
+
+
+
+
+
+
+
 
 
 
@@ -314,11 +614,23 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         """Estimate total parameter count."""
 
 
 
+
+
+
+
                           
+
+
+
+
 
 
 
@@ -330,11 +642,27 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
                                
 
 
 
+
+
+
+
                                                             
+
+
+
+
 
 
 
@@ -342,7 +670,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
                                                                         
+
+
+
+
 
 
 
@@ -350,11 +686,23 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
                                                             
 
 
 
+
+
+
+
         o_proj = self.num_attention_heads * self.head_dim * self.hidden_size
+
+
+
+
 
 
 
@@ -366,11 +714,27 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
                                                        
 
 
 
+
+
+
+
         mlp_params = (self.hidden_size * self.intermediate_size * 2 +
+
+
+
+
 
 
 
@@ -382,7 +746,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
                                                            
+
+
+
+
 
 
 
@@ -394,7 +770,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
         layer_params = attn_params + mlp_params + norm_params
+
+
+
+
 
 
 
@@ -406,7 +794,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
                     
+
+
+
+
 
 
 
@@ -418,7 +818,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
         total = embed_params + total_transformer + final_norm
+
+
+
+
 
 
 
@@ -430,11 +842,27 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
     def to_dict(self) -> dict:
 
 
 
+
+
+
+
         """Convert config to dictionary."""
+
+
+
+
 
 
 
@@ -446,7 +874,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
     def save(self, path: str):
+
+
+
+
 
 
 
@@ -454,7 +894,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         with open(path, 'w') as f:
+
+
+
+
 
 
 
@@ -466,7 +914,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
     @classmethod
+
+
+
+
 
 
 
@@ -474,7 +934,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         """Create config from dictionary."""
+
+
+
+
 
 
 
@@ -486,7 +954,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
     @classmethod
+
+
+
+
 
 
 
@@ -494,7 +974,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         """Load config from JSON file."""
+
+
+
+
 
 
 
@@ -502,7 +990,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
             d = json.load(f)
+
+
+
+
 
 
 
@@ -514,7 +1010,19 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
+
+
+
+
     def print_summary(self):
+
+
+
+
 
 
 
@@ -522,11 +1030,23 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         total_params = self.total_parameters()
 
 
 
+
+
+
+
         print("=" * 60)
+
+
+
+
 
 
 
@@ -534,7 +1054,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         print("=" * 60)
+
+
+
+
 
 
 
@@ -542,7 +1070,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         print(f"  Hidden Size:           {self.hidden_size}")
+
+
+
+
 
 
 
@@ -550,7 +1086,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         print(f"  Num Attention Heads:   {self.num_attention_heads}")
+
+
+
+
 
 
 
@@ -558,7 +1102,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         print(f"  Head Dimension:        {self.head_dim}")
+
+
+
+
 
 
 
@@ -566,7 +1118,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         print(f"  Vocabulary Size:       {self.vocab_size:,}")
+
+
+
+
 
 
 
@@ -574,7 +1134,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         print(f"  Sliding Window:        {self.sliding_window}")
+
+
+
+
 
 
 
@@ -582,7 +1150,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         print(f"  Activation:            SwiGLU (SiLU)")
+
+
+
+
 
 
 
@@ -590,7 +1166,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         print(f"  Gradient Checkpoint:   {self.use_gradient_checkpointing}")
+
+
+
+
 
 
 
@@ -598,11 +1182,31 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
         print(f"  DeepSpeed Stage:       ZeRO-{self.deepspeed_stage}")
 
 
 
+
+
+
+
         print("=" * 60)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -618,7 +1222,15 @@ class CodingAgentConfig:
 
 
 
+
+
+
+
 def get_20b_config() -> CodingAgentConfig:
+
+
+
+
 
 
 
@@ -626,7 +1238,15 @@ def get_20b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
     return CodingAgentConfig(
+
+
+
+
 
 
 
@@ -634,7 +1254,15 @@ def get_20b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         hidden_size=6144,
+
+
+
+
 
 
 
@@ -642,7 +1270,15 @@ def get_20b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         num_hidden_layers=60,
+
+
+
+
 
 
 
@@ -650,7 +1286,15 @@ def get_20b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         num_kv_heads=8,
+
+
+
+
 
 
 
@@ -658,7 +1302,15 @@ def get_20b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         sliding_window=4096,
+
+
+
+
 
 
 
@@ -666,7 +1318,23 @@ def get_20b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
     )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -682,7 +1350,15 @@ def get_7b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
     """Get a 7B parameter configuration (for testing/debugging)."""
+
+
+
+
 
 
 
@@ -690,7 +1366,15 @@ def get_7b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         vocab_size=128256,
+
+
+
+
 
 
 
@@ -698,7 +1382,15 @@ def get_7b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         intermediate_size=11008,
+
+
+
+
 
 
 
@@ -706,7 +1398,15 @@ def get_7b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         num_attention_heads=32,
+
+
+
+
 
 
 
@@ -714,7 +1414,15 @@ def get_7b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         max_position_embeddings=8192,
+
+
+
+
 
 
 
@@ -722,11 +1430,31 @@ def get_7b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         rope_theta=500000.0,
 
 
 
+
+
+
+
     )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -742,7 +1470,15 @@ def get_20b_32k_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
     """20B with YaRN-scaled RoPE for 32k agent trajectories (train 8k, extend 4x)."""
+
+
+
+
 
 
 
@@ -750,7 +1486,15 @@ def get_20b_32k_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         vocab_size=128256, hidden_size=6144, intermediate_size=16384,
+
+
+
+
 
 
 
@@ -758,7 +1502,15 @@ def get_20b_32k_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         max_position_embeddings=32768, sliding_window=4096,
+
+
+
+
 
 
 
@@ -766,11 +1518,31 @@ def get_20b_32k_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         original_max_position_embeddings=8192,
 
 
 
+
+
+
+
     )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -786,7 +1558,15 @@ def get_tiny_config(vocab_size: int = 320) -> CodingAgentConfig:
 
 
 
+
+
+
+
     """CPU smoke-test config (fast forward/generate in CI)."""
+
+
+
+
 
 
 
@@ -794,7 +1574,15 @@ def get_tiny_config(vocab_size: int = 320) -> CodingAgentConfig:
 
 
 
+
+
+
+
         vocab_size=vocab_size, hidden_size=128, intermediate_size=256,
+
+
+
+
 
 
 
@@ -802,11 +1590,31 @@ def get_tiny_config(vocab_size: int = 320) -> CodingAgentConfig:
 
 
 
+
+
+
+
         max_position_embeddings=256, sliding_window=128, rope_theta=10000.0,
 
 
 
+
+
+
+
     )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -822,7 +1630,15 @@ def get_1b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
     """Get a 1B parameter configuration (for smoke testing)."""
+
+
+
+
 
 
 
@@ -830,7 +1646,15 @@ def get_1b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         vocab_size=128256,
+
+
+
+
 
 
 
@@ -838,7 +1662,15 @@ def get_1b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         intermediate_size=5504,
+
+
+
+
 
 
 
@@ -846,7 +1678,15 @@ def get_1b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         num_attention_heads=16,
+
+
+
+
 
 
 
@@ -854,7 +1694,15 @@ def get_1b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         max_position_embeddings=4096,
+
+
+
+
 
 
 
@@ -862,11 +1710,23 @@ def get_1b_config() -> CodingAgentConfig:
 
 
 
+
+
+
+
         rope_theta=500000.0,
 
 
 
+
+
+
+
     )
+
+
+
+
 
 
 

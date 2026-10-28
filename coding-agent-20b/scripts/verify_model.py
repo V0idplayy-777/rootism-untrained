@@ -2,6 +2,10 @@
 
 
 
+
+
+
+
 """
 Model Verification Script.
 
@@ -22,7 +26,19 @@ Usage:
 
 
 
+
+
+
+
+
+
+
+
 import sys
+
+
+
+
 
 
 
@@ -30,11 +46,27 @@ import time
 
 
 
+
+
+
+
 import argparse
 
 
 
+
+
+
+
 from pathlib import Path
+
+
+
+
+
+
+
+
 
 
 
@@ -50,7 +82,19 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 
+
+
+
+
+
+
+
+
 import torch
+
+
+
+
 
 
 
@@ -62,11 +106,27 @@ import torch.nn as nn
 
 
 
+
+
+
+
+
+
+
+
 from model.config import get_20b_config, get_7b_config, get_1b_config, CodingAgentConfig
 
 
 
+
+
+
+
 from model.model import CodingAgentModel
+
+
+
+
 
 
 
@@ -82,7 +142,23 @@ from model.tokenizer import CodeTokenizer
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def verify_model(config: CodingAgentConfig, device: str = "cpu"):
+
+
+
+
 
 
 
@@ -90,7 +166,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     print("=" * 60)
+
+
+
+
 
 
 
@@ -98,7 +182,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     print("=" * 60)
+
+
+
+
+
+
+
+
 
 
 
@@ -107,6 +203,10 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
                   
+
+
+
+
 
 
 
@@ -118,7 +218,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
                   
+
+
+
+
 
 
 
@@ -126,7 +238,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     start = time.time()
+
+
+
+
 
 
 
@@ -134,7 +254,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     model = model.to(device)
+
+
+
+
 
 
 
@@ -146,7 +274,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
                       
+
+
+
+
 
 
 
@@ -154,7 +294,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     total = model.num_parameters()
+
+
+
+
 
 
 
@@ -162,7 +310,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     print(f"  Total parameters:     {total:,} ({total / 1e9:.2f}B)")
+
+
+
+
 
 
 
@@ -174,7 +330,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
                
+
+
+
+
 
 
 
@@ -182,11 +350,23 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     for name, param in model.named_parameters():
 
 
 
+
+
+
+
         category = name.split('.')[1] if '.' in name else name
+
+
+
+
 
 
 
@@ -198,11 +378,27 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
     print("\n  Parameter breakdown:")
 
 
 
+
+
+
+
     for cat, count in sorted(param_counts.items(), key=lambda x: -x[1]):
+
+
+
+
 
 
 
@@ -214,7 +410,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
                   
+
+
+
+
 
 
 
@@ -222,7 +430,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     batch_size = 2
+
+
+
+
 
 
 
@@ -234,7 +450,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
     input_ids = torch.randint(0, config.vocab_size, (batch_size, seq_length), device=device)
+
+
+
+
 
 
 
@@ -246,7 +474,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
                                              
+
+
+
+
 
 
 
@@ -258,7 +498,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
     start = time.time()
+
+
+
+
 
 
 
@@ -266,11 +518,27 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
         output = model(input_ids=input_ids, labels=labels)
 
 
 
+
+
+
+
     elapsed = time.time() - start
+
+
+
+
+
+
+
+
 
 
 
@@ -282,7 +550,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     print(f"  Logits shape: {output.logits.shape}")
+
+
+
+
 
 
 
@@ -290,11 +566,23 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     assert output.logits.shape == (batch_size, seq_length, config.vocab_size)
 
 
 
+
+
+
+
     assert output.loss.item() > 0
+
+
+
+
 
 
 
@@ -306,7 +594,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
                    
+
+
+
+
 
 
 
@@ -314,7 +614,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     start = time.time()
+
+
+
+
 
 
 
@@ -322,7 +630,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     loss = output.loss
+
+
+
+
 
 
 
@@ -330,7 +646,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     elapsed = time.time() - start
+
+
+
+
+
+
+
+
 
 
 
@@ -346,7 +674,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
                            
+
+
+
+
 
 
 
@@ -354,7 +694,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     for name, param in model.named_parameters():
+
+
+
+
 
 
 
@@ -362,11 +710,23 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
             grad_count += 1
 
 
 
+
+
+
+
             assert not torch.isnan(param.grad).any(), f"NaN gradient in {name}"
+
+
+
+
 
 
 
@@ -378,7 +738,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
     total_params = sum(1 for _ in model.parameters() if _.requires_grad)
+
+
+
+
 
 
 
@@ -386,7 +758,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     assert grad_count == total_params
+
+
+
+
 
 
 
@@ -398,7 +778,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
                                  
+
+
+
+
 
 
 
@@ -406,7 +798,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     model.gradient_checkpointing = True
+
+
+
+
 
 
 
@@ -418,7 +818,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
     output = model(input_ids=input_ids, labels=labels)
+
+
+
+
 
 
 
@@ -426,11 +838,23 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     loss.backward()
 
 
 
+
+
+
+
     print(f"  Loss with checkpointing: {loss.item():.4f}")
+
+
+
+
 
 
 
@@ -442,7 +866,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
                                 
+
+
+
+
 
 
 
@@ -450,11 +886,27 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     model.gradient_checkpointing = False
 
 
 
+
+
+
+
     model.eval()
+
+
+
+
+
+
+
+
 
 
 
@@ -470,11 +922,27 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
     with torch.no_grad():
 
 
 
+
+
+
+
                        
+
+
+
+
 
 
 
@@ -486,7 +954,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
                     
+
+
+
+
 
 
 
@@ -498,7 +978,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
     assert output_with_cache.past_key_values is not None
+
+
+
+
 
 
 
@@ -510,11 +1002,27 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
     print(f"  KV cache layers: {len(output_with_cache.past_key_values)}")
 
 
 
+
+
+
+
     print(f"  KV cache shape per layer: K={output_with_cache.past_key_values[0][0].shape}")
+
+
+
+
 
 
 
@@ -526,7 +1034,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
              
+
+
+
+
 
 
 
@@ -534,7 +1054,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     print("  ALL TESTS PASSED ✓")
+
+
+
+
 
 
 
@@ -546,7 +1074,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
                      
+
+
+
+
 
 
 
@@ -554,7 +1094,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
         import gc
+
+
+
+
 
 
 
@@ -566,7 +1114,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
     param_bytes = total * 2                            
+
+
+
+
 
 
 
@@ -574,7 +1134,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     optim_bytes = total * 12                                                            
+
+
+
+
 
 
 
@@ -586,7 +1154,19 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
     print(f"\n  Memory estimates (BF16 + AdamW):")
+
+
+
+
 
 
 
@@ -594,7 +1174,15 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     print(f"    Gradients:      {grad_bytes / 1e9:.1f} GB")
+
+
+
+
 
 
 
@@ -602,11 +1190,23 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
     print(f"    Total (ZeRO-0): {total_training_bytes / 1e9:.1f} GB")
 
 
 
+
+
+
+
     print(f"    Per GPU (8x, ZeRO-3): {total_training_bytes / 8 / 1e9:.1f} GB")
+
+
+
+
 
 
 
@@ -622,7 +1222,23 @@ def verify_model(config: CodingAgentConfig, device: str = "cpu"):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def main():
+
+
+
+
 
 
 
@@ -630,11 +1246,23 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--model_size", type=str, default="1B", choices=["1B", "7B", "20B"])
 
 
 
+
+
+
+
     parser.add_argument("--device", type=str, default="cpu")
+
+
+
+
 
 
 
@@ -646,7 +1274,19 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
     if args.model_size == "20B":
+
+
+
+
 
 
 
@@ -654,7 +1294,15 @@ def main():
 
 
 
+
+
+
+
     elif args.model_size == "7B":
+
+
+
+
 
 
 
@@ -662,11 +1310,27 @@ def main():
 
 
 
+
+
+
+
     else:
 
 
 
+
+
+
+
         config = get_1b_config()
+
+
+
+
+
+
+
+
 
 
 
@@ -686,11 +1350,31 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
 
 
 
+
+
+
+
     main()
+
+
+
+
 
 
 

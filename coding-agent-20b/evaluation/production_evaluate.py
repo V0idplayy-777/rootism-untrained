@@ -15,7 +15,19 @@ Features:
 
 
 
+
+
+
+
+
+
+
+
 import os
+
+
+
+
 
 
 
@@ -23,7 +35,15 @@ import json
 
 
 
+
+
+
+
 import time
+
+
+
+
 
 
 
@@ -31,7 +51,15 @@ import logging
 
 
 
+
+
+
+
 import tempfile
+
+
+
+
 
 
 
@@ -39,7 +67,15 @@ import subprocess
 
 
 
+
+
+
+
 from pathlib import Path
+
+
+
+
 
 
 
@@ -47,7 +83,15 @@ from typing import List, Dict, Any, Optional, Tuple
 
 
 
+
+
+
+
 from dataclasses import dataclass, asdict
+
+
+
+
 
 
 
@@ -55,7 +99,19 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 
 
+
+
+
+
 import multiprocessing as mp
+
+
+
+
+
+
+
+
 
 
 
@@ -71,7 +127,19 @@ import numpy as np
 
 
 
+
+
+
+
+
+
+
+
 try:
+
+
+
+
 
 
 
@@ -79,7 +147,15 @@ try:
 
 
 
+
+
+
+
     HAS_DOCKER = True
+
+
+
+
 
 
 
@@ -87,7 +163,19 @@ except ImportError:
 
 
 
+
+
+
+
     HAS_DOCKER = False
+
+
+
+
+
+
+
+
 
 
 
@@ -107,7 +195,23 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -115,7 +219,19 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -127,7 +243,15 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
 class EvaluationProblem:
+
+
+
+
 
 
 
@@ -135,7 +259,15 @@ class EvaluationProblem:
 
 
 
+
+
+
+
     id: str
+
+
+
+
 
 
 
@@ -143,7 +275,15 @@ class EvaluationProblem:
 
 
 
+
+
+
+
     canonical_solution: str
+
+
+
+
 
 
 
@@ -151,7 +291,15 @@ class EvaluationProblem:
 
 
 
+
+
+
+
     entry_point: str
+
+
+
+
 
 
 
@@ -159,7 +307,15 @@ class EvaluationProblem:
 
 
 
+
+
+
+
     difficulty: str = "medium"
+
+
+
+
 
 
 
@@ -167,7 +323,15 @@ class EvaluationProblem:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -175,7 +339,15 @@ class EvaluationProblem:
 
 
 
+
+
+
+
         if self.metadata is None:
+
+
+
+
 
 
 
@@ -191,7 +363,23 @@ class EvaluationProblem:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def load_humaneval() -> List[EvaluationProblem]:
+
+
+
+
 
 
 
@@ -199,7 +387,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
     try:
+
+
+
+
 
 
 
@@ -207,11 +403,23 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         dataset = load_dataset("openai_humaneval", split="test")
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -219,7 +427,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         for item in dataset:
+
+
+
+
 
 
 
@@ -227,7 +443,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 id=item["task_id"],
+
+
+
+
 
 
 
@@ -235,7 +459,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 canonical_solution=item["canonical_solution"],
+
+
+
+
 
 
 
@@ -243,7 +475,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 entry_point=item["entry_point"],
+
+
+
+
 
 
 
@@ -251,7 +491,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 difficulty="medium",
+
+
+
+
 
 
 
@@ -259,7 +507,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
             ))
+
+
+
+
 
 
 
@@ -267,7 +523,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         logger.info(f"Loaded {len(problems)} HumanEval problems")
+
+
+
+
 
 
 
@@ -275,7 +539,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
     except Exception as e:
+
+
+
+
 
 
 
@@ -283,7 +555,23 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         return []
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -299,7 +587,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
     """Load MBPP benchmark."""
+
+
+
+
 
 
 
@@ -307,7 +603,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         from datasets import load_dataset
+
+
+
+
 
 
 
@@ -315,7 +619,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -323,7 +635,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         for i, item in enumerate(dataset):
+
+
+
+
 
 
 
@@ -331,7 +651,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -339,7 +667,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 id=f"mbpp_{i}",
+
+
+
+
 
 
 
@@ -347,7 +683,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 canonical_solution=item["code"],
+
+
+
+
 
 
 
@@ -355,7 +699,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 entry_point=item.get("entry_point", ""),
+
+
+
+
 
 
 
@@ -363,7 +715,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 difficulty="easy",
+
+
+
+
 
 
 
@@ -371,7 +731,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
             ))
+
+
+
+
 
 
 
@@ -379,7 +747,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         logger.info(f"Loaded {len(problems)} MBPP problems")
+
+
+
+
 
 
 
@@ -387,7 +763,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
     except Exception as e:
+
+
+
+
 
 
 
@@ -395,7 +779,23 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         return []
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -411,7 +811,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
     """Load LiveCodeBench (competitive programming)."""
+
+
+
+
 
 
 
@@ -419,7 +827,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         from datasets import load_dataset
+
+
+
+
 
 
 
@@ -427,7 +843,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -435,7 +859,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         for i, item in enumerate(dataset):
+
+
+
+
 
 
 
@@ -443,7 +875,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 id=item.get("problem_id", f"lcb_{i}"),
+
+
+
+
 
 
 
@@ -451,7 +891,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 canonical_solution=item.get("canonical_solution", ""),
+
+
+
+
 
 
 
@@ -459,7 +907,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 entry_point=item.get("entry_point", ""),
+
+
+
+
 
 
 
@@ -467,7 +923,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 difficulty=item.get("difficulty", "medium"),
+
+
+
+
 
 
 
@@ -475,7 +939,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
             ))
+
+
+
+
 
 
 
@@ -483,7 +955,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         logger.info(f"Loaded {len(problems)} LiveCodeBench problems")
+
+
+
+
 
 
 
@@ -491,11 +971,23 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
     except Exception as e:
 
 
 
+
+
+
+
         logger.error(f"Error loading LiveCodeBench: {e}")
+
+
+
+
 
 
 
@@ -511,7 +1003,23 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -519,7 +1027,19 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -531,11 +1051,23 @@ class SandboxExecutor:
 
 
 
+
+
+
+
     """Execute code in Docker sandbox with resource limits."""
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -543,7 +1075,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
         self,
+
+
+
+
 
 
 
@@ -551,7 +1091,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
         memory_limit: str = "1g",
+
+
+
+
 
 
 
@@ -559,7 +1107,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
         network_disabled: bool = True,
+
+
+
+
 
 
 
@@ -567,7 +1123,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
         self.image = image
+
+
+
+
 
 
 
@@ -575,7 +1139,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
         self.timeout = timeout
+
+
+
+
 
 
 
@@ -583,7 +1155,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -591,7 +1171,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
             try:
+
+
+
+
 
 
 
@@ -599,7 +1187,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 self.available = True
+
+
+
+
 
 
 
@@ -607,7 +1203,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 logger.warning(f"Docker not available: {e}")
+
+
+
+
 
 
 
@@ -615,7 +1219,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
         else:
+
+
+
+
 
 
 
@@ -623,7 +1235,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -631,7 +1251,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
         self,
+
+
+
+
 
 
 
@@ -639,7 +1267,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
         test_cases: str = "",
+
+
+
+
 
 
 
@@ -647,7 +1283,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
     ) -> Dict[str, Any]:
+
+
+
+
 
 
 
@@ -660,7 +1304,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
         timeout = timeout or self.timeout
+
+
+
+
 
 
 
@@ -668,7 +1320,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -676,11 +1336,23 @@ class SandboxExecutor:
 
 
 
+
+
+
+
             return self._fallback_execute(full_code, timeout)
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -688,11 +1360,23 @@ class SandboxExecutor:
 
 
 
+
+
+
+
         
 
 
 
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -700,7 +1384,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
             with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+
+
+
+
 
 
 
@@ -708,11 +1400,23 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 script_path = f.name
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -720,7 +1424,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
             container = self.client.containers.run(
+
+
+
+
 
 
 
@@ -728,7 +1440,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 command=f"python /script.py",
+
+
+
+
 
 
 
@@ -736,7 +1456,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 mem_limit=self.memory_limit,
+
+
+
+
 
 
 
@@ -744,7 +1472,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 detach=True,
+
+
+
+
 
 
 
@@ -752,7 +1488,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -760,7 +1504,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 result = container.wait(timeout=timeout)
+
+
+
+
 
 
 
@@ -768,7 +1520,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 stderr = container.logs(stdout=False, stderr=True).decode('utf-8')
+
+
+
+
 
 
 
@@ -776,7 +1536,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 
+
+
+
+
 
 
 
@@ -784,7 +1552,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 
+
+
+
+
 
 
 
@@ -792,11 +1568,23 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 
 
 
 
+
+
+
+
                 return {
+
+
+
+
 
 
 
@@ -804,7 +1592,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                     'failed': not passed,
+
+
+
+
 
 
 
@@ -812,7 +1608,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                     'stdout': stdout,
+
+
+
+
 
 
 
@@ -820,7 +1624,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                     'exit_code': exit_code,
+
+
+
+
 
 
 
@@ -828,11 +1640,23 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 }
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -840,7 +1664,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 container.kill()
+
+
+
+
 
 
 
@@ -848,7 +1680,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                     'passed': False,
+
+
+
+
 
 
 
@@ -856,7 +1696,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                     'error': f'Timeout after {timeout}s',
+
+
+
+
 
 
 
@@ -864,7 +1712,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                     'stderr': str(e),
+
+
+
+
 
 
 
@@ -872,7 +1728,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                     'execution_time': timeout,
+
+
+
+
 
 
 
@@ -880,7 +1744,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
             finally:
+
+
+
+
 
 
 
@@ -888,7 +1760,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 os.unlink(script_path)
+
+
+
+
 
 
 
@@ -896,7 +1776,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
         except Exception as e:
+
+
+
+
 
 
 
@@ -904,11 +1792,23 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 'passed': False,
 
 
 
+
+
+
+
                 'failed': True,
+
+
+
+
 
 
 
@@ -916,7 +1816,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 'stdout': '',
+
+
+
+
 
 
 
@@ -924,7 +1832,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 'exit_code': -1,
+
+
+
+
 
 
 
@@ -932,7 +1848,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
             }
+
+
+
+
 
 
 
@@ -940,7 +1864,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
     def _fallback_execute(self, code: str, timeout: int) -> Dict:
+
+
+
+
 
 
 
@@ -948,11 +1880,23 @@ class SandboxExecutor:
 
 
 
+
+
+
+
         start_time = time.time()
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -960,7 +1904,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
             with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+
+
+
+
 
 
 
@@ -968,11 +1920,23 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 script_path = f.name
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -980,7 +1944,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 ['python3', script_path],
+
+
+
+
 
 
 
@@ -988,7 +1960,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 text=True,
+
+
+
+
 
 
 
@@ -996,11 +1976,23 @@ class SandboxExecutor:
 
 
 
+
+
+
+
             )
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1008,11 +2000,23 @@ class SandboxExecutor:
 
 
 
+
+
+
+
             execution_time = time.time() - start_time
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1020,11 +2024,23 @@ class SandboxExecutor:
 
 
 
+
+
+
+
             
 
 
 
+
+
+
+
             return {
+
+
+
+
 
 
 
@@ -1032,7 +2048,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 'failed': not passed,
+
+
+
+
 
 
 
@@ -1040,7 +2064,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 'stdout': result.stdout,
+
+
+
+
 
 
 
@@ -1048,7 +2080,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 'exit_code': result.returncode,
+
+
+
+
 
 
 
@@ -1056,7 +2096,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
             }
+
+
+
+
 
 
 
@@ -1064,7 +2112,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
         except subprocess.TimeoutExpired:
+
+
+
+
 
 
 
@@ -1072,11 +2128,23 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 'passed': False,
 
 
 
+
+
+
+
                 'failed': True,
+
+
+
+
 
 
 
@@ -1084,7 +2152,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 'stdout': '',
+
+
+
+
 
 
 
@@ -1092,7 +2168,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 'exit_code': -1,
+
+
+
+
 
 
 
@@ -1100,7 +2184,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
             }
+
+
+
+
 
 
 
@@ -1108,7 +2200,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
             return {
+
+
+
+
 
 
 
@@ -1116,7 +2216,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 'failed': True,
+
+
+
+
 
 
 
@@ -1124,7 +2232,15 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 'stdout': '',
+
+
+
+
 
 
 
@@ -1132,11 +2248,23 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                 'exit_code': -1,
 
 
 
+
+
+
+
                 'execution_time': 0,
+
+
+
+
 
 
 
@@ -1152,7 +2280,23 @@ class SandboxExecutor:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -1160,7 +2304,19 @@ class SandboxExecutor:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -1172,11 +2328,23 @@ class CodeGenerator:
 
 
 
+
+
+
+
     """Generate code completions."""
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1184,7 +2352,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
         self.model = model
+
+
+
+
 
 
 
@@ -1192,7 +2368,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
         self.max_new_tokens = max_new_tokens
+
+
+
+
 
 
 
@@ -1200,7 +2384,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
     def generate(
+
+
+
+
 
 
 
@@ -1208,7 +2400,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
         prompt: str,
+
+
+
+
 
 
 
@@ -1216,7 +2416,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
         top_p: float = 0.95,
+
+
+
+
 
 
 
@@ -1224,7 +2432,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
     ) -> List[str]:
+
+
+
+
 
 
 
@@ -1232,11 +2448,23 @@ class CodeGenerator:
 
 
 
+
+
+
+
         import torch
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1244,11 +2472,23 @@ class CodeGenerator:
 
 
 
+
+
+
+
         completions = []
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1256,7 +2496,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
             input_ids = self.tokenizer.encode(prompt, add_special_tokens=True)
+
+
+
+
 
 
 
@@ -1264,11 +2512,23 @@ class CodeGenerator:
 
 
 
+
+
+
+
             input_tensor = torch.tensor([input_ids], device=_dev)
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1276,7 +2536,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
                 output_ids = self.model.generate(
+
+
+
+
 
 
 
@@ -1284,7 +2552,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
                     max_new_tokens=self.max_new_tokens,
+
+
+
+
 
 
 
@@ -1292,7 +2568,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
                     top_p=top_p,
+
+
+
+
 
 
 
@@ -1300,7 +2584,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
                 )
+
+
+
+
 
 
 
@@ -1308,7 +2600,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
             completion = self.tokenizer.decode(output_ids[0][len(input_ids):])
+
+
+
+
 
 
 
@@ -1316,7 +2616,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1332,7 +2640,23 @@ class CodeGenerator:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -1340,7 +2664,19 @@ class CodeGenerator:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -1352,7 +2688,15 @@ def compute_pass_at_k(n: int, c: int, k: int) -> float:
 
 
 
+
+
+
+
     """Compute pass@k metric."""
+
+
+
+
 
 
 
@@ -1360,7 +2704,15 @@ def compute_pass_at_k(n: int, c: int, k: int) -> float:
 
 
 
+
+
+
+
         return 1.0
+
+
+
+
 
 
 
@@ -1376,7 +2728,23 @@ def compute_pass_at_k(n: int, c: int, k: int) -> float:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def evaluate_problem(
+
+
+
+
 
 
 
@@ -1384,7 +2752,15 @@ def evaluate_problem(
 
 
 
+
+
+
+
     generator: CodeGenerator,
+
+
+
+
 
 
 
@@ -1392,7 +2768,15 @@ def evaluate_problem(
 
 
 
+
+
+
+
     num_samples: int = 10,
+
+
+
+
 
 
 
@@ -1400,7 +2784,15 @@ def evaluate_problem(
 
 
 
+
+
+
+
 ) -> Dict[str, Any]:
+
+
+
+
 
 
 
@@ -1408,7 +2800,15 @@ def evaluate_problem(
 
 
 
+
+
+
+
                           
+
+
+
+
 
 
 
@@ -1416,7 +2816,15 @@ def evaluate_problem(
 
 
 
+
+
+
+
         problem.prompt,
+
+
+
+
 
 
 
@@ -1424,7 +2832,15 @@ def evaluate_problem(
 
 
 
+
+
+
+
         num_samples=num_samples,
+
+
+
+
 
 
 
@@ -1432,7 +2848,15 @@ def evaluate_problem(
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1440,7 +2864,15 @@ def evaluate_problem(
 
 
 
+
+
+
+
     results = []
+
+
+
+
 
 
 
@@ -1448,7 +2880,15 @@ def evaluate_problem(
 
 
 
+
+
+
+
         full_code = problem.prompt + completion
+
+
+
+
 
 
 
@@ -1456,11 +2896,23 @@ def evaluate_problem(
 
 
 
+
+
+
+
         results.append(result)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1468,11 +2920,23 @@ def evaluate_problem(
 
 
 
+
+
+
+
     correct = sum(1 for r in results if r['passed'])
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1480,7 +2944,15 @@ def evaluate_problem(
 
 
 
+
+
+
+
     n = num_samples
+
+
+
+
 
 
 
@@ -1488,7 +2960,15 @@ def evaluate_problem(
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1496,7 +2976,15 @@ def evaluate_problem(
 
 
 
+
+
+
+
         'id': problem.id,
+
+
+
+
 
 
 
@@ -1504,7 +2992,15 @@ def evaluate_problem(
 
 
 
+
+
+
+
         'num_correct': c,
+
+
+
+
 
 
 
@@ -1512,7 +3008,15 @@ def evaluate_problem(
 
 
 
+
+
+
+
         'pass_at_5': compute_pass_at_k(n, c, 5) if n >= 5 else None,
+
+
+
+
 
 
 
@@ -1520,7 +3024,15 @@ def evaluate_problem(
 
 
 
+
+
+
+
         'results': results,
+
+
+
+
 
 
 
@@ -1536,7 +3048,23 @@ def evaluate_problem(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def evaluate_benchmark(
+
+
+
+
 
 
 
@@ -1544,7 +3072,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     generator: CodeGenerator,
+
+
+
+
 
 
 
@@ -1552,7 +3088,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     num_samples: int = 10,
+
+
+
+
 
 
 
@@ -1560,7 +3104,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     num_workers: int = 4,
+
+
+
+
 
 
 
@@ -1568,7 +3120,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
 ) -> Dict[str, Any]:
+
+
+
+
 
 
 
@@ -1590,11 +3150,23 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     results = []
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1602,7 +3174,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1610,7 +3190,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     cached = {}
+
+
+
+
 
 
 
@@ -1618,7 +3206,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         cdir = Path(cache_dir)
+
+
+
+
 
 
 
@@ -1626,7 +3222,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         if legacy.exists():
+
+
+
+
 
 
 
@@ -1634,7 +3238,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
                 cached = json.load(f)
+
+
+
+
 
 
 
@@ -1642,7 +3254,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
             for f in cdir.glob("*.json"):
+
+
+
+
 
 
 
@@ -1650,7 +3270,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
                     continue
+
+
+
+
 
 
 
@@ -1658,7 +3286,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
                     r = json.loads(f.read_text())
+
+
+
+
 
 
 
@@ -1666,7 +3302,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
                 except Exception:
+
+
+
+
 
 
 
@@ -1674,7 +3318,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         logger.info(f"Loaded {len(cached)} cached results")
+
+
+
+
 
 
 
@@ -1682,7 +3334,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
                                                                           
+
+
+
+
 
 
 
@@ -1690,7 +3350,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
                                                           
+
+
+
+
 
 
 
@@ -1698,7 +3366,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         return evaluate_problem(problem, generator, executor,
+
+
+
+
 
 
 
@@ -1710,7 +3386,19 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
+
+
+
+
     pending = []
+
+
+
+
 
 
 
@@ -1718,7 +3406,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         if problem.id in cached:
+
+
+
+
 
 
 
@@ -1726,7 +3422,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         else:
+
+
+
+
 
 
 
@@ -1734,7 +3438,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     if pending:
+
+
+
+
 
 
 
@@ -1742,7 +3454,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         with _TPE(max_workers=max(1, num_workers)) as pool:
+
+
+
+
 
 
 
@@ -1750,7 +3470,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
                 results.append(result)
+
+
+
+
 
 
 
@@ -1758,7 +3486,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
                     cdir = Path(cache_dir)
+
+
+
+
 
 
 
@@ -1766,7 +3502,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
                     (cdir / f"{problem.id.replace('/', '_')}.json").write_text(json.dumps(result))
+
+
+
+
 
 
 
@@ -1774,7 +3518,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         by_id = {r["id"]: r for r in results}
+
+
+
+
 
 
 
@@ -1782,7 +3534,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1790,7 +3550,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     pass_at_1_scores = [r["pass_at_1"] for r in results]
+
+
+
+
 
 
 
@@ -1798,11 +3566,23 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     pass_at_10_scores = [r["pass_at_10"] for r in results if r["pass_at_10"] is not None]
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1810,7 +3590,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     errors = []
+
+
+
+
 
 
 
@@ -1818,7 +3606,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         if r['num_correct'] == 0:
+
+
+
+
 
 
 
@@ -1826,7 +3622,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
                 'id': r['id'],
+
+
+
+
 
 
 
@@ -1834,11 +3638,23 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
             })
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1846,7 +3662,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         'num_problems': len(problems),
+
+
+
+
 
 
 
@@ -1854,7 +3678,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         'pass_at_1': np.mean(pass_at_1_scores) if pass_at_1_scores else 0,
+
+
+
+
 
 
 
@@ -1862,7 +3694,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         'pass_at_10': np.mean(pass_at_10_scores) if pass_at_10_scores else None,
+
+
+
+
 
 
 
@@ -1870,7 +3710,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         'results': results,
+
+
+
+
 
 
 
@@ -1878,11 +3726,23 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1906,7 +3766,31 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -1914,7 +3798,19 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -1926,7 +3822,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
 class SweBenchProblem:
+
+
+
+
 
 
 
@@ -1935,7 +3839,15 @@ class SweBenchProblem:
 
 
 
+
+
+
+
     instance_id: str
+
+
+
+
 
 
 
@@ -1943,7 +3855,15 @@ class SweBenchProblem:
 
 
 
+
+
+
+
     base_commit: str
+
+
+
+
 
 
 
@@ -1951,7 +3871,15 @@ class SweBenchProblem:
 
 
 
+
+
+
+
     fail_to_pass: List[str]
+
+
+
+
 
 
 
@@ -1959,7 +3887,15 @@ class SweBenchProblem:
 
 
 
+
+
+
+
     patch: str = ""                                               
+
+
+
+
 
 
 
@@ -1975,7 +3911,23 @@ class SweBenchProblem:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def load_swebench(split: str = "test") -> List[SweBenchProblem]:
+
+
+
+
 
 
 
@@ -1983,7 +3935,15 @@ def load_swebench(split: str = "test") -> List[SweBenchProblem]:
 
 
 
+
+
+
+
     try:
+
+
+
+
 
 
 
@@ -1991,7 +3951,15 @@ def load_swebench(split: str = "test") -> List[SweBenchProblem]:
 
 
 
+
+
+
+
         import json as _json
+
+
+
+
 
 
 
@@ -1999,7 +3967,15 @@ def load_swebench(split: str = "test") -> List[SweBenchProblem]:
 
 
 
+
+
+
+
         out = []
+
+
+
+
 
 
 
@@ -2007,7 +3983,15 @@ def load_swebench(split: str = "test") -> List[SweBenchProblem]:
 
 
 
+
+
+
+
             def _lst(v):
+
+
+
+
 
 
 
@@ -2015,7 +3999,15 @@ def load_swebench(split: str = "test") -> List[SweBenchProblem]:
 
 
 
+
+
+
+
                     return v
+
+
+
+
 
 
 
@@ -2023,7 +4015,15 @@ def load_swebench(split: str = "test") -> List[SweBenchProblem]:
 
 
 
+
+
+
+
                     return _json.loads(v)
+
+
+
+
 
 
 
@@ -2031,7 +4031,15 @@ def load_swebench(split: str = "test") -> List[SweBenchProblem]:
 
 
 
+
+
+
+
                     return [v] if v else []
+
+
+
+
 
 
 
@@ -2039,7 +4047,15 @@ def load_swebench(split: str = "test") -> List[SweBenchProblem]:
 
 
 
+
+
+
+
                 instance_id=item["instance_id"], repo=item["repo"],
+
+
+
+
 
 
 
@@ -2047,7 +4063,15 @@ def load_swebench(split: str = "test") -> List[SweBenchProblem]:
 
 
 
+
+
+
+
                 problem_statement=item["problem_statement"],
+
+
+
+
 
 
 
@@ -2055,7 +4079,15 @@ def load_swebench(split: str = "test") -> List[SweBenchProblem]:
 
 
 
+
+
+
+
                 pass_to_pass=_lst(item.get("PASS_TO_PASS", [])),
+
+
+
+
 
 
 
@@ -2063,7 +4095,15 @@ def load_swebench(split: str = "test") -> List[SweBenchProblem]:
 
 
 
+
+
+
+
         logger.info(f"Loaded {len(out)} SWE-bench problems")
+
+
+
+
 
 
 
@@ -2071,11 +4111,23 @@ def load_swebench(split: str = "test") -> List[SweBenchProblem]:
 
 
 
+
+
+
+
     except Exception as e:
 
 
 
+
+
+
+
         logger.error(f"Error loading SWE-bench: {e}")
+
+
+
+
 
 
 
@@ -2091,7 +4143,23 @@ def load_swebench(split: str = "test") -> List[SweBenchProblem]:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class SweBenchHarness:
+
+
+
+
 
 
 
@@ -2107,7 +4175,19 @@ class SweBenchHarness:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, work_dir: str, timeout: int = 600):
+
+
+
+
 
 
 
@@ -2115,7 +4195,15 @@ class SweBenchHarness:
 
 
 
+
+
+
+
         self.work_dir.mkdir(parents=True, exist_ok=True)
+
+
+
+
 
 
 
@@ -2127,7 +4215,19 @@ class SweBenchHarness:
 
 
 
+
+
+
+
+
+
+
+
     def evaluate(self, problem: SweBenchProblem, candidate_patch: str, run_tests_fn=None) -> Dict[str, Any]:
+
+
+
+
 
 
 
@@ -2135,7 +4235,15 @@ class SweBenchHarness:
 
 
 
+
+
+
+
         import subprocess as _sp
+
+
+
+
 
 
 
@@ -2143,7 +4251,15 @@ class SweBenchHarness:
 
 
 
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -2151,7 +4267,15 @@ class SweBenchHarness:
 
 
 
+
+
+
+
                 _shutil.rmtree(repo_dir)
+
+
+
+
 
 
 
@@ -2159,7 +4283,15 @@ class SweBenchHarness:
 
 
 
+
+
+
+
                             capture_output=True, text=True, timeout=self.timeout)
+
+
+
+
 
 
 
@@ -2167,7 +4299,15 @@ class SweBenchHarness:
 
 
 
+
+
+
+
                 return {"instance_id": problem.instance_id, "resolved": False, "error": f"clone failed: {clone.stderr[:500]}"}
+
+
+
+
 
 
 
@@ -2175,7 +4315,15 @@ class SweBenchHarness:
 
 
 
+
+
+
+
             if problem.test_patch:
+
+
+
+
 
 
 
@@ -2183,7 +4331,15 @@ class SweBenchHarness:
 
 
 
+
+
+
+
                         capture_output=True, text=True, timeout=60)
+
+
+
+
 
 
 
@@ -2191,7 +4347,15 @@ class SweBenchHarness:
 
 
 
+
+
+
+
                               capture_output=True, text=True, timeout=60)
+
+
+
+
 
 
 
@@ -2199,7 +4363,15 @@ class SweBenchHarness:
 
 
 
+
+
+
+
                 return {"instance_id": problem.instance_id, "resolved": False,
+
+
+
+
 
 
 
@@ -2207,7 +4379,15 @@ class SweBenchHarness:
 
 
 
+
+
+
+
             runner = run_tests_fn or (lambda d, tests: {"passed": [], "failed": list(tests), "error": "no test runner configured"})
+
+
+
+
 
 
 
@@ -2215,7 +4395,15 @@ class SweBenchHarness:
 
 
 
+
+
+
+
             passed = set(results.get("passed", []))
+
+
+
+
 
 
 
@@ -2223,7 +4411,15 @@ class SweBenchHarness:
 
 
 
+
+
+
+
             return {"instance_id": problem.instance_id, "resolved": resolved, "test_results": results}
+
+
+
+
 
 
 
@@ -2231,11 +4427,23 @@ class SweBenchHarness:
 
 
 
+
+
+
+
             return {"instance_id": problem.instance_id, "resolved": False, "error": str(e)}
 
 
 
+
+
+
+
         finally:
+
+
+
+
 
 
 
@@ -2251,7 +4459,23 @@ class SweBenchHarness:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class ContaminationChecker:
+
+
+
+
 
 
 
@@ -2267,11 +4491,27 @@ class ContaminationChecker:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, n: int = 13):
 
 
 
+
+
+
+
         self.n = n
+
+
+
+
 
 
 
@@ -2283,7 +4523,19 @@ class ContaminationChecker:
 
 
 
+
+
+
+
+
+
+
+
     @staticmethod
+
+
+
+
 
 
 
@@ -2291,7 +4543,15 @@ class ContaminationChecker:
 
 
 
+
+
+
+
         toks = text.lower().split()
+
+
+
+
 
 
 
@@ -2303,7 +4563,19 @@ class ContaminationChecker:
 
 
 
+
+
+
+
+
+
+
+
     def add_training_text(self, text: str):
+
+
+
+
 
 
 
@@ -2315,7 +4587,19 @@ class ContaminationChecker:
 
 
 
+
+
+
+
+
+
+
+
     def check(self, text: str) -> Dict[str, Any]:
+
+
+
+
 
 
 
@@ -2323,7 +4607,15 @@ class ContaminationChecker:
 
 
 
+
+
+
+
         hit = grams & self.index
+
+
+
+
 
 
 
@@ -2339,7 +4631,23 @@ class ContaminationChecker:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @dataclass
+
+
+
+
 
 
 
@@ -2347,7 +4655,15 @@ class Trajectory:
 
 
 
+
+
+
+
     task: str
+
+
+
+
 
 
 
@@ -2355,7 +4671,15 @@ class Trajectory:
 
 
 
+
+
+
+
     success: bool
+
+
+
+
 
 
 
@@ -2371,7 +4695,23 @@ class Trajectory:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
+
+
+
+
 
 
 
@@ -2380,7 +4720,15 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
     if not trajectories:
+
+
+
+
 
 
 
@@ -2388,7 +4736,15 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
     tool_total = tool_correct = malformed = 0
+
+
+
+
 
 
 
@@ -2396,7 +4752,15 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
     for tr in trajectories:
+
+
+
+
 
 
 
@@ -2404,7 +4768,15 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
         for step in tr.steps:
+
+
+
+
 
 
 
@@ -2412,11 +4784,23 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
                 malformed += 1
 
 
 
+
+
+
+
                 had_error = True
+
+
+
+
 
 
 
@@ -2424,7 +4808,15 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
             tool_total += 1
+
+
+
+
 
 
 
@@ -2432,7 +4824,15 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
                 tool_correct += 1
+
+
+
+
 
 
 
@@ -2440,7 +4840,15 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
             if isinstance(result, dict) and result.get("error"):
+
+
+
+
 
 
 
@@ -2448,7 +4856,15 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
         if had_error:
+
+
+
+
 
 
 
@@ -2456,7 +4872,15 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
             if tr.success:
+
+
+
+
 
 
 
@@ -2464,7 +4888,15 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
     total_calls = tool_total + malformed
+
+
+
+
 
 
 
@@ -2472,7 +4904,15 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
         "num_trajectories": len(trajectories),
+
+
+
+
 
 
 
@@ -2480,7 +4920,15 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
         "tool_accuracy": tool_correct / max(tool_total, 1),
+
+
+
+
 
 
 
@@ -2488,11 +4936,23 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
         "recovery_rate": recovered / max(recoverable, 1),
 
 
 
+
+
+
+
         "avg_steps": sum(len(t.steps) for t in trajectories) / len(trajectories),
+
+
+
+
 
 
 
@@ -2508,7 +4968,23 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -2516,7 +4992,19 @@ def evaluate_trajectories(trajectories: List[Trajectory]) -> Dict[str, Any]:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -2528,7 +5016,15 @@ def main():
 
 
 
+
+
+
+
     """Run evaluation on all benchmarks."""
+
+
+
+
 
 
 
@@ -2536,11 +5032,23 @@ def main():
 
 
 
+
+
+
+
     import torch
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2548,7 +5056,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--benchmark", type=str, required=True,
+
+
+
+
 
 
 
@@ -2556,7 +5072,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--model_path", type=str, required=True)
+
+
+
+
 
 
 
@@ -2564,7 +5088,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--num_samples", type=int, default=10)
+
+
+
+
 
 
 
@@ -2572,7 +5104,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--cache_dir", type=str, default="eval_cache")
+
+
+
+
 
 
 
@@ -2580,11 +5120,23 @@ def main():
 
 
 
+
+
+
+
     args = parser.parse_args()
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2592,7 +5144,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2600,7 +5160,15 @@ def main():
 
 
 
+
+
+
+
     logger.info(f"Loading model from {args.model_path}")
+
+
+
+
 
 
 
@@ -2608,7 +5176,15 @@ def main():
 
 
 
+
+
+
+
     from model.model import CodingAgentModel
+
+
+
+
 
 
 
@@ -2616,7 +5192,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2624,7 +5208,15 @@ def main():
 
 
 
+
+
+
+
     model = CodingAgentModel(config)
+
+
+
+
 
 
 
@@ -2632,11 +5224,23 @@ def main():
 
 
 
+
+
+
+
     model.load_state_dict(checkpoint)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2644,7 +5248,15 @@ def main():
 
 
 
+
+
+
+
     model = model.to(device)
+
+
+
+
 
 
 
@@ -2652,7 +5264,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2660,11 +5280,23 @@ def main():
 
 
 
+
+
+
+
     tokenizer = CodeTokenizer.load(tokenizer_path)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2672,11 +5304,23 @@ def main():
 
 
 
+
+
+
+
     executor = SandboxExecutor()
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2684,11 +5328,23 @@ def main():
 
 
 
+
+
+
+
     all_results = {}
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2696,7 +5352,15 @@ def main():
 
 
 
+
+
+
+
         logger.info("\n" + "="*60)
+
+
+
+
 
 
 
@@ -2704,7 +5368,15 @@ def main():
 
 
 
+
+
+
+
         logger.info("="*60)
+
+
+
+
 
 
 
@@ -2712,7 +5384,15 @@ def main():
 
 
 
+
+
+
+
         if problems:
+
+
+
+
 
 
 
@@ -2720,7 +5400,15 @@ def main():
 
 
 
+
+
+
+
                 problems, generator, executor,
+
+
+
+
 
 
 
@@ -2728,7 +5416,15 @@ def main():
 
 
 
+
+
+
+
                 temperature=args.temperature,
+
+
+
+
 
 
 
@@ -2736,7 +5432,15 @@ def main():
 
 
 
+
+
+
+
             )
+
+
+
+
 
 
 
@@ -2744,11 +5448,23 @@ def main():
 
 
 
+
+
+
+
             logger.info(f"HumanEval pass@1: {metrics['pass_at_1']:.4f}")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2756,7 +5472,15 @@ def main():
 
 
 
+
+
+
+
         logger.info("\n" + "="*60)
+
+
+
+
 
 
 
@@ -2764,7 +5488,15 @@ def main():
 
 
 
+
+
+
+
         logger.info("="*60)
+
+
+
+
 
 
 
@@ -2772,7 +5504,15 @@ def main():
 
 
 
+
+
+
+
         if problems:
+
+
+
+
 
 
 
@@ -2780,7 +5520,15 @@ def main():
 
 
 
+
+
+
+
                 problems, generator, executor,
+
+
+
+
 
 
 
@@ -2788,7 +5536,15 @@ def main():
 
 
 
+
+
+
+
                 temperature=args.temperature,
+
+
+
+
 
 
 
@@ -2796,7 +5552,15 @@ def main():
 
 
 
+
+
+
+
             )
+
+
+
+
 
 
 
@@ -2804,11 +5568,23 @@ def main():
 
 
 
+
+
+
+
             logger.info(f"MBPP pass@1: {metrics['pass_at_1']:.4f}")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2816,7 +5592,15 @@ def main():
 
 
 
+
+
+
+
         logger.info("\n" + "="*60)
+
+
+
+
 
 
 
@@ -2824,7 +5608,15 @@ def main():
 
 
 
+
+
+
+
         logger.info("="*60)
+
+
+
+
 
 
 
@@ -2832,7 +5624,15 @@ def main():
 
 
 
+
+
+
+
         if problems:
+
+
+
+
 
 
 
@@ -2840,7 +5640,15 @@ def main():
 
 
 
+
+
+
+
                 problems, generator, executor,
+
+
+
+
 
 
 
@@ -2848,7 +5656,15 @@ def main():
 
 
 
+
+
+
+
                 temperature=args.temperature,
+
+
+
+
 
 
 
@@ -2856,7 +5672,15 @@ def main():
 
 
 
+
+
+
+
             )
+
+
+
+
 
 
 
@@ -2864,11 +5688,23 @@ def main():
 
 
 
+
+
+
+
             logger.info(f"LiveCodeBench pass@1: {metrics['pass_at_1']:.4f}")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2876,7 +5712,15 @@ def main():
 
 
 
+
+
+
+
     with open(args.output, 'w') as f:
+
+
+
+
 
 
 
@@ -2884,7 +5728,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2892,7 +5744,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2900,7 +5760,15 @@ def main():
 
 
 
+
+
+
+
     print("\n" + "="*60)
+
+
+
+
 
 
 
@@ -2908,7 +5776,15 @@ def main():
 
 
 
+
+
+
+
     print("="*60)
+
+
+
+
 
 
 
@@ -2916,7 +5792,15 @@ def main():
 
 
 
+
+
+
+
         print(f"\n{benchmark.upper()}:")
+
+
+
+
 
 
 
@@ -2924,7 +5808,15 @@ def main():
 
 
 
+
+
+
+
         if metrics.get('pass_at_5'):
+
+
+
+
 
 
 
@@ -2932,11 +5824,23 @@ def main():
 
 
 
+
+
+
+
         if metrics.get('pass_at_10'):
 
 
 
+
+
+
+
             print(f"  pass@10: {metrics['pass_at_10']:.4f}")
+
+
+
+
 
 
 
@@ -2952,11 +5856,31 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
 
 
 
+
+
+
+
     main()
+
+
+
+
 
 
 

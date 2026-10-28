@@ -17,7 +17,19 @@ Target: 300B+ tokens for training a 20B parameter model.
 
 
 
+
+
+
+
+
+
+
+
 import os
+
+
+
+
 
 
 
@@ -25,7 +37,15 @@ import json
 
 
 
+
+
+
+
 import random
+
+
+
+
 
 
 
@@ -33,7 +53,15 @@ import hashlib
 
 
 
+
+
+
+
 import logging
+
+
+
+
 
 
 
@@ -41,7 +69,15 @@ from typing import List, Dict, Any, Optional
 
 
 
+
+
+
+
 from pathlib import Path
+
+
+
+
 
 
 
@@ -53,7 +89,19 @@ from dataclasses import asdict
 
 
 
+
+
+
+
+
+
+
+
 from .code_templates import (
+
+
+
+
 
 
 
@@ -61,7 +109,15 @@ from .code_templates import (
 
 
 
+
+
+
+
     PythonCodeGenerator, NameGenerator,
+
+
+
+
 
 
 
@@ -69,11 +125,27 @@ from .code_templates import (
 
 
 
+
+
+
+
 from .instruction_data import InstructionGenerator, InstructionSample
 
 
 
+
+
+
+
 from .processor import DatasetProcessor, DatasetConfig
+
+
+
+
+
+
+
+
 
 
 
@@ -93,7 +165,23 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class JavaScriptCodeGenerator:
+
+
+
+
 
 
 
@@ -105,7 +193,19 @@ class JavaScriptCodeGenerator:
 
 
 
+
+
+
+
+
+
+
+
     SAMPLES = [
+
+
+
+
 
 
 
@@ -113,7 +213,15 @@ class JavaScriptCodeGenerator:
 
 
 
+
+
+
+
             "language": "javascript",
+
+
+
+
 
 
 
@@ -172,7 +280,15 @@ function debounce(func, wait, options = {}) {
 
 
 
+
+
+
+
             "description": "Advanced debounce function with leading/trailing edge options",
+
+
+
+
 
 
 
@@ -180,7 +296,15 @@ function debounce(func, wait, options = {}) {
 
 
 
+
+
+
+
             "domain": "web",
+
+
+
+
 
 
 
@@ -188,11 +312,23 @@ function debounce(func, wait, options = {}) {
 
 
 
+
+
+
+
         {
 
 
 
+
+
+
+
             "language": "typescript",
+
+
+
+
 
 
 
@@ -262,7 +398,15 @@ const unsub = emitter.on('user:login', (userId, timestamp) => {
 
 
 
+
+
+
+
             "description": "Type-safe event emitter with generics in TypeScript",
+
+
+
+
 
 
 
@@ -270,7 +414,15 @@ const unsub = emitter.on('user:login', (userId, timestamp) => {
 
 
 
+
+
+
+
             "domain": "web",
+
+
+
+
 
 
 
@@ -278,11 +430,23 @@ const unsub = emitter.on('user:login', (userId, timestamp) => {
 
 
 
+
+
+
+
         {
 
 
 
+
+
+
+
             "language": "rust",
+
+
+
+
 
 
 
@@ -418,7 +582,15 @@ impl<K: Hash + Eq + Clone, V: Clone> LRUCache<K, V> {
 
 
 
+
+
+
+
             "description": "LRU Cache implementation in Rust with doubly-linked list",
+
+
+
+
 
 
 
@@ -426,7 +598,15 @@ impl<K: Hash + Eq + Clone, V: Clone> LRUCache<K, V> {
 
 
 
+
+
+
+
             "domain": "systems",
+
+
+
+
 
 
 
@@ -434,11 +614,23 @@ impl<K: Hash + Eq + Clone, V: Clone> LRUCache<K, V> {
 
 
 
+
+
+
+
         {
 
 
 
+
+
+
+
             "language": "go",
+
+
+
+
 
 
 
@@ -582,7 +774,15 @@ func main() {
 
 
 
+
+
+
+
             "description": "Concurrent worker pool in Go with graceful shutdown",
+
+
+
+
 
 
 
@@ -590,7 +790,15 @@ func main() {
 
 
 
+
+
+
+
             "domain": "systems",
+
+
+
+
 
 
 
@@ -598,11 +806,23 @@ func main() {
 
 
 
+
+
+
+
         {
 
 
 
+
+
+
+
             "language": "cpp",
+
+
+
+
 
 
 
@@ -760,7 +980,15 @@ int main() {
 
 
 
+
+
+
+
             "description": "Modern C++ with Result types, RAII, smart pointers, and move semantics",
+
+
+
+
 
 
 
@@ -768,11 +996,23 @@ int main() {
 
 
 
+
+
+
+
             "domain": "systems",
 
 
 
+
+
+
+
         },
+
+
+
+
 
 
 
@@ -784,7 +1024,19 @@ int main() {
 
 
 
+
+
+
+
+
+
+
+
     def generate(self) -> List[CodeSample]:
+
+
+
+
 
 
 
@@ -792,7 +1044,15 @@ int main() {
 
 
 
+
+
+
+
             CodeSample(
+
+
+
+
 
 
 
@@ -800,7 +1060,15 @@ int main() {
 
 
 
+
+
+
+
                 code=s["code"],
+
+
+
+
 
 
 
@@ -808,7 +1076,15 @@ int main() {
 
 
 
+
+
+
+
                 complexity=s["complexity"],
+
+
+
+
 
 
 
@@ -816,7 +1092,15 @@ int main() {
 
 
 
+
+
+
+
                 tags=[],
+
+
+
+
 
 
 
@@ -824,7 +1108,15 @@ int main() {
 
 
 
+
+
+
+
             for s in self.SAMPLES
+
+
+
+
 
 
 
@@ -840,7 +1132,23 @@ int main() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class FIMGenerator:
+
+
+
+
 
 
 
@@ -858,7 +1166,19 @@ class FIMGenerator:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self):
+
+
+
+
 
 
 
@@ -870,7 +1190,19 @@ class FIMGenerator:
 
 
 
+
+
+
+
+
+
+
+
     def generate_fim(self, code: str, language: str = "python") -> List[Dict[str, str]]:
+
+
+
+
 
 
 
@@ -882,7 +1214,15 @@ class FIMGenerator:
 
 
 
+
+
+
+
         lines = code.split('\n')
+
+
+
+
 
 
 
@@ -890,7 +1230,19 @@ class FIMGenerator:
 
 
 
+
+
+
+
             return []
+
+
+
+
+
+
+
+
 
 
 
@@ -906,7 +1258,19 @@ class FIMGenerator:
 
 
 
+
+
+
+
+
+
+
+
         for split_ratio in self.split_points:
+
+
+
+
 
 
 
@@ -918,11 +1282,27 @@ class FIMGenerator:
 
 
 
+
+
+
+
+
+
+
+
             prefix = '\n'.join(lines[:split_idx])
 
 
 
+
+
+
+
             middle = '\n'.join(lines[split_idx:split_idx + 3])
+
+
+
+
 
 
 
@@ -934,7 +1314,19 @@ class FIMGenerator:
 
 
 
+
+
+
+
+
+
+
+
             if not middle.strip():
+
+
+
+
 
 
 
@@ -946,7 +1338,19 @@ class FIMGenerator:
 
 
 
+
+
+
+
+
+
+
+
                         
+
+
+
+
 
 
 
@@ -954,7 +1358,15 @@ class FIMGenerator:
 
 
 
+
+
+
+
                 f"<|fim_prefix|>{prefix}"
+
+
+
+
 
 
 
@@ -962,7 +1374,15 @@ class FIMGenerator:
 
 
 
+
+
+
+
                 f"<|fim_middle|>{middle}"
+
+
+
+
 
 
 
@@ -974,7 +1394,19 @@ class FIMGenerator:
 
 
 
+
+
+
+
+
+
+
+
             examples.append({
+
+
+
+
 
 
 
@@ -982,7 +1414,15 @@ class FIMGenerator:
 
 
 
+
+
+
+
                 "category": "fim",
+
+
+
+
 
 
 
@@ -990,7 +1430,19 @@ class FIMGenerator:
 
 
 
+
+
+
+
             })
+
+
+
+
+
+
+
+
 
 
 
@@ -1010,7 +1462,23 @@ class FIMGenerator:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class DatasetGenerator:
+
+
+
+
 
 
 
@@ -1025,7 +1493,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, output_dir: str = "data/processed"):
+
+
+
+
 
 
 
@@ -1033,7 +1513,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         self.python_gen = PythonCodeGenerator()
+
+
+
+
 
 
 
@@ -1041,7 +1529,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         self.instruction_gen = InstructionGenerator()
+
+
+
+
 
 
 
@@ -1053,7 +1549,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
     def generate_full_dataset(
+
+
+
+
 
 
 
@@ -1061,7 +1569,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         target_samples: int = 1_000_000,
+
+
+
+
 
 
 
@@ -1069,7 +1585,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
     ) -> Dict[str, Any]:
+
+
+
+
 
 
 
@@ -1086,7 +1610,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         output_dir = output_dir or str(self.output_dir)
+
+
+
+
 
 
 
@@ -1098,7 +1630,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
         stats = {
+
+
+
+
 
 
 
@@ -1106,7 +1650,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
             "code_samples": 0,
+
+
+
+
 
 
 
@@ -1114,7 +1666,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
             "fim_samples": 0,
+
+
+
+
 
 
 
@@ -1122,7 +1682,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         }
+
+
+
+
+
+
+
+
 
 
 
@@ -1138,7 +1710,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
         logger.info("Phase 1: Generating code samples...")
+
+
+
+
 
 
 
@@ -1146,11 +1730,23 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         all_documents.extend(code_docs)
 
 
 
+
+
+
+
         stats["code_samples"] = len(code_docs)
+
+
+
+
 
 
 
@@ -1162,7 +1758,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
         logger.info("Phase 2: Generating instruction samples...")
+
+
+
+
 
 
 
@@ -1170,11 +1778,23 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         all_documents.extend(instruction_docs)
 
 
 
+
+
+
+
         stats["instruction_samples"] = len(instruction_docs)
+
+
+
+
 
 
 
@@ -1186,7 +1806,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
         logger.info("Phase 3: Generating FIM samples...")
+
+
+
+
 
 
 
@@ -1194,11 +1826,23 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         all_documents.extend(fim_docs)
 
 
 
+
+
+
+
         stats["fim_samples"] = len(fim_docs)
+
+
+
+
 
 
 
@@ -1210,11 +1854,27 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
                  
 
 
 
+
+
+
+
         random.shuffle(all_documents)
+
+
+
+
 
 
 
@@ -1226,7 +1886,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
                             
+
+
+
+
 
 
 
@@ -1234,7 +1906,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         with open(raw_path, 'w') as f:
+
+
+
+
 
 
 
@@ -1242,7 +1922,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
                 f.write(json.dumps(doc) + '\n')
+
+
+
+
+
+
+
+
 
 
 
@@ -1258,7 +1950,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
                     
+
+
+
+
 
 
 
@@ -1266,11 +1970,27 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         with open(stats_path, 'w') as f:
 
 
 
+
+
+
+
             json.dump(stats, f, indent=2)
+
+
+
+
+
+
+
+
 
 
 
@@ -1286,7 +2006,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
     def _generate_code_samples(self, target: int) -> List[Dict[str, Any]]:
+
+
+
+
 
 
 
@@ -1294,7 +2026,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         documents = []
+
+
+
+
+
+
+
+
 
 
 
@@ -1306,7 +2050,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         domains = ["algorithms", "data", "web", "systems", "testing"]
+
+
+
+
+
+
+
+
 
 
 
@@ -1318,7 +2074,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
             complexity = random.choice(complexities)
+
+
+
+
 
 
 
@@ -1330,7 +2094,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
             try:
+
+
+
+
 
 
 
@@ -1338,7 +2114,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
                 doc = {
+
+
+
+
 
 
 
@@ -1346,7 +2130,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
                     "category": "code",
+
+
+
+
 
 
 
@@ -1354,7 +2146,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
                     "complexity": sample.complexity,
+
+
+
+
 
 
 
@@ -1362,7 +2162,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
                 }
+
+
+
+
 
 
 
@@ -1370,11 +2178,27 @@ class DatasetGenerator:
 
 
 
+
+
+
+
             except Exception:
 
 
 
+
+
+
+
                 pass
+
+
+
+
+
+
+
+
 
 
 
@@ -1386,7 +2210,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
             if i % 5 == 0:
+
+
+
+
 
 
 
@@ -1394,7 +2226,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
                     doc = {
+
+
+
+
 
 
 
@@ -1402,7 +2242,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
                         "category": "code",
+
+
+
+
 
 
 
@@ -1410,7 +2258,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
                         "complexity": js_sample.complexity,
+
+
+
+
 
 
 
@@ -1418,7 +2274,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
                     }
+
+
+
+
 
 
 
@@ -1430,7 +2294,23 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
         return documents[:target]
+
+
+
+
+
+
+
+
 
 
 
@@ -1442,11 +2322,27 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         """Generate instruction-following samples."""
 
 
 
+
+
+
+
         documents = []
+
+
+
+
+
+
+
+
 
 
 
@@ -1458,7 +2354,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         for sample in samples:
+
+
+
+
 
 
 
@@ -1466,7 +2370,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
                 "text": self._format_instruction_document(sample),
+
+
+
+
 
 
 
@@ -1474,11 +2386,23 @@ class DatasetGenerator:
 
 
 
+
+
+
+
                 "language": sample.language,
 
 
 
+
+
+
+
             }
+
+
+
+
 
 
 
@@ -1490,7 +2414,23 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
         return documents[:target]
+
+
+
+
+
+
+
+
 
 
 
@@ -1502,7 +2442,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         """Generate fill-in-the-middle samples from code."""
+
+
+
+
 
 
 
@@ -1514,11 +2462,27 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
                                                       
 
 
 
+
+
+
+
         complexities = ["intermediate", "advanced", "expert"]
+
+
+
+
 
 
 
@@ -1530,7 +2494,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
         generated = 0
+
+
+
+
 
 
 
@@ -1542,7 +2518,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
         while generated < target and attempts < target * 10:
+
+
+
+
 
 
 
@@ -1550,7 +2538,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
             complexity = random.choice(complexities)
+
+
+
+
 
 
 
@@ -1562,11 +2558,27 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
             try:
 
 
 
+
+
+
+
                 sample = self.python_gen.generate(complexity, domain)
+
+
+
+
 
 
 
@@ -1578,7 +2590,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
                 for fim in fim_examples:
+
+
+
+
 
 
 
@@ -1586,7 +2610,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
                     generated += 1
+
+
+
+
 
 
 
@@ -1594,7 +2626,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
                         break
+
+
+
+
 
 
 
@@ -1602,7 +2642,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
                 pass
+
+
+
+
+
+
+
+
 
 
 
@@ -1618,11 +2670,27 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
     def _format_code_document(self, sample: CodeSample) -> str:
 
 
 
+
+
+
+
         """Format a code sample into a training document."""
+
+
+
+
 
 
 
@@ -1634,7 +2702,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
                       
+
+
+
+
 
 
 
@@ -1646,11 +2726,27 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
                                 
 
 
 
+
+
+
+
         if sample.description:
+
+
+
+
 
 
 
@@ -1662,7 +2758,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
               
+
+
+
+
 
 
 
@@ -1670,7 +2778,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         parts.append(sample.code)
+
+
+
+
 
 
 
@@ -1682,7 +2798,23 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
         return '\n'.join(parts)
+
+
+
+
+
+
+
+
 
 
 
@@ -1694,7 +2826,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         """Format an instruction sample into a training document."""
+
+
+
+
 
 
 
@@ -1702,7 +2842,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
             "<|system|>",
+
+
+
+
 
 
 
@@ -1710,7 +2858,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
             "<eos>",
+
+
+
+
 
 
 
@@ -1718,7 +2874,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
             sample.instruction,
+
+
+
+
 
 
 
@@ -1730,7 +2894,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
         if sample.input_context:
+
+
+
+
 
 
 
@@ -1738,11 +2914,23 @@ class DatasetGenerator:
 
 
 
+
+
+
+
             parts.append("```" + (sample.language or ""))
 
 
 
+
+
+
+
             parts.append(sample.input_context)
+
+
+
+
 
 
 
@@ -1754,11 +2942,27 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
         parts.extend([
 
 
 
+
+
+
+
             "<eos>",
+
+
+
+
 
 
 
@@ -1766,7 +2970,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
             sample.output,
+
+
+
+
 
 
 
@@ -1774,7 +2986,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         ])
+
+
+
+
+
+
+
+
 
 
 
@@ -1790,7 +3014,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
     def tokenize_and_shard(
+
+
+
+
 
 
 
@@ -1798,7 +3034,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         raw_dir: str,
+
+
+
+
 
 
 
@@ -1806,7 +3050,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         tokenizer,
+
+
+
+
 
 
 
@@ -1814,7 +3066,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
     ) -> Dict[str, Any]:
+
+
+
+
 
 
 
@@ -1833,7 +3093,15 @@ class DatasetGenerator:
 
 
 
+
+
+
+
         if config is None:
+
+
+
+
 
 
 
@@ -1845,11 +3113,27 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
                             
 
 
 
+
+
+
+
         raw_path = os.path.join(raw_dir, "raw_documents.jsonl")
+
+
+
+
 
 
 
@@ -1861,7 +3145,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
         logger.info(f"Loading documents from {raw_path}...")
+
+
+
+
 
 
 
@@ -1869,11 +3165,27 @@ class DatasetGenerator:
 
 
 
+
+
+
+
             for line in f:
 
 
 
+
+
+
+
                 documents.append(json.loads(line))
+
+
+
+
+
+
+
+
 
 
 
@@ -1889,11 +3201,27 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
                  
 
 
 
+
+
+
+
         processor = DatasetProcessor(config, tokenizer)
+
+
+
+
 
 
 
@@ -1905,7 +3233,19 @@ class DatasetGenerator:
 
 
 
+
+
+
+
+
+
+
+
         return stats
+
+
+
+
 
 
 

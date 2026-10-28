@@ -2,7 +2,19 @@ import pytest
 
 
 
+
+
+
+
 from conftest import requires_torch
+
+
+
+
+
+
+
+
 
 
 
@@ -22,7 +34,23 @@ torch = pytest.importorskip("torch")
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @requires_torch
+
+
+
+
 
 
 
@@ -30,7 +58,15 @@ def test_forward_and_loss(tiny_model):
 
 
 
+
+
+
+
     ids = torch.randint(0, 320, (2, 16))
+
+
+
+
 
 
 
@@ -38,7 +74,15 @@ def test_forward_and_loss(tiny_model):
 
 
 
+
+
+
+
     assert out.logits.shape == (2, 16, 320)
+
+
+
+
 
 
 
@@ -54,7 +98,23 @@ def test_forward_and_loss(tiny_model):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @requires_torch
+
+
+
+
 
 
 
@@ -62,7 +122,15 @@ def test_generate_sampling_controls(tiny_model):
 
 
 
+
+
+
+
     from model.generation import GenerationConfig
+
+
+
+
 
 
 
@@ -70,7 +138,15 @@ def test_generate_sampling_controls(tiny_model):
 
 
 
+
+
+
+
     out = tiny_model.generate(ids.clone(), generation_config=GenerationConfig(
+
+
+
+
 
 
 
@@ -78,11 +154,23 @@ def test_generate_sampling_controls(tiny_model):
 
 
 
+
+
+
+
     assert out.shape[1] == 13
 
 
 
+
+
+
+
     out2 = tiny_model.generate(ids.clone(), max_new_tokens=4, do_sample=False)
+
+
+
+
 
 
 
@@ -98,7 +186,23 @@ def test_generate_sampling_controls(tiny_model):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @requires_torch
+
+
+
+
 
 
 
@@ -106,7 +210,15 @@ def test_kv_cache_trim_and_yarn_config():
 
 
 
+
+
+
+
     from model.config import get_20b_32k_config, get_tiny_config
+
+
+
+
 
 
 
@@ -114,7 +226,15 @@ def test_kv_cache_trim_and_yarn_config():
 
 
 
+
+
+
+
     cfg = get_20b_32k_config()
+
+
+
+
 
 
 
@@ -122,11 +242,23 @@ def test_kv_cache_trim_and_yarn_config():
 
 
 
+
+
+
+
     cache = [(torch.zeros(1, 2, 100, 8), torch.zeros(1, 2, 100, 8))]
 
 
 
+
+
+
+
     trimmed = PagedKVCache(max_tokens=32, sink_tokens=4).trim(cache)
+
+
+
+
 
 
 
@@ -142,7 +274,23 @@ def test_kv_cache_trim_and_yarn_config():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @requires_torch
+
+
+
+
 
 
 
@@ -150,7 +298,15 @@ def test_samplers_keep_valid_distribution():
 
 
 
+
+
+
+
     from model.generation import GenerationConfig, filter_min_p, filter_top_p, sample_next
+
+
+
+
 
 
 
@@ -158,7 +314,15 @@ def test_samplers_keep_valid_distribution():
 
 
 
+
+
+
+
     assert torch.isfinite(filter_top_p(logits.clone(), 0.9)).any()
+
+
+
+
 
 
 
@@ -166,11 +330,23 @@ def test_samplers_keep_valid_distribution():
 
 
 
+
+
+
+
     tok = sample_next(logits, [1, 2], GenerationConfig(do_sample=True, seed=0))
 
 
 
+
+
+
+
     assert 0 <= tok < 320
+
+
+
+
 
 
 

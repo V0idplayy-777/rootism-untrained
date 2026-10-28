@@ -18,7 +18,19 @@ but with code-specific extensions.
 
 
 
+
+
+
+
+
+
+
+
 import json
+
+
+
+
 
 
 
@@ -26,7 +38,15 @@ import os
 
 
 
+
+
+
+
 import re
+
+
+
+
 
 
 
@@ -34,11 +54,23 @@ import unicodedata
 
 
 
+
+
+
+
 from collections import Counter, defaultdict
 
 
 
+
+
+
+
 from typing import List, Optional, Dict, Tuple, Union
+
+
+
+
 
 
 
@@ -54,7 +86,23 @@ import heapq
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -62,7 +110,19 @@ import heapq
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -74,7 +134,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<pad>": 0,
+
+
+
+
 
 
 
@@ -82,7 +150,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<eos>": 2,
+
+
+
+
 
 
 
@@ -90,7 +166,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
                                   
+
+
+
+
 
 
 
@@ -98,7 +182,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|user|>": 5,
+
+
+
+
 
 
 
@@ -106,7 +198,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|code_start|>": 7,
+
+
+
+
 
 
 
@@ -114,7 +214,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|comment|>": 9,
+
+
+
+
 
 
 
@@ -122,7 +230,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|function|>": 11,
+
+
+
+
 
 
 
@@ -130,7 +246,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|import|>": 13,
+
+
+
+
 
 
 
@@ -138,7 +262,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|indent|>": 15,
+
+
+
+
 
 
 
@@ -146,7 +278,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|newline|>": 17,
+
+
+
+
 
 
 
@@ -154,7 +294,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|space|>": 19,
+
+
+
+
 
 
 
@@ -162,7 +310,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|python|>": 20,
+
+
+
+
 
 
 
@@ -170,7 +326,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|typescript|>": 22,
+
+
+
+
 
 
 
@@ -178,7 +342,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|cpp|>": 24,
+
+
+
+
 
 
 
@@ -186,7 +358,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|go|>": 26,
+
+
+
+
 
 
 
@@ -194,7 +374,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|php|>": 28,
+
+
+
+
 
 
 
@@ -202,7 +390,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|kotlin|>": 30,
+
+
+
+
 
 
 
@@ -210,7 +406,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|scala|>": 32,
+
+
+
+
 
 
 
@@ -218,7 +422,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|sql|>": 34,
+
+
+
+
 
 
 
@@ -226,7 +438,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|css|>": 36,
+
+
+
+
 
 
 
@@ -234,7 +454,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|yaml|>": 38,
+
+
+
+
 
 
 
@@ -242,7 +470,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|markdown|>": 40,
+
+
+
+
 
 
 
@@ -250,7 +486,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|r|>": 42,
+
+
+
+
 
 
 
@@ -258,7 +502,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|perl|>": 44,
+
+
+
+
 
 
 
@@ -266,7 +518,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|elixir|>": 46,
+
+
+
+
 
 
 
@@ -274,7 +534,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
                            
+
+
+
+
 
 
 
@@ -282,7 +550,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|tool_result|>": 49,
+
+
+
+
 
 
 
@@ -290,7 +566,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|function_result|>": 51,
+
+
+
+
 
 
 
@@ -298,7 +582,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|think|>": 52,
+
+
+
+
 
 
 
@@ -306,7 +598,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|search|>": 54,
+
+
+
+
 
 
 
@@ -314,7 +614,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
                                               
+
+
+
+
 
 
 
@@ -322,7 +630,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|fim_middle|>": 57,
+
+
+
+
 
 
 
@@ -330,7 +646,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
                         
+
+
+
+
 
 
 
@@ -338,7 +662,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|file_sep|>": 60,
+
+
+
+
 
 
 
@@ -346,7 +678,15 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
                     
+
+
+
+
 
 
 
@@ -354,11 +694,27 @@ SPECIAL_TOKENS = {
 
 
 
+
+
+
+
     "<|reserved_63|>": 63,
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -378,7 +734,23 @@ NUM_SPECIAL_TOKENS = len(SPECIAL_TOKENS)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -386,7 +758,19 @@ NUM_SPECIAL_TOKENS = len(SPECIAL_TOKENS)
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -395,6 +779,10 @@ NUM_SPECIAL_TOKENS = len(SPECIAL_TOKENS)
 
 
 class CodePreTokenizer:
+
+
+
+
 
 
 
@@ -415,11 +803,27 @@ class CodePreTokenizer:
 
 
 
+
+
+
+
+
+
+
+
                                          
 
 
 
+
+
+
+
     CODE_PATTERN = re.compile(
+
+
+
+
 
 
 
@@ -441,7 +845,15 @@ class CodePreTokenizer:
 
 
 
+
+
+
+
         re.VERBOSE,
+
+
+
+
 
 
 
@@ -453,11 +865,27 @@ class CodePreTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     def pre_tokenize(self, text: str) -> List[str]:
 
 
 
+
+
+
+
         """Split text into pre-tokens."""
+
+
+
+
 
 
 
@@ -473,7 +901,23 @@ class CodePreTokenizer:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -481,7 +925,19 @@ class CodePreTokenizer:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -490,6 +946,10 @@ class CodePreTokenizer:
 
 
 class BPETrainer:
+
+
+
+
 
 
 
@@ -508,7 +968,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(
+
+
+
+
 
 
 
@@ -516,7 +988,15 @@ class BPETrainer:
 
 
 
+
+
+
+
         vocab_size: int = 128256,
+
+
+
+
 
 
 
@@ -524,7 +1004,15 @@ class BPETrainer:
 
 
 
+
+
+
+
         special_tokens: Optional[Dict[str, int]] = None,
+
+
+
+
 
 
 
@@ -532,7 +1020,15 @@ class BPETrainer:
 
 
 
+
+
+
+
         self.vocab_size = vocab_size
+
+
+
+
 
 
 
@@ -540,7 +1036,15 @@ class BPETrainer:
 
 
 
+
+
+
+
         self.special_tokens = special_tokens or SPECIAL_TOKENS
+
+
+
+
 
 
 
@@ -552,7 +1056,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
                                                    
+
+
+
+
 
 
 
@@ -564,7 +1080,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
     def train(self, texts: List[str], verbose: bool = True) -> 'CodeTokenizer':
+
+
+
+
 
 
 
@@ -581,6 +1109,10 @@ class BPETrainer:
 
 
 
+
+
+
+
         pre_tokenizer = CodePreTokenizer()
 
 
@@ -589,7 +1121,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
         if verbose:
+
+
+
+
 
 
 
@@ -601,7 +1145,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
                                 
+
+
+
+
 
 
 
@@ -609,7 +1165,15 @@ class BPETrainer:
 
 
 
+
+
+
+
         for text in texts:
+
+
+
+
 
 
 
@@ -617,7 +1181,15 @@ class BPETrainer:
 
 
 
+
+
+
+
             for token in pre_tokens:
+
+
+
+
 
 
 
@@ -625,7 +1197,15 @@ class BPETrainer:
 
 
 
+
+
+
+
                 word = self._to_byte_level(token)
+
+
+
+
 
 
 
@@ -637,7 +1217,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
         if verbose:
+
+
+
+
 
 
 
@@ -649,7 +1241,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
                                                      
+
+
+
+
 
 
 
@@ -657,7 +1261,15 @@ class BPETrainer:
 
 
 
+
+
+
+
         for i in range(256):
+
+
+
+
 
 
 
@@ -669,7 +1281,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
                                                   
+
+
+
+
 
 
 
@@ -677,7 +1301,15 @@ class BPETrainer:
 
 
 
+
+
+
+
             for char in word:
+
+
+
+
 
 
 
@@ -689,11 +1321,27 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
         if verbose:
 
 
 
+
+
+
+
             print(f"  Base vocabulary size: {len(base_vocab)}")
+
+
+
+
 
 
 
@@ -705,7 +1353,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
                                          
+
+
+
+
 
 
 
@@ -717,11 +1377,27 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
                               
 
 
 
+
+
+
+
         merges = []
+
+
+
+
 
 
 
@@ -733,11 +1409,27 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
         for i in range(self.num_merges):
 
 
 
+
+
+
+
             if verbose and (i + 1) % 5000 == 0:
+
+
+
+
 
 
 
@@ -749,7 +1441,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
                                          
+
+
+
+
 
 
 
@@ -757,7 +1461,15 @@ class BPETrainer:
 
 
 
+
+
+
+
             for word, freq in word_freqs.items():
+
+
+
+
 
 
 
@@ -765,11 +1477,23 @@ class BPETrainer:
 
 
 
+
+
+
+
                 for j in range(len(chars) - 1):
 
 
 
+
+
+
+
                     pair = (chars[j], chars[j + 1])
+
+
+
+
 
 
 
@@ -781,7 +1505,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
             if not pair_freqs:
+
+
+
+
 
 
 
@@ -789,11 +1525,27 @@ class BPETrainer:
 
 
 
+
+
+
+
                     print("  No more pairs to merge. Stopping early.")
 
 
 
+
+
+
+
                 break
+
+
+
+
+
+
+
+
 
 
 
@@ -809,7 +1561,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
             if pair_freqs[best_pair] < self.min_frequency:
+
+
+
+
 
 
 
@@ -817,7 +1581,15 @@ class BPETrainer:
 
 
 
+
+
+
+
                     print(f"  Best pair frequency ({pair_freqs[best_pair]}) below minimum. Stopping.")
+
+
+
+
 
 
 
@@ -829,7 +1601,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
                          
+
+
+
+
 
 
 
@@ -837,7 +1621,15 @@ class BPETrainer:
 
 
 
+
+
+
+
             merged = best_pair[0] + best_pair[1]
+
+
+
+
 
 
 
@@ -849,7 +1641,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
                            
+
+
+
+
 
 
 
@@ -857,7 +1661,15 @@ class BPETrainer:
 
 
 
+
+
+
+
                 chars = splits[word]
+
+
+
+
 
 
 
@@ -865,7 +1677,15 @@ class BPETrainer:
 
 
 
+
+
+
+
                 j = 0
+
+
+
+
 
 
 
@@ -873,7 +1693,15 @@ class BPETrainer:
 
 
 
+
+
+
+
                     if j < len(chars) - 1 and chars[j] == best_pair[0] and chars[j + 1] == best_pair[1]:
+
+
+
+
 
 
 
@@ -881,7 +1709,15 @@ class BPETrainer:
 
 
 
+
+
+
+
                         j += 2
+
+
+
+
 
 
 
@@ -889,11 +1725,23 @@ class BPETrainer:
 
 
 
+
+
+
+
                         new_chars.append(chars[j])
 
 
 
+
+
+
+
                         j += 1
+
+
+
+
 
 
 
@@ -905,11 +1753,27 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
         if verbose:
 
 
 
+
+
+
+
             print(f"  Training complete. Learned {len(merges)} merges.")
+
+
+
+
 
 
 
@@ -921,7 +1785,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
                              
+
+
+
+
 
 
 
@@ -929,7 +1805,15 @@ class BPETrainer:
 
 
 
+
+
+
+
             vocab=sorted(vocab),
+
+
+
+
 
 
 
@@ -937,7 +1821,15 @@ class BPETrainer:
 
 
 
+
+
+
+
             special_tokens=self.special_tokens,
+
+
+
+
 
 
 
@@ -949,11 +1841,27 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
     def _to_byte_level(self, text: str) -> str:
 
 
 
+
+
+
+
         """Convert text to byte-level representation."""
+
+
+
+
 
 
 
@@ -965,7 +1873,19 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
     def _byte_to_char(self, byte_val: int) -> str:
+
+
+
+
 
 
 
@@ -973,7 +1893,15 @@ class BPETrainer:
 
 
 
+
+
+
+
                                                             
+
+
+
+
 
 
 
@@ -981,7 +1909,15 @@ class BPETrainer:
 
 
 
+
+
+
+
             return chr(byte_val)
+
+
+
+
 
 
 
@@ -989,7 +1925,15 @@ class BPETrainer:
 
 
 
+
+
+
+
             return 'Ġ'         
+
+
+
+
 
 
 
@@ -997,7 +1941,15 @@ class BPETrainer:
 
 
 
+
+
+
+
             return 'Ċ'           
+
+
+
+
 
 
 
@@ -1005,11 +1957,23 @@ class BPETrainer:
 
 
 
+
+
+
+
             return 'ĉ'       
 
 
 
+
+
+
+
         else:
+
+
+
+
 
 
 
@@ -1025,7 +1989,23 @@ class BPETrainer:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -1033,7 +2013,19 @@ class BPETrainer:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -1042,6 +2034,10 @@ class BPETrainer:
 
 
 class CodeTokenizer:
+
+
+
+
 
 
 
@@ -1062,7 +2058,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(
+
+
+
+
 
 
 
@@ -1070,7 +2078,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         vocab: Optional[List[str]] = None,
+
+
+
+
 
 
 
@@ -1078,7 +2094,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         special_tokens: Optional[Dict[str, int]] = None,
+
+
+
+
 
 
 
@@ -1086,7 +2110,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         self.special_tokens = special_tokens or SPECIAL_TOKENS
+
+
+
+
 
 
 
@@ -1098,7 +2130,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
                           
+
+
+
+
 
 
 
@@ -1106,7 +2150,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
             self._build_vocab(vocab, merges or [])
+
+
+
+
 
 
 
@@ -1114,7 +2166,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
                                             
+
+
+
+
 
 
 
@@ -1126,7 +2186,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
                        
+
+
+
+
 
 
 
@@ -1138,7 +2210,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     def _build_default_vocab(self):
+
+
+
+
 
 
 
@@ -1146,11 +2230,27 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         self.token_to_id = dict(self.special_tokens)
 
 
 
+
+
+
+
         self.id_to_token = {v: k for k, v in self.special_tokens.items()}
+
+
+
+
+
+
+
+
 
 
 
@@ -1162,7 +2262,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         for i in range(256):
+
+
+
+
 
 
 
@@ -1170,7 +2278,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
             if char not in self.token_to_id:
+
+
+
+
 
 
 
@@ -1178,11 +2294,27 @@ class CodeTokenizer:
 
 
 
+
+
+
+
                 self.token_to_id[char] = idx
 
 
 
+
+
+
+
                 self.id_to_token[idx] = char
+
+
+
+
+
+
+
+
 
 
 
@@ -1194,7 +2326,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         self.merge_ranks = {}
+
+
+
+
+
+
+
+
 
 
 
@@ -1206,6 +2350,10 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         """Build vocabulary from trained BPE data.
 
         Byte-fallback guarantee: all 256 byte-level symbols are always
@@ -1214,7 +2362,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         self.token_to_id = dict(self.special_tokens)
+
+
+
+
 
 
 
@@ -1226,7 +2382,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
                                                                                 
+
+
+
+
 
 
 
@@ -1234,7 +2402,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
             char = self._byte_to_char(i)
+
+
+
+
 
 
 
@@ -1242,11 +2418,23 @@ class CodeTokenizer:
 
 
 
+
+
+
+
                 idx = len(self.token_to_id)
 
 
 
+
+
+
+
                 self.token_to_id[char] = idx
+
+
+
+
 
 
 
@@ -1258,7 +2446,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
                             
+
+
+
+
 
 
 
@@ -1266,7 +2466,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
             if token not in self.token_to_id:
+
+
+
+
 
 
 
@@ -1274,7 +2482,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
                 self.token_to_id[token] = idx
+
+
+
+
 
 
 
@@ -1286,7 +2502,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
         self.merges = merges
+
+
+
+
 
 
 
@@ -1298,7 +2526,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     def _byte_to_char(self, byte_val: int) -> str:
+
+
+
+
 
 
 
@@ -1306,7 +2546,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         if 33 <= byte_val <= 126:
+
+
+
+
 
 
 
@@ -1314,7 +2562,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         elif byte_val == 32:
+
+
+
+
 
 
 
@@ -1322,7 +2578,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         elif byte_val == 10:
+
+
+
+
 
 
 
@@ -1330,7 +2594,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         elif byte_val == 9:
+
+
+
+
 
 
 
@@ -1338,7 +2610,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         else:
+
+
+
+
 
 
 
@@ -1350,7 +2630,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     def encode(self, text: str, add_special_tokens: bool = True) -> List[int]:
+
+
+
+
 
 
 
@@ -1367,7 +2659,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         tokens = []
+
+
+
+
+
+
+
+
 
 
 
@@ -1379,7 +2683,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
             tokens.append(self.special_tokens["<bos>"])
+
+
+
+
+
+
+
+
 
 
 
@@ -1391,7 +2707,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         pre_tokens = self.pre_tokenizer.pre_tokenize(text)
+
+
+
+
+
+
+
+
 
 
 
@@ -1403,7 +2731,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
                                    
+
+
+
+
 
 
 
@@ -1415,7 +2751,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
                                                                         
+
+
+
+
 
 
 
@@ -1423,7 +2771,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
             bpe_tokens = self._apply_bpe(bytes_str)
+
+
+
+
 
 
 
@@ -1431,7 +2787,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
                 token_id = self.token_to_id.get(token)
+
+
+
+
 
 
 
@@ -1439,7 +2803,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
                     tokens.append(token_id)
+
+
+
+
 
 
 
@@ -1447,11 +2819,27 @@ class CodeTokenizer:
 
 
 
+
+
+
+
                     for ch in token:
 
 
 
+
+
+
+
                         tokens.append(self.token_to_id.get(ch, self.special_tokens["<unk>"]))
+
+
+
+
+
+
+
+
 
 
 
@@ -1467,7 +2855,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     def decode(self, token_ids: List[int], skip_special_tokens: bool = True) -> str:
+
+
+
+
 
 
 
@@ -1484,7 +2884,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         text_parts = []
+
+
+
+
+
+
+
+
 
 
 
@@ -1496,7 +2908,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
             if skip_special_tokens and token_id < self.num_special:
+
+
+
+
 
 
 
@@ -1508,7 +2928,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
             token = self.id_to_token.get(token_id, "")
+
+
+
+
 
 
 
@@ -1520,11 +2952,27 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
                                                   
 
 
 
+
+
+
+
         text = ''.join(text_parts)
+
+
+
+
 
 
 
@@ -1536,7 +2984,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     def _apply_bpe(self, word: str) -> List[str]:
+
+
+
+
 
 
 
@@ -1544,11 +3004,27 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         if not self.merges:
 
 
 
+
+
+
+
             return list(word)
+
+
+
+
+
+
+
+
 
 
 
@@ -1564,7 +3040,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
         while len(chars) > 1:
+
+
+
+
 
 
 
@@ -1572,7 +3060,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
             best_rank = float('inf')
+
+
+
+
 
 
 
@@ -1584,7 +3080,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
             for i in range(len(chars) - 1):
+
+
+
+
 
 
 
@@ -1592,7 +3100,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
                 rank = self.merge_ranks.get(pair, float('inf'))
+
+
+
+
 
 
 
@@ -1600,7 +3116,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
                     best_rank = rank
+
+
+
+
 
 
 
@@ -1612,7 +3136,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
             if best_rank == float('inf'):
+
+
+
+
 
 
 
@@ -1624,7 +3160,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
                          
+
+
+
+
 
 
 
@@ -1632,7 +3180,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
             chars.pop(best_idx + 1)
+
+
+
+
+
+
+
+
 
 
 
@@ -1648,7 +3208,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     def _byte_level_decode(self, text: str) -> str:
+
+
+
+
 
 
 
@@ -1656,7 +3228,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
                                           
+
+
+
+
 
 
 
@@ -1664,11 +3244,23 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         for i in range(256):
 
 
 
+
+
+
+
             char = self._byte_to_char(i)
+
+
+
+
 
 
 
@@ -1680,7 +3272,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
         bytes_list = []
+
+
+
+
 
 
 
@@ -1688,7 +3292,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
             if char in byte_map:
+
+
+
+
 
 
 
@@ -1696,7 +3308,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
             elif ord(char) >= 256:
+
+
+
+
 
 
 
@@ -1704,7 +3324,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
             else:
+
+
+
+
 
 
 
@@ -1716,7 +3344,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -1724,7 +3364,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         except Exception:
+
+
+
+
 
 
 
@@ -1736,11 +3384,27 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     def encode_batch(self, texts: List[str], add_special_tokens: bool = True) -> List[List[int]]:
 
 
 
+
+
+
+
         """Encode a batch of texts."""
+
+
+
+
 
 
 
@@ -1752,11 +3416,27 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     def decode_batch(self, token_ids_batch: List[List[int]], skip_special_tokens: bool = True) -> List[str]:
 
 
 
+
+
+
+
         """Decode a batch of token ID lists."""
+
+
+
+
 
 
 
@@ -1768,7 +3448,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     def __len__(self) -> int:
+
+
+
+
 
 
 
@@ -1780,7 +3472,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     @property
+
+
+
+
 
 
 
@@ -1788,7 +3492,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         return len(self.token_to_id)
+
+
+
+
+
+
+
+
 
 
 
@@ -1800,7 +3516,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
     def bos_token_id(self) -> int:
+
+
+
+
 
 
 
@@ -1812,11 +3536,27 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     @property
 
 
 
+
+
+
+
     def eos_token_id(self) -> int:
+
+
+
+
 
 
 
@@ -1828,11 +3568,27 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     @property
 
 
 
+
+
+
+
     def pad_token_id(self) -> int:
+
+
+
+
 
 
 
@@ -1844,11 +3600,27 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     def get_token_id(self, token: str) -> int:
 
 
 
+
+
+
+
         """Get the ID for a token."""
+
+
+
+
 
 
 
@@ -1860,11 +3632,27 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     def get_token(self, token_id: int) -> str:
 
 
 
+
+
+
+
         """Get the token for an ID."""
+
+
+
+
 
 
 
@@ -1876,11 +3664,27 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     def save(self, directory: str):
 
 
 
+
+
+
+
         """Save tokenizer to directory."""
+
+
+
+
 
 
 
@@ -1892,7 +3696,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
                          
+
+
+
+
 
 
 
@@ -1900,7 +3716,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
             "token_to_id": self.token_to_id,
+
+
+
+
 
 
 
@@ -1908,7 +3732,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
             "special_tokens": self.special_tokens,
+
+
+
+
 
 
 
@@ -1916,7 +3748,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         with open(os.path.join(directory, "tokenizer.json"), "w") as f:
+
+
+
+
 
 
 
@@ -1928,7 +3768,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
     @classmethod
+
+
+
+
 
 
 
@@ -1936,11 +3788,23 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         """Load tokenizer from directory."""
 
 
 
+
+
+
+
         with open(os.path.join(directory, "tokenizer.json"), "r") as f:
+
+
+
+
 
 
 
@@ -1952,7 +3816,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
         tokenizer = cls(special_tokens=data["special_tokens"])
+
+
+
+
 
 
 
@@ -1960,7 +3836,15 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         tokenizer.id_to_token = {v: k for k, v in data["token_to_id"].items()}
+
+
+
+
 
 
 
@@ -1968,7 +3852,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
         tokenizer.merge_ranks = {tuple(m): i for i, m in enumerate(data["merges"])}
+
+
+
+
+
+
+
+
 
 
 
@@ -1988,7 +3884,23 @@ class CodeTokenizer:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -1996,7 +3908,19 @@ class CodeTokenizer:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -2005,6 +3929,10 @@ class CodeTokenizer:
 
 
 class EfficientBPETrainer:
+
+
+
+
 
 
 
@@ -2027,7 +3955,19 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, vocab_size: int = 128256, min_frequency: int = 2,
+
+
+
+
 
 
 
@@ -2035,7 +3975,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
         self.vocab_size = vocab_size
+
+
+
+
 
 
 
@@ -2043,7 +3991,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
         self.special_tokens = special_tokens or SPECIAL_TOKENS
+
+
+
+
 
 
 
@@ -2055,7 +4011,19 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
+
+
+
+
     @staticmethod
+
+
+
+
 
 
 
@@ -2063,7 +4031,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
         if 33 <= byte_val <= 126:
+
+
+
+
 
 
 
@@ -2071,7 +4047,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
         if byte_val == 32:
+
+
+
+
 
 
 
@@ -2079,7 +4063,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
         if byte_val == 10:
+
+
+
+
 
 
 
@@ -2087,11 +4079,23 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
         if byte_val == 9:
 
 
 
+
+
+
+
             return "ĉ"
+
+
+
+
 
 
 
@@ -2103,7 +4107,19 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
+
+
+
+
     def _count_word_freqs(self, texts) -> Counter:
+
+
+
+
 
 
 
@@ -2111,7 +4127,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
         for text in texts:                                     
+
+
+
+
 
 
 
@@ -2119,7 +4143,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                 continue
+
+
+
+
 
 
 
@@ -2127,11 +4159,23 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                 word = "".join(self._byte_to_char(b) for b in pre.encode("utf-8"))
 
 
 
+
+
+
+
                 word_freqs[word] += 1
+
+
+
+
 
 
 
@@ -2143,7 +4187,19 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
+
+
+
+
     def train_from_iterator(self, texts, verbose: bool = True) -> "CodeTokenizer":
+
+
+
+
 
 
 
@@ -2151,11 +4207,23 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
         if verbose:
 
 
 
+
+
+
+
             print(f"Unique pre-tokens: {len(word_freqs):,}")
+
+
+
+
 
 
 
@@ -2167,11 +4235,27 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
+
+
+
+
     def train(self, texts: List[str], verbose: bool = True) -> "CodeTokenizer":
 
 
 
+
+
+
+
         """Backwards-compatible list API (delegates to the streaming path)."""
+
+
+
+
 
 
 
@@ -2183,7 +4267,19 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
+
+
+
+
     def _train_from_word_freqs(self, word_freqs: Counter, verbose: bool = True) -> "CodeTokenizer":
+
+
+
+
 
 
 
@@ -2191,7 +4287,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
         splits: Dict[str, List[str]] = {w: list(w) for w in word_freqs}
+
+
+
+
 
 
 
@@ -2199,7 +4303,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
         pair_counts: Counter = Counter()
+
+
+
+
 
 
 
@@ -2207,7 +4319,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
         for word, freq in word_freqs.items():
+
+
+
+
 
 
 
@@ -2215,7 +4335,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
             for j in range(len(chars) - 1):
+
+
+
+
 
 
 
@@ -2223,7 +4351,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                 pair_counts[pair] += freq
+
+
+
+
 
 
 
@@ -2235,7 +4371,19 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
+
+
+
+
         def heap_key(pair, count):
+
+
+
+
 
 
 
@@ -2247,7 +4395,19 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
+
+
+
+
         heap = [heap_key(p, c) for p, c in pair_counts.items()]
+
+
+
+
 
 
 
@@ -2255,7 +4415,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
         merges: List[Tuple[str, str]] = []
+
+
+
+
 
 
 
@@ -2267,7 +4435,19 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
+
+
+
+
         def push(pair):
+
+
+
+
 
 
 
@@ -2275,7 +4455,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
             if c >= self.min_frequency:
+
+
+
+
 
 
 
@@ -2287,7 +4475,19 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
+
+
+
+
         while heap and len(merges) < num_merges:
+
+
+
+
 
 
 
@@ -2295,7 +4495,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
             count = -neg_count
+
+
+
+
 
 
 
@@ -2303,7 +4511,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                 continue                    
+
+
+
+
 
 
 
@@ -2311,7 +4527,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
             merges.append(pair)
+
+
+
+
 
 
 
@@ -2319,7 +4543,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
             affected = list(pair_to_words.get(pair, ()))
+
+
+
+
 
 
 
@@ -2327,7 +4559,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                 freq = word_freqs[word]
+
+
+
+
 
 
 
@@ -2335,7 +4575,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                                                  
+
+
+
+
 
 
 
@@ -2343,7 +4591,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                     old = (chars[j], chars[j + 1])
+
+
+
+
 
 
 
@@ -2351,7 +4607,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                     if pair_counts[old] <= 0:
+
+
+
+
 
 
 
@@ -2359,7 +4623,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                 new_chars, j = [], 0
+
+
+
+
 
 
 
@@ -2367,7 +4639,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                     if j < len(chars) - 1 and chars[j] == pair[0] and chars[j + 1] == pair[1]:
+
+
+
+
 
 
 
@@ -2375,7 +4655,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                         j += 2
+
+
+
+
 
 
 
@@ -2383,7 +4671,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                         new_chars.append(chars[j])
+
+
+
+
 
 
 
@@ -2391,7 +4687,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                 splits[word] = new_chars
+
+
+
+
 
 
 
@@ -2399,7 +4703,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                     new_pair = (new_chars[j], new_chars[j + 1])
+
+
+
+
 
 
 
@@ -2407,7 +4719,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                     pair_to_words[new_pair].add(word)
+
+
+
+
 
 
 
@@ -2415,7 +4735,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
             pair_to_words.pop(pair, None)
+
+
+
+
 
 
 
@@ -2423,7 +4751,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
                 print(f"  Merge {len(merges)}/{num_merges}")
+
+
+
+
 
 
 
@@ -2431,7 +4767,15 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
             print(f"Learned {len(merges)} merges; vocab={len(vocab) + len(self.special_tokens):,}")
+
+
+
+
 
 
 
@@ -2447,7 +4791,23 @@ class EfficientBPETrainer:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class TokenizerValidator:
+
+
+
+
 
 
 
@@ -2459,7 +4819,19 @@ class TokenizerValidator:
 
 
 
+
+
+
+
+
+
+
+
     @staticmethod
+
+
+
+
 
 
 
@@ -2467,7 +4839,15 @@ class TokenizerValidator:
 
 
 
+
+
+
+
         total_chars = total_bytes = total_tokens = unk = 0
+
+
+
+
 
 
 
@@ -2475,7 +4855,15 @@ class TokenizerValidator:
 
 
 
+
+
+
+
         per_sample = []
+
+
+
+
 
 
 
@@ -2483,7 +4871,15 @@ class TokenizerValidator:
 
 
 
+
+
+
+
             ids = tokenizer.encode(s, add_special_tokens=False)
+
+
+
+
 
 
 
@@ -2491,7 +4887,15 @@ class TokenizerValidator:
 
 
 
+
+
+
+
             ok = (back == s)
+
+
+
+
 
 
 
@@ -2499,7 +4903,15 @@ class TokenizerValidator:
 
 
 
+
+
+
+
             total_chars += len(s)
+
+
+
+
 
 
 
@@ -2507,7 +4919,15 @@ class TokenizerValidator:
 
 
 
+
+
+
+
             total_tokens += max(len(ids), 1)
+
+
+
+
 
 
 
@@ -2515,7 +4935,15 @@ class TokenizerValidator:
 
 
 
+
+
+
+
             per_sample.append({"chars": len(s), "tokens": len(ids),
+
+
+
+
 
 
 
@@ -2523,7 +4951,15 @@ class TokenizerValidator:
 
 
 
+
+
+
+
         return {
+
+
+
+
 
 
 
@@ -2531,7 +4967,15 @@ class TokenizerValidator:
 
 
 
+
+
+
+
             "chars_per_token": total_chars / max(total_tokens, 1),
+
+
+
+
 
 
 
@@ -2539,7 +4983,15 @@ class TokenizerValidator:
 
 
 
+
+
+
+
             "unk_rate": unk / max(total_tokens, 1),
+
+
+
+
 
 
 
@@ -2547,7 +4999,15 @@ class TokenizerValidator:
 
 
 
+
+
+
+
             "per_sample": per_sample,
+
+
+
+
 
 
 
@@ -2559,7 +5019,19 @@ class TokenizerValidator:
 
 
 
+
+
+
+
+
+
+
+
     @staticmethod
+
+
+
+
 
 
 
@@ -2567,7 +5039,15 @@ class TokenizerValidator:
 
 
 
+
+
+
+
                                   max_unk_rate: float = 0.001) -> None:
+
+
+
+
 
 
 
@@ -2575,11 +5055,23 @@ class TokenizerValidator:
 
 
 
+
+
+
+
         assert report["unk_rate"] <= max_unk_rate, f"unk_rate {report['unk_rate']} too high (byte-fallback broken?)"
 
 
 
+
+
+
+
         assert report["chars_per_token"] >= min_chars_per_token, (
+
+
+
+
 
 
 
@@ -2595,7 +5087,23 @@ class TokenizerValidator:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -2603,7 +5111,19 @@ class TokenizerValidator:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -2612,6 +5132,10 @@ class TokenizerValidator:
 
 
 class CodeChatTemplate:
+
+
+
+
 
 
 
@@ -2626,7 +5150,19 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, tokenizer: CodeTokenizer):
+
+
+
+
 
 
 
@@ -2638,7 +5174,19 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
+
+
+
+
     def format_message(self, role: str, content: str, language: Optional[str] = None) -> str:
+
+
+
+
 
 
 
@@ -2646,7 +5194,15 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
         role_tokens = {
+
+
+
+
 
 
 
@@ -2654,7 +5210,15 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
             "user": "<|user|>",
+
+
+
+
 
 
 
@@ -2662,7 +5226,15 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
             "tool": "<|tool_result|>",
+
+
+
+
 
 
 
@@ -2670,7 +5242,19 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
         role_token = role_tokens.get(role, "<|user|>")
+
+
+
+
+
+
+
+
 
 
 
@@ -2686,7 +5270,19 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
+
+
+
+
         if language:
+
+
+
+
 
 
 
@@ -2694,7 +5290,15 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
                 "python": "<|python|>",
+
+
+
+
 
 
 
@@ -2702,7 +5306,15 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
                 "typescript": "<|typescript|>",
+
+
+
+
 
 
 
@@ -2710,7 +5322,15 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
                 "cpp": "<|cpp|>",
+
+
+
+
 
 
 
@@ -2718,7 +5338,15 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
                 "go": "<|go|>",
+
+
+
+
 
 
 
@@ -2726,7 +5354,15 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
             if language in lang_tokens:
+
+
+
+
 
 
 
@@ -2738,11 +5374,31 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
+
+
+
+
         parts.append(content)
 
 
 
+
+
+
+
         parts.append("<eos>")
+
+
+
+
+
+
+
+
 
 
 
@@ -2758,7 +5414,19 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
+
+
+
+
     def format_conversation(self, messages: List[Dict[str, str]]) -> str:
+
+
+
+
 
 
 
@@ -2766,7 +5434,15 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
         formatted = []
+
+
+
+
 
 
 
@@ -2774,7 +5450,15 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
             formatted.append(self.format_message(
+
+
+
+
 
 
 
@@ -2782,7 +5466,15 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
                 content=msg["content"],
+
+
+
+
 
 
 
@@ -2790,7 +5482,15 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
             ))
+
+
+
+
 
 
 
@@ -2802,7 +5502,19 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
+
+
+
+
     def encode_conversation(self, messages: List[Dict[str, str]]) -> List[int]:
+
+
+
+
 
 
 
@@ -2810,7 +5522,15 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
         text = self.format_conversation(messages)
+
+
+
+
 
 
 
@@ -2822,7 +5542,19 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
+
+
+
+
                                                                            
+
+
+
+
 
 
 
@@ -2830,7 +5562,15 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
                                                                                
+
+
+
+
 
 
 
@@ -2838,7 +5578,15 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
                                                                          
+
+
+
+
 
 
 
@@ -2846,11 +5594,23 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
     def format_tool_call(tool: str, arguments: Dict) -> str:
 
 
 
+
+
+
+
         import json as _json
+
+
+
+
 
 
 
@@ -2862,7 +5622,19 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
+
+
+
+
     @staticmethod
+
+
+
+
 
 
 
@@ -2870,11 +5642,23 @@ class CodeChatTemplate:
 
 
 
+
+
+
+
         import json as _json
 
 
 
+
+
+
+
         return "<|tool_result|>\n" + _json.dumps({"tool": tool, "result": result}) + "\n<eos>"
+
+
+
+
 
 
 

@@ -11,7 +11,19 @@ contract is: generation-time stop tokens + this validator + bounded retries.
 
 
 
+
+
+
+
 from __future__ import annotations
+
+
+
+
+
+
+
+
 
 
 
@@ -23,7 +35,15 @@ import json
 
 
 
+
+
+
+
 import re
+
+
+
+
 
 
 
@@ -35,7 +55,19 @@ from typing import Any, Dict, Optional, Tuple
 
 
 
+
+
+
+
+
+
+
+
 try:
+
+
+
+
 
 
 
@@ -43,11 +75,23 @@ try:
 
 
 
+
+
+
+
     HAS_JSONSCHEMA = True
 
 
 
+
+
+
+
 except ImportError:
+
+
+
+
 
 
 
@@ -59,11 +103,27 @@ except ImportError:
 
 
 
+
+
+
+
+
+
+
+
 _FENCED = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
 
 
 
+
+
+
+
 _NATIVE = re.compile(r"<\|tool_call\|>\s*(\{.*?\})\s*(?:<eos>|<\|tool_result\|>|$)", re.DOTALL)
+
+
+
+
 
 
 
@@ -79,7 +139,23 @@ _REACT_ACTION = re.compile(r"Action:\s*(\w+)\s*\nAction Input:\s*(\{.*)", re.DOT
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def _balance_braces(text: str) -> str:
+
+
+
+
 
 
 
@@ -87,7 +163,15 @@ def _balance_braces(text: str) -> str:
 
 
 
+
+
+
+
     stack, in_str, esc = [], False, False
+
+
+
+
 
 
 
@@ -95,7 +179,15 @@ def _balance_braces(text: str) -> str:
 
 
 
+
+
+
+
         if in_str:
+
+
+
+
 
 
 
@@ -103,7 +195,15 @@ def _balance_braces(text: str) -> str:
 
 
 
+
+
+
+
                 esc = False
+
+
+
+
 
 
 
@@ -111,7 +211,15 @@ def _balance_braces(text: str) -> str:
 
 
 
+
+
+
+
                 esc = True
+
+
+
+
 
 
 
@@ -119,7 +227,15 @@ def _balance_braces(text: str) -> str:
 
 
 
+
+
+
+
                 in_str = False
+
+
+
+
 
 
 
@@ -127,7 +243,15 @@ def _balance_braces(text: str) -> str:
 
 
 
+
+
+
+
         if ch == '"':
+
+
+
+
 
 
 
@@ -135,7 +259,15 @@ def _balance_braces(text: str) -> str:
 
 
 
+
+
+
+
         elif ch in "{[":
+
+
+
+
 
 
 
@@ -143,7 +275,15 @@ def _balance_braces(text: str) -> str:
 
 
 
+
+
+
+
         elif ch in "}]" and stack and stack[-1] == ch:
+
+
+
+
 
 
 
@@ -151,11 +291,23 @@ def _balance_braces(text: str) -> str:
 
 
 
+
+
+
+
     if in_str:
 
 
 
+
+
+
+
         text += '"'
+
+
+
+
 
 
 
@@ -171,7 +323,23 @@ def _balance_braces(text: str) -> str:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def repair_json(raw: str) -> str:
+
+
+
+
 
 
 
@@ -179,11 +347,23 @@ def repair_json(raw: str) -> str:
 
 
 
+
+
+
+
     s = re.sub(r",\s*([}\]])", r"\1", s)                           
 
 
 
+
+
+
+
     s = s.replace("'", '"') if s.count("'") > s.count('"') and '"' not in s else s
+
+
+
+
 
 
 
@@ -199,7 +379,23 @@ def repair_json(raw: str) -> str:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def _loads_maybe_repair(raw: str) -> Tuple[Optional[Any], Optional[str]]:
+
+
+
+
 
 
 
@@ -207,7 +403,15 @@ def _loads_maybe_repair(raw: str) -> Tuple[Optional[Any], Optional[str]]:
 
 
 
+
+
+
+
         return json.loads(raw), None
+
+
+
+
 
 
 
@@ -215,7 +419,15 @@ def _loads_maybe_repair(raw: str) -> Tuple[Optional[Any], Optional[str]]:
 
 
 
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -223,7 +435,15 @@ def _loads_maybe_repair(raw: str) -> Tuple[Optional[Any], Optional[str]]:
 
 
 
+
+
+
+
         except json.JSONDecodeError as e2:
+
+
+
+
 
 
 
@@ -239,7 +459,23 @@ def _loads_maybe_repair(raw: str) -> Tuple[Optional[Any], Optional[str]]:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def validate_against_schema(call: Dict, schemas: Dict[str, Dict]) -> Tuple[Optional[Dict], Optional[str]]:
+
+
+
+
 
 
 
@@ -247,7 +483,15 @@ def validate_against_schema(call: Dict, schemas: Dict[str, Dict]) -> Tuple[Optio
 
 
 
+
+
+
+
     if not isinstance(call, dict) or "tool" not in call:
+
+
+
+
 
 
 
@@ -255,7 +499,15 @@ def validate_against_schema(call: Dict, schemas: Dict[str, Dict]) -> Tuple[Optio
 
 
 
+
+
+
+
     tool = call["tool"]
+
+
+
+
 
 
 
@@ -263,7 +515,15 @@ def validate_against_schema(call: Dict, schemas: Dict[str, Dict]) -> Tuple[Optio
 
 
 
+
+
+
+
         return None, f"unknown tool {tool!r}; valid tools: {sorted(schemas)}"
+
+
+
+
 
 
 
@@ -271,7 +531,15 @@ def validate_against_schema(call: Dict, schemas: Dict[str, Dict]) -> Tuple[Optio
 
 
 
+
+
+
+
     if not isinstance(args, dict):
+
+
+
+
 
 
 
@@ -279,7 +547,15 @@ def validate_against_schema(call: Dict, schemas: Dict[str, Dict]) -> Tuple[Optio
 
 
 
+
+
+
+
     schema = schemas[tool].get("parameters", {})
+
+
+
+
 
 
 
@@ -287,7 +563,15 @@ def validate_against_schema(call: Dict, schemas: Dict[str, Dict]) -> Tuple[Optio
 
 
 
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -295,7 +579,15 @@ def validate_against_schema(call: Dict, schemas: Dict[str, Dict]) -> Tuple[Optio
 
 
 
+
+
+
+
         except jsonschema.ValidationError as e:
+
+
+
+
 
 
 
@@ -303,7 +595,15 @@ def validate_against_schema(call: Dict, schemas: Dict[str, Dict]) -> Tuple[Optio
 
 
 
+
+
+
+
     else:
+
+
+
+
 
 
 
@@ -311,7 +611,15 @@ def validate_against_schema(call: Dict, schemas: Dict[str, Dict]) -> Tuple[Optio
 
 
 
+
+
+
+
         if err:
+
+
+
+
 
 
 
@@ -319,7 +627,15 @@ def validate_against_schema(call: Dict, schemas: Dict[str, Dict]) -> Tuple[Optio
 
 
 
+
+
+
+
                                                                       
+
+
+
+
 
 
 
@@ -327,7 +643,15 @@ def validate_against_schema(call: Dict, schemas: Dict[str, Dict]) -> Tuple[Optio
 
 
 
+
+
+
+
     for key, spec in props.items():
+
+
+
+
 
 
 
@@ -335,7 +659,15 @@ def validate_against_schema(call: Dict, schemas: Dict[str, Dict]) -> Tuple[Optio
 
 
 
+
+
+
+
             args[key] = spec["default"]
+
+
+
+
 
 
 
@@ -351,7 +683,23 @@ def validate_against_schema(call: Dict, schemas: Dict[str, Dict]) -> Tuple[Optio
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def _validate_fallback(args: Dict, schema: Dict) -> Optional[str]:
+
+
+
+
 
 
 
@@ -359,7 +707,15 @@ def _validate_fallback(args: Dict, schema: Dict) -> Optional[str]:
 
 
 
+
+
+
+
         if req not in args:
+
+
+
+
 
 
 
@@ -367,7 +723,15 @@ def _validate_fallback(args: Dict, schema: Dict) -> Optional[str]:
 
 
 
+
+
+
+
     types = {"string": str, "integer": int, "number": (int, float), "boolean": bool,
+
+
+
+
 
 
 
@@ -375,7 +739,15 @@ def _validate_fallback(args: Dict, schema: Dict) -> Optional[str]:
 
 
 
+
+
+
+
     for key, spec in schema.get("properties", {}).items():
+
+
+
+
 
 
 
@@ -383,7 +755,15 @@ def _validate_fallback(args: Dict, schema: Dict) -> Optional[str]:
 
 
 
+
+
+
+
             expected = types[spec["type"]]
+
+
+
+
 
 
 
@@ -391,7 +771,15 @@ def _validate_fallback(args: Dict, schema: Dict) -> Optional[str]:
 
 
 
+
+
+
+
                 return f"property {key!r} must be integer"
+
+
+
+
 
 
 
@@ -399,7 +787,15 @@ def _validate_fallback(args: Dict, schema: Dict) -> Optional[str]:
 
 
 
+
+
+
+
                 return f"property {key!r} must be {spec['type']}"
+
+
+
+
 
 
 
@@ -415,7 +811,23 @@ def _validate_fallback(args: Dict, schema: Dict) -> Optional[str]:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def extract_candidates(text: str):
+
+
+
+
 
 
 
@@ -423,7 +835,15 @@ def extract_candidates(text: str):
 
 
 
+
+
+
+
         m = pat.search(text)
+
+
+
+
 
 
 
@@ -431,7 +851,15 @@ def extract_candidates(text: str):
 
 
 
+
+
+
+
             yield m.group(1)
+
+
+
+
 
 
 
@@ -439,11 +867,23 @@ def extract_candidates(text: str):
 
 
 
+
+
+
+
     m = re.search(r"(\{\s*\"tool\"\s*:.*)", text, re.DOTALL)
 
 
 
+
+
+
+
     if m:
+
+
+
+
 
 
 
@@ -451,7 +891,15 @@ def extract_candidates(text: str):
 
 
 
+
+
+
+
     m = _REACT_ACTION.search(text)
+
+
+
+
 
 
 
@@ -459,7 +907,15 @@ def extract_candidates(text: str):
 
 
 
+
+
+
+
         yield json.dumps({"tool": m.group(1), "arguments": {}})                                        
+
+
+
+
 
 
 
@@ -467,7 +923,15 @@ def extract_candidates(text: str):
 
 
 
+
+
+
+
         if m2:
+
+
+
+
 
 
 
@@ -475,7 +939,15 @@ def extract_candidates(text: str):
 
 
 
+
+
+
+
             if isinstance(obj, dict):
+
+
+
+
 
 
 
@@ -491,7 +963,23 @@ def extract_candidates(text: str):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def parse_tool_call(text: str, schemas: Dict[str, Dict]) -> Tuple[Optional[Dict], Optional[str]]:
+
+
+
+
 
 
 
@@ -499,7 +987,15 @@ def parse_tool_call(text: str, schemas: Dict[str, Dict]) -> Tuple[Optional[Dict]
 
 
 
+
+
+
+
     last_err = "no tool call found; emit <|tool_call|> with a JSON object {\"tool\": ..., \"arguments\": {...}}"
+
+
+
+
 
 
 
@@ -507,7 +1003,15 @@ def parse_tool_call(text: str, schemas: Dict[str, Dict]) -> Tuple[Optional[Dict]
 
 
 
+
+
+
+
         obj, err = _loads_maybe_repair(raw)
+
+
+
+
 
 
 
@@ -515,7 +1019,15 @@ def parse_tool_call(text: str, schemas: Dict[str, Dict]) -> Tuple[Optional[Dict]
 
 
 
+
+
+
+
             last_err = err
+
+
+
+
 
 
 
@@ -523,7 +1035,15 @@ def parse_tool_call(text: str, schemas: Dict[str, Dict]) -> Tuple[Optional[Dict]
 
 
 
+
+
+
+
         call, verr = validate_against_schema(obj, schemas)
+
+
+
+
 
 
 
@@ -531,11 +1051,23 @@ def parse_tool_call(text: str, schemas: Dict[str, Dict]) -> Tuple[Optional[Dict]
 
 
 
+
+
+
+
             return call, None
 
 
 
+
+
+
+
         last_err = verr
+
+
+
+
 
 
 
@@ -551,7 +1083,23 @@ def parse_tool_call(text: str, schemas: Dict[str, Dict]) -> Tuple[Optional[Dict]
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def repair_prompt(task_error: str, bad_output: str) -> str:
+
+
+
+
 
 
 
@@ -559,7 +1107,15 @@ def repair_prompt(task_error: str, bad_output: str) -> str:
 
 
 
+
+
+
+
             f"Previous output (truncated): {bad_output[:800]}\n"
+
+
+
+
 
 
 
@@ -567,7 +1123,15 @@ def repair_prompt(task_error: str, bad_output: str) -> str:
 
 
 
+
+
+
+
             '<|tool_call|>\n{"tool": "<tool_name>", "arguments": {...}}\n')
+
+
+
+
 
 
 

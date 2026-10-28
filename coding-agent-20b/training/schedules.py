@@ -6,7 +6,19 @@ pretrain 3e-4 -> mid-train 1.5e-4 -> SFT 2e-5 -> DPO 5e-7 (beta 0.1).
 
 
 
+
+
+
+
 from __future__ import annotations
+
+
+
+
+
+
+
+
 
 
 
@@ -18,7 +30,15 @@ import math
 
 
 
+
+
+
+
 from dataclasses import dataclass, field
+
+
+
+
 
 
 
@@ -34,7 +54,23 @@ from typing import Dict, List
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def wsd_lr(step: int, max_lr: float, min_lr: float, warmup: int, stable_end: int, total: int) -> float:
+
+
+
+
 
 
 
@@ -43,7 +79,15 @@ def wsd_lr(step: int, max_lr: float, min_lr: float, warmup: int, stable_end: int
 
 
 
+
+
+
+
     if step < warmup:
+
+
+
+
 
 
 
@@ -51,7 +95,15 @@ def wsd_lr(step: int, max_lr: float, min_lr: float, warmup: int, stable_end: int
 
 
 
+
+
+
+
     if step < stable_end:
+
+
+
+
 
 
 
@@ -59,7 +111,15 @@ def wsd_lr(step: int, max_lr: float, min_lr: float, warmup: int, stable_end: int
 
 
 
+
+
+
+
     if step >= total:
+
+
+
+
 
 
 
@@ -67,11 +127,31 @@ def wsd_lr(step: int, max_lr: float, min_lr: float, warmup: int, stable_end: int
 
 
 
+
+
+
+
     progress = (step - stable_end) / max(total - stable_end, 1)
 
 
 
+
+
+
+
     return min_lr + 0.5 * (max_lr - min_lr) * (1 + math.cos(math.pi * progress))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -87,7 +167,15 @@ def cosine_lr(step: int, max_lr: float, min_lr: float, warmup: int, total: int) 
 
 
 
+
+
+
+
     if step < warmup:
+
+
+
+
 
 
 
@@ -95,7 +183,15 @@ def cosine_lr(step: int, max_lr: float, min_lr: float, warmup: int, total: int) 
 
 
 
+
+
+
+
     if step >= total:
+
+
+
+
 
 
 
@@ -103,7 +199,15 @@ def cosine_lr(step: int, max_lr: float, min_lr: float, warmup: int, total: int) 
 
 
 
+
+
+
+
     progress = (step - warmup) / max(total - warmup, 1)
+
+
+
+
 
 
 
@@ -119,7 +223,23 @@ def cosine_lr(step: int, max_lr: float, min_lr: float, warmup: int, total: int) 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def seq_length_at(step: int, schedule: List[tuple] = None) -> int:
+
+
+
+
 
 
 
@@ -127,7 +247,15 @@ def seq_length_at(step: int, schedule: List[tuple] = None) -> int:
 
 
 
+
+
+
+
     schedule = schedule or [(0, 2048), (2000, 4096), (6000, 8192)]
+
+
+
+
 
 
 
@@ -135,7 +263,15 @@ def seq_length_at(step: int, schedule: List[tuple] = None) -> int:
 
 
 
+
+
+
+
     for start, length in schedule:
+
+
+
+
 
 
 
@@ -143,7 +279,15 @@ def seq_length_at(step: int, schedule: List[tuple] = None) -> int:
 
 
 
+
+
+
+
             current = length
+
+
+
+
 
 
 
@@ -159,7 +303,23 @@ def seq_length_at(step: int, schedule: List[tuple] = None) -> int:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @dataclass
+
+
+
+
 
 
 
@@ -167,7 +327,15 @@ class StageConfig:
 
 
 
+
+
+
+
     name: str
+
+
+
+
 
 
 
@@ -175,7 +343,15 @@ class StageConfig:
 
 
 
+
+
+
+
     learning_rate: float
+
+
+
+
 
 
 
@@ -183,7 +359,15 @@ class StageConfig:
 
 
 
+
+
+
+
     warmup_steps: int
+
+
+
+
 
 
 
@@ -191,7 +375,15 @@ class StageConfig:
 
 
 
+
+
+
+
     seq_length: int = 8192
+
+
+
+
 
 
 
@@ -199,7 +391,15 @@ class StageConfig:
 
 
 
+
+
+
+
     beta1: float = 0.9
+
+
+
+
 
 
 
@@ -207,7 +407,15 @@ class StageConfig:
 
 
 
+
+
+
+
     max_grad_norm: float = 1.0
+
+
+
+
 
 
 
@@ -223,7 +431,23 @@ class StageConfig:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def default_pipeline() -> List[StageConfig]:
+
+
+
+
 
 
 
@@ -231,7 +455,15 @@ def default_pipeline() -> List[StageConfig]:
 
 
 
+
+
+
+
     return [
+
+
+
+
 
 
 
@@ -239,7 +471,15 @@ def default_pipeline() -> List[StageConfig]:
 
 
 
+
+
+
+
         StageConfig("midtrain", "midtrain", 1.5e-4, 1.5e-5, 500, 20000, seq_length=8192,
+
+
+
+
 
 
 
@@ -247,7 +487,15 @@ def default_pipeline() -> List[StageConfig]:
 
 
 
+
+
+
+
         StageConfig("sft", "sft", 2e-5, 2e-6, 200, 6000, seq_length=8192,
+
+
+
+
 
 
 
@@ -255,11 +503,23 @@ def default_pipeline() -> List[StageConfig]:
 
 
 
+
+
+
+
         StageConfig("dpo", "dpo", 5e-7, 5e-8, 50, 1500, seq_length=4096, weight_decay=0.0,
 
 
 
+
+
+
+
                     extra={"beta": 0.1, "reference_model": "sft"}),
+
+
+
+
 
 
 
@@ -275,7 +535,23 @@ def default_pipeline() -> List[StageConfig]:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def dpo_loss(policy_chosen_logps, policy_rejected_logps, ref_chosen_logps, ref_rejected_logps, beta: float = 0.1):
+
+
+
+
 
 
 
@@ -283,7 +559,15 @@ def dpo_loss(policy_chosen_logps, policy_rejected_logps, ref_chosen_logps, ref_r
 
 
 
+
+
+
+
     import torch
+
+
+
+
 
 
 
@@ -291,7 +575,15 @@ def dpo_loss(policy_chosen_logps, policy_rejected_logps, ref_chosen_logps, ref_r
 
 
 
+
+
+
+
     chosen_rewards = beta * (policy_chosen_logps - ref_chosen_logps)
+
+
+
+
 
 
 
@@ -299,7 +591,15 @@ def dpo_loss(policy_chosen_logps, policy_rejected_logps, ref_chosen_logps, ref_r
 
 
 
+
+
+
+
     losses = -F.logsigmoid(chosen_rewards - rejected_rewards)
+
+
+
+
 
 
 
@@ -307,11 +607,23 @@ def dpo_loss(policy_chosen_logps, policy_rejected_logps, ref_chosen_logps, ref_r
 
 
 
+
+
+
+
                             "rejected_reward": rejected_rewards.mean().detach(),
 
 
 
+
+
+
+
                             "margin": (chosen_rewards - rejected_rewards).mean().detach()}
+
+
+
+
 
 
 

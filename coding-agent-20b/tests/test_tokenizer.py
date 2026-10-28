@@ -6,7 +6,19 @@ from model.tokenizer import CodeTokenizer, EfficientBPETrainer, TokenizerValidat
 
 
 
+
+
+
+
+
+
+
+
 SAMPLES = [
+
+
+
+
 
 
 
@@ -14,11 +26,23 @@ SAMPLES = [
 
 
 
+
+
+
+
     "héllo wörld — unicode ✓ def f(): pass\n",
 
 
 
+
+
+
+
     "class Foo:\n    def bar(self, x=1):\n        return [i*i for i in range(x)]\n",
+
+
+
+
 
 
 
@@ -34,7 +58,23 @@ SAMPLES = [
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def test_roundtrip_byte_fallback(tokenizer):
+
+
+
+
 
 
 
@@ -42,11 +82,23 @@ def test_roundtrip_byte_fallback(tokenizer):
 
 
 
+
+
+
+
         ids = tokenizer.encode(s, add_special_tokens=False)
 
 
 
+
+
+
+
         assert tokenizer.decode(ids, skip_special_tokens=True) == s
+
+
+
+
 
 
 
@@ -62,7 +114,23 @@ def test_roundtrip_byte_fallback(tokenizer):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def test_efficient_trainer_learns_merges_and_validates():
+
+
+
+
 
 
 
@@ -70,7 +138,15 @@ def test_efficient_trainer_learns_merges_and_validates():
 
 
 
+
+
+
+
     tok = EfficientBPETrainer(vocab_size=600, min_frequency=2).train_from_iterator(iter(corpus), verbose=False)
+
+
+
+
 
 
 
@@ -78,7 +154,15 @@ def test_efficient_trainer_learns_merges_and_validates():
 
 
 
+
+
+
+
     assert report["roundtrip_ok"] and report["unk_rate"] == 0.0
+
+
+
+
 
 
 
@@ -86,11 +170,23 @@ def test_efficient_trainer_learns_merges_and_validates():
 
 
 
+
+
+
+
                                                                   
 
 
 
+
+
+
+
     ids = tok.encode(SAMPLES[0], add_special_tokens=False)
+
+
+
+
 
 
 
@@ -106,7 +202,23 @@ def test_efficient_trainer_learns_merges_and_validates():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def test_trained_vocab_still_byte_fallback():
+
+
+
+
 
 
 
@@ -114,11 +226,23 @@ def test_trained_vocab_still_byte_fallback():
 
 
 
+
+
+
+
     ids = tok.encode("Ωμέγα ✓ unseen text", add_special_tokens=False)
 
 
 
+
+
+
+
     assert tok.decode(ids, skip_special_tokens=True) == "Ωμέγα ✓ unseen text"
+
+
+
+
 
 
 

@@ -2,7 +2,19 @@
 
 
 
+
+
+
+
 from __future__ import annotations
+
+
+
+
+
+
+
+
 
 
 
@@ -18,7 +30,19 @@ from typing import Dict
 
 
 
+
+
+
+
+
+
+
+
 import torch
+
+
+
+
 
 
 
@@ -34,7 +58,23 @@ import torch.nn.functional as F
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def distillation_loss(student_logits, teacher_logits, labels=None,
+
+
+
+
 
 
 
@@ -42,7 +82,15 @@ def distillation_loss(student_logits, teacher_logits, labels=None,
 
 
 
+
+
+
+
     """alpha_kd * T^2 * KL(teacher||student) + (1-alpha_kd) * CE(labels)."""
+
+
+
+
 
 
 
@@ -50,7 +98,15 @@ def distillation_loss(student_logits, teacher_logits, labels=None,
 
 
 
+
+
+
+
     q = F.softmax(teacher_logits / temperature, dim=-1)
+
+
+
+
 
 
 
@@ -58,7 +114,15 @@ def distillation_loss(student_logits, teacher_logits, labels=None,
 
 
 
+
+
+
+
     total = kd * alpha_kd
+
+
+
+
 
 
 
@@ -66,7 +130,15 @@ def distillation_loss(student_logits, teacher_logits, labels=None,
 
 
 
+
+
+
+
     if labels is not None:
+
+
+
+
 
 
 
@@ -74,7 +146,15 @@ def distillation_loss(student_logits, teacher_logits, labels=None,
 
 
 
+
+
+
+
                              labels.view(-1), ignore_index=-100)
+
+
+
+
 
 
 
@@ -82,7 +162,15 @@ def distillation_loss(student_logits, teacher_logits, labels=None,
 
 
 
+
+
+
+
         out["loss"] = total + ce * (1 - alpha_kd)
+
+
+
+
 
 
 
@@ -98,11 +186,31 @@ def distillation_loss(student_logits, teacher_logits, labels=None,
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @torch.no_grad()
 
 
 
+
+
+
+
 def _teacher_logits(teacher, input_ids):
+
+
+
+
 
 
 
@@ -118,7 +226,23 @@ def _teacher_logits(teacher, input_ids):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def distillation_step(student, teacher, batch: Dict, optimizer, temperature: float = 2.0,
+
+
+
+
 
 
 
@@ -126,7 +250,15 @@ def distillation_step(student, teacher, batch: Dict, optimizer, temperature: flo
 
 
 
+
+
+
+
     student.train()
+
+
+
+
 
 
 
@@ -134,7 +266,15 @@ def distillation_step(student, teacher, batch: Dict, optimizer, temperature: flo
 
 
 
+
+
+
+
     input_ids = batch["input_ids"]
+
+
+
+
 
 
 
@@ -142,7 +282,15 @@ def distillation_step(student, teacher, batch: Dict, optimizer, temperature: flo
 
 
 
+
+
+
+
     with torch.no_grad():
+
+
+
+
 
 
 
@@ -150,7 +298,15 @@ def distillation_step(student, teacher, batch: Dict, optimizer, temperature: flo
 
 
 
+
+
+
+
     s_logits = student(input_ids=input_ids).logits
+
+
+
+
 
 
 
@@ -158,7 +314,15 @@ def distillation_step(student, teacher, batch: Dict, optimizer, temperature: flo
 
 
 
+
+
+
+
     shift_labels = None
+
+
+
+
 
 
 
@@ -166,7 +330,15 @@ def distillation_step(student, teacher, batch: Dict, optimizer, temperature: flo
 
 
 
+
+
+
+
         shift_labels = torch.cat([labels[:, 1:], torch.full_like(labels[:, :1], -100)], dim=1)
+
+
+
+
 
 
 
@@ -174,7 +346,15 @@ def distillation_step(student, teacher, batch: Dict, optimizer, temperature: flo
 
 
 
+
+
+
+
                                temperature=temperature, alpha_kd=alpha_kd)
+
+
+
+
 
 
 
@@ -182,7 +362,15 @@ def distillation_step(student, teacher, batch: Dict, optimizer, temperature: flo
 
 
 
+
+
+
+
     torch.nn.utils.clip_grad_norm_(student.parameters(), 1.0)
+
+
+
+
 
 
 
@@ -190,11 +378,23 @@ def distillation_step(student, teacher, batch: Dict, optimizer, temperature: flo
 
 
 
+
+
+
+
     optimizer.zero_grad(set_to_none=True)
 
 
 
+
+
+
+
     return {k: (float(v) if hasattr(v, "item") else v) for k, v in losses.items()}
+
+
+
+
 
 
 

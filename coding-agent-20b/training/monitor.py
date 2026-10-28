@@ -17,7 +17,19 @@ Features:
 
 
 
+
+
+
+
+
+
+
+
 import os
+
+
+
+
 
 
 
@@ -25,7 +37,15 @@ import json
 
 
 
+
+
+
+
 import time
+
+
+
+
 
 
 
@@ -33,7 +53,15 @@ import logging
 
 
 
+
+
+
+
 import math
+
+
+
+
 
 
 
@@ -41,7 +69,15 @@ from pathlib import Path
 
 
 
+
+
+
+
 from typing import Dict, List, Optional, Tuple
+
+
+
+
 
 
 
@@ -49,7 +85,15 @@ from dataclasses import dataclass, asdict
 
 
 
+
+
+
+
 from collections import deque
+
+
+
+
 
 
 
@@ -61,7 +105,19 @@ import numpy as np
 
 
 
+
+
+
+
+
+
+
+
 try:
+
+
+
+
 
 
 
@@ -69,11 +125,23 @@ try:
 
 
 
+
+
+
+
     HAS_WANDB = True
 
 
 
+
+
+
+
 except ImportError:
+
+
+
+
 
 
 
@@ -85,7 +153,19 @@ except ImportError:
 
 
 
+
+
+
+
+
+
+
+
 try:
+
+
+
+
 
 
 
@@ -93,7 +173,15 @@ try:
 
 
 
+
+
+
+
     HAS_TENSORBOARD = True
+
+
+
+
 
 
 
@@ -101,7 +189,19 @@ except ImportError:
 
 
 
+
+
+
+
     HAS_TENSORBOARD = False
+
+
+
+
+
+
+
+
 
 
 
@@ -121,7 +221,23 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @dataclass
+
+
+
+
 
 
 
@@ -129,7 +245,15 @@ class TrainingMetrics:
 
 
 
+
+
+
+
     """Training metrics for a single step."""
+
+
+
+
 
 
 
@@ -137,7 +261,15 @@ class TrainingMetrics:
 
 
 
+
+
+
+
     loss: float
+
+
+
+
 
 
 
@@ -145,7 +277,15 @@ class TrainingMetrics:
 
 
 
+
+
+
+
     grad_norm: float
+
+
+
+
 
 
 
@@ -153,7 +293,15 @@ class TrainingMetrics:
 
 
 
+
+
+
+
     tokens_processed: int
+
+
+
+
 
 
 
@@ -161,11 +309,23 @@ class TrainingMetrics:
 
 
 
+
+
+
+
     
 
 
 
+
+
+
+
     def to_dict(self) -> Dict:
+
+
+
+
 
 
 
@@ -181,7 +341,23 @@ class TrainingMetrics:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class LossSpikeDetector:
+
+
+
+
 
 
 
@@ -189,7 +365,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -197,7 +381,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
         self,
+
+
+
+
 
 
 
@@ -205,7 +397,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
         spike_threshold: float = 3.0,                         
+
+
+
+
 
 
 
@@ -213,7 +413,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
     ):
+
+
+
+
 
 
 
@@ -226,7 +434,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
         self.window_size = window_size
+
+
+
+
 
 
 
@@ -234,7 +450,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
         self.recovery_threshold = recovery_threshold
+
+
+
+
 
 
 
@@ -242,7 +466,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
         self.losses = deque(maxlen=window_size)
+
+
+
+
 
 
 
@@ -250,7 +482,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
         self.spike_step = None
+
+
+
+
 
 
 
@@ -258,11 +498,23 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
     
 
 
 
+
+
+
+
     def update(self, step: int, loss: float) -> Dict[str, any]:
+
+
+
+
 
 
 
@@ -275,11 +527,23 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
         self.losses.append(loss)
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -287,7 +551,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
             'spike_detected': False,
+
+
+
+
 
 
 
@@ -295,7 +567,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
             'should_reduce_lr': False,
+
+
+
+
 
 
 
@@ -303,11 +583,23 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
         }
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -315,7 +607,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
         if len(self.losses) < 10:
+
+
+
+
 
 
 
@@ -323,7 +623,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -331,7 +639,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
         mean_loss = np.mean(self.losses)
+
+
+
+
 
 
 
@@ -339,7 +655,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -347,7 +671,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
         if not self.spike_detected:
+
+
+
+
 
 
 
@@ -355,7 +687,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
                 self.spike_detected = True
+
+
+
+
 
 
 
@@ -363,11 +703,23 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
                 self.spike_loss = loss
 
 
 
+
+
+
+
                 
+
+
+
+
 
 
 
@@ -375,7 +727,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
                 result['should_checkpoint'] = True
+
+
+
+
 
 
 
@@ -383,7 +743,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
                 result['spike_info'] = {
+
+
+
+
 
 
 
@@ -391,7 +759,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
                     'loss': loss,
+
+
+
+
 
 
 
@@ -399,7 +775,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
                     'std': std_loss,
+
+
+
+
 
 
 
@@ -407,7 +791,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
                 }
+
+
+
+
 
 
 
@@ -415,7 +807,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
                 logger.warning(
+
+
+
+
 
 
 
@@ -423,7 +823,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
                     f"loss={loss:.4f}, mean={mean_loss:.4f}, "
+
+
+
+
 
 
 
@@ -431,7 +839,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
                 )
+
+
+
+
 
 
 
@@ -439,7 +855,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
                                 
+
+
+
+
 
 
 
@@ -447,7 +871,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
             if recovery > self.recovery_threshold:
+
+
+
+
 
 
 
@@ -455,7 +887,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
                     f"Loss recovered at step {step}: "
+
+
+
+
 
 
 
@@ -463,7 +903,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
                 )
+
+
+
+
 
 
 
@@ -471,7 +919,15 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
                 self.spike_step = None
+
+
+
+
 
 
 
@@ -479,11 +935,31 @@ class LossSpikeDetector:
 
 
 
+
+
+
+
         
 
 
 
+
+
+
+
         return result
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -499,11 +975,23 @@ class GradientMonitor:
 
 
 
+
+
+
+
     """Monitor gradient norms and detect anomalies."""
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -511,7 +999,15 @@ class GradientMonitor:
 
 
 
+
+
+
+
         self.window_size = window_size
+
+
+
+
 
 
 
@@ -519,7 +1015,15 @@ class GradientMonitor:
 
 
 
+
+
+
+
         self.grad_norms = deque(maxlen=window_size)
+
+
+
+
 
 
 
@@ -527,7 +1031,15 @@ class GradientMonitor:
 
 
 
+
+
+
+
     def update(self, step: int, grad_norm: float) -> Dict[str, any]:
+
+
+
+
 
 
 
@@ -540,11 +1052,23 @@ class GradientMonitor:
 
 
 
+
+
+
+
         self.grad_norms.append(grad_norm)
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -552,7 +1076,15 @@ class GradientMonitor:
 
 
 
+
+
+
+
             'explosion_detected': False,
+
+
+
+
 
 
 
@@ -560,7 +1092,15 @@ class GradientMonitor:
 
 
 
+
+
+
+
             'stats': None,
+
+
+
+
 
 
 
@@ -568,7 +1108,15 @@ class GradientMonitor:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -576,11 +1124,23 @@ class GradientMonitor:
 
 
 
+
+
+
+
             return result
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -588,11 +1148,23 @@ class GradientMonitor:
 
 
 
+
+
+
+
         max_norm = np.max(self.grad_norms)
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -600,7 +1172,15 @@ class GradientMonitor:
 
 
 
+
+
+
+
         if grad_norm > self.explosion_threshold * mean_norm:
+
+
+
+
 
 
 
@@ -608,7 +1188,15 @@ class GradientMonitor:
 
 
 
+
+
+
+
             result['should_clip'] = True
+
+
+
+
 
 
 
@@ -616,7 +1204,15 @@ class GradientMonitor:
 
 
 
+
+
+
+
             logger.warning(
+
+
+
+
 
 
 
@@ -624,7 +1220,15 @@ class GradientMonitor:
 
 
 
+
+
+
+
                 f"norm={grad_norm:.4f}, mean={mean_norm:.4f}, "
+
+
+
+
 
 
 
@@ -632,11 +1236,23 @@ class GradientMonitor:
 
 
 
+
+
+
+
             )
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -644,7 +1260,15 @@ class GradientMonitor:
 
 
 
+
+
+
+
             'mean': mean_norm,
+
+
+
+
 
 
 
@@ -652,7 +1276,15 @@ class GradientMonitor:
 
 
 
+
+
+
+
             'current': grad_norm,
+
+
+
+
 
 
 
@@ -660,7 +1292,15 @@ class GradientMonitor:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -676,7 +1316,23 @@ class GradientMonitor:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class ThroughputTracker:
+
+
+
+
 
 
 
@@ -684,7 +1340,15 @@ class ThroughputTracker:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -692,7 +1356,15 @@ class ThroughputTracker:
 
 
 
+
+
+
+
         self.window_size = window_size
+
+
+
+
 
 
 
@@ -700,7 +1372,15 @@ class ThroughputTracker:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -708,7 +1388,15 @@ class ThroughputTracker:
 
 
 
+
+
+
+
         """Update with new throughput measurement."""
+
+
+
+
 
 
 
@@ -716,7 +1404,15 @@ class ThroughputTracker:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -724,11 +1420,23 @@ class ThroughputTracker:
 
 
 
+
+
+
+
             return {'current': tokens_per_second}
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -736,7 +1444,15 @@ class ThroughputTracker:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -744,7 +1460,15 @@ class ThroughputTracker:
 
 
 
+
+
+
+
             'current': tokens_per_second,
+
+
+
+
 
 
 
@@ -752,7 +1476,15 @@ class ThroughputTracker:
 
 
 
+
+
+
+
             'min': np.min(self.throughputs),
+
+
+
+
 
 
 
@@ -760,11 +1492,31 @@ class ThroughputTracker:
 
 
 
+
+
+
+
             'efficiency': tokens_per_second / mean_throughput if mean_throughput > 0 else 0,
 
 
 
+
+
+
+
         }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -780,11 +1532,23 @@ class CheckpointValidator:
 
 
 
+
+
+
+
     """Validate checkpoints by loading and testing them."""
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -792,7 +1556,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
         self.validation_data = validation_data
+
+
+
+
 
 
 
@@ -800,7 +1572,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
         self.config = config
+
+
+
+
 
 
 
@@ -808,7 +1588,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
     def validate(self, checkpoint_path: str) -> Dict[str, any]:
+
+
+
+
 
 
 
@@ -821,11 +1609,23 @@ class CheckpointValidator:
 
 
 
+
+
+
+
         import torch
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -833,7 +1633,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
                              
+
+
+
+
 
 
 
@@ -841,7 +1649,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -849,7 +1665,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
             model = self.model_class(self.config)
+
+
+
+
 
 
 
@@ -857,7 +1681,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -865,7 +1697,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
             model.eval()
+
+
+
+
 
 
 
@@ -873,11 +1713,23 @@ class CheckpointValidator:
 
 
 
+
+
+
+
             num_batches = 0
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -885,7 +1737,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
                 for batch in self.validation_data:
+
+
+
+
 
 
 
@@ -893,7 +1753,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
                     total_loss += output.loss.item()
+
+
+
+
 
 
 
@@ -901,7 +1769,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
                     
+
+
+
+
 
 
 
@@ -909,11 +1785,23 @@ class CheckpointValidator:
 
 
 
+
+
+
+
                         break
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -921,7 +1809,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -929,7 +1825,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
             if math.isnan(avg_loss) or math.isinf(avg_loss):
+
+
+
+
 
 
 
@@ -937,7 +1841,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
                     'valid': False,
+
+
+
+
 
 
 
@@ -945,7 +1857,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
                     'error': 'Loss is NaN or Inf',
+
+
+
+
 
 
 
@@ -953,11 +1873,23 @@ class CheckpointValidator:
 
 
 
+
+
+
+
             
 
 
 
+
+
+
+
             return {
+
+
+
+
 
 
 
@@ -965,7 +1897,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
                 'loss': avg_loss,
+
+
+
+
 
 
 
@@ -973,7 +1913,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
             }
+
+
+
+
 
 
 
@@ -981,7 +1929,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
         except Exception as e:
+
+
+
+
 
 
 
@@ -989,7 +1945,15 @@ class CheckpointValidator:
 
 
 
+
+
+
+
                 'valid': False,
+
+
+
+
 
 
 
@@ -997,11 +1961,31 @@ class CheckpointValidator:
 
 
 
+
+
+
+
                 'error': str(e),
 
 
 
+
+
+
+
             }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1017,11 +2001,23 @@ class TrainingMonitor:
 
 
 
+
+
+
+
     """Main training monitor that integrates all components."""
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1029,7 +2025,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         self,
+
+
+
+
 
 
 
@@ -1037,7 +2041,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         project_name: str = "coding-agent-20b",
+
+
+
+
 
 
 
@@ -1045,7 +2057,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         use_tensorboard: bool = True,
+
+
+
+
 
 
 
@@ -1053,7 +2073,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         self.log_dir = Path(log_dir)
+
+
+
+
 
 
 
@@ -1061,7 +2089,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1069,7 +2105,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         self.loss_detector = LossSpikeDetector()
+
+
+
+
 
 
 
@@ -1077,11 +2121,23 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         self.throughput_tracker = ThroughputTracker()
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1089,7 +2145,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         self.use_wandb = use_wandb and HAS_WANDB
+
+
+
+
 
 
 
@@ -1097,7 +2161,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1105,7 +2177,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             try:
+
+
+
+
 
 
 
@@ -1113,11 +2193,23 @@ class TrainingMonitor:
 
 
 
+
+
+
+
                 logger.info("WandB initialized")
 
 
 
+
+
+
+
             except Exception as e:
+
+
+
+
 
 
 
@@ -1125,11 +2217,23 @@ class TrainingMonitor:
 
 
 
+
+
+
+
                 self.use_wandb = False
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1137,7 +2241,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             try:
+
+
+
+
 
 
 
@@ -1145,7 +2257,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
                 logger.info("TensorBoard initialized")
+
+
+
+
 
 
 
@@ -1153,7 +2273,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
                 logger.warning(f"Failed to initialize TensorBoard: {e}")
+
+
+
+
 
 
 
@@ -1161,7 +2289,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1169,7 +2305,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         self.metrics_history = []
+
+
+
+
 
 
 
@@ -1177,7 +2321,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
     def log_step(self, metrics: TrainingMetrics) -> Dict[str, any]:
+
+
+
+
 
 
 
@@ -1190,7 +2342,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
                            
+
+
+
+
 
 
 
@@ -1198,7 +2358,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         grad_result = self.grad_monitor.update(metrics.step, metrics.grad_norm)
+
+
+
+
 
 
 
@@ -1206,7 +2374,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1214,11 +2390,23 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         self.metrics_history.append(metrics.to_dict())
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1226,7 +2414,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         if self.use_wandb:
+
+
+
+
 
 
 
@@ -1234,7 +2430,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
                 'train/loss': metrics.loss,
+
+
+
+
 
 
 
@@ -1242,7 +2446,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
                 'train/grad_norm': metrics.grad_norm,
+
+
+
+
 
 
 
@@ -1250,7 +2462,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
                 'train/tokens_processed': metrics.tokens_processed,
+
+
+
+
 
 
 
@@ -1258,11 +2478,23 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             })
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1270,7 +2502,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         if self.use_tensorboard:
+
+
+
+
 
 
 
@@ -1278,7 +2518,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             self.tb_writer.add_scalar('train/learning_rate', metrics.learning_rate, metrics.step)
+
+
+
+
 
 
 
@@ -1286,11 +2534,23 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             self.tb_writer.add_scalar('train/tokens_per_second', metrics.tokens_per_second, metrics.step)
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1298,7 +2558,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         if metrics.step % 100 == 0:
+
+
+
+
 
 
 
@@ -1306,7 +2574,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             with open(metrics_file, 'a') as f:
+
+
+
+
 
 
 
@@ -1314,7 +2590,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1322,7 +2606,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         recommendations = {
+
+
+
+
 
 
 
@@ -1330,7 +2622,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             'should_reduce_lr': loss_result['should_reduce_lr'],
+
+
+
+
 
 
 
@@ -1338,7 +2638,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             'spike_detected': loss_result['spike_detected'],
+
+
+
+
 
 
 
@@ -1346,11 +2654,23 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         }
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1358,7 +2678,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1366,7 +2694,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         """Log summary statistics."""
+
+
+
+
 
 
 
@@ -1374,11 +2710,23 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             return
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1386,7 +2734,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1394,7 +2750,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             'step': step,
+
+
+
+
 
 
 
@@ -1402,7 +2766,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             'avg_grad_norm': np.mean([m['grad_norm'] for m in recent]),
+
+
+
+
 
 
 
@@ -1410,7 +2782,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             'total_tokens': self.metrics_history[-1]['tokens_processed'],
+
+
+
+
 
 
 
@@ -1418,7 +2798,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1426,7 +2814,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             f"Step {step}: "
+
+
+
+
 
 
 
@@ -1434,7 +2830,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             f"grad_norm={summary['avg_grad_norm']:.4f}, "
+
+
+
+
 
 
 
@@ -1442,7 +2846,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             f"tokens={summary['total_tokens']/1e9:.2f}B"
+
+
+
+
 
 
 
@@ -1450,11 +2862,23 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         
 
 
 
+
+
+
+
         if self.use_wandb:
+
+
+
+
 
 
 
@@ -1462,7 +2886,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1470,7 +2902,15 @@ class TrainingMonitor:
 
 
 
+
+
+
+
         """Close all loggers."""
+
+
+
+
 
 
 
@@ -1478,11 +2918,23 @@ class TrainingMonitor:
 
 
 
+
+
+
+
             wandb.finish()
 
 
 
+
+
+
+
         if self.use_tensorboard:
+
+
+
+
 
 
 
@@ -1498,7 +2950,23 @@ class TrainingMonitor:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class RecoveryPolicy:
+
+
+
+
 
 
 
@@ -1515,7 +2983,23 @@ class RecoveryPolicy:
 
 
 
+
+
+
+
+
+
+
+
     ACTIONS = ("none", "reduce_lr", "skip_batch", "rollback")
+
+
+
+
+
+
+
+
 
 
 
@@ -1527,7 +3011,15 @@ class RecoveryPolicy:
 
 
 
+
+
+
+
         self.max_lr_reductions = max_lr_reductions
+
+
+
+
 
 
 
@@ -1535,11 +3027,23 @@ class RecoveryPolicy:
 
 
 
+
+
+
+
         self.lr_reductions = 0
 
 
 
+
+
+
+
         self._last_action_step = -10**9
+
+
+
+
 
 
 
@@ -1551,7 +3055,19 @@ class RecoveryPolicy:
 
 
 
+
+
+
+
+
+
+
+
     def decide(self, step: int, loss: float, recommendations: dict) -> str:
+
+
+
+
 
 
 
@@ -1559,11 +3075,23 @@ class RecoveryPolicy:
 
 
 
+
+
+
+
         if loss is not None and (not _math.isfinite(loss)):
 
 
 
+
+
+
+
             return "skip_batch"
+
+
+
+
 
 
 
@@ -1571,7 +3099,15 @@ class RecoveryPolicy:
 
 
 
+
+
+
+
             self.consecutive_spikes += 1
+
+
+
+
 
 
 
@@ -1579,7 +3115,15 @@ class RecoveryPolicy:
 
 
 
+
+
+
+
             self.consecutive_spikes = max(0, self.consecutive_spikes - 1)
+
+
+
+
 
 
 
@@ -1587,7 +3131,15 @@ class RecoveryPolicy:
 
 
 
+
+
+
+
             return "none"
+
+
+
+
 
 
 
@@ -1595,7 +3147,15 @@ class RecoveryPolicy:
 
 
 
+
+
+
+
             self._last_action_step = step
+
+
+
+
 
 
 
@@ -1603,7 +3163,15 @@ class RecoveryPolicy:
 
 
 
+
+
+
+
         if recommendations.get("should_reduce_lr") and self.lr_reductions < self.max_lr_reductions:
+
+
+
+
 
 
 
@@ -1611,7 +3179,15 @@ class RecoveryPolicy:
 
 
 
+
+
+
+
             self._last_action_step = step
+
+
+
+
 
 
 
@@ -1619,11 +3195,23 @@ class RecoveryPolicy:
 
 
 
+
+
+
+
         if recommendations.get("grad_explosion"):
 
 
 
+
+
+
+
             return "skip_batch"
+
+
+
+
 
 
 
@@ -1639,7 +3227,23 @@ class RecoveryPolicy:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class RecoveryManager:
+
+
+
+
 
 
 
@@ -1647,7 +3251,15 @@ class RecoveryManager:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1655,7 +3267,15 @@ class RecoveryManager:
 
 
 
+
+
+
+
         self.checkpoint_dir = Path(checkpoint_dir)
+
+
+
+
 
 
 
@@ -1663,11 +3283,23 @@ class RecoveryManager:
 
 
 
+
+
+
+
         self.retry_count = 0
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1675,7 +3307,15 @@ class RecoveryManager:
 
 
 
+
+
+
+
         """Get path to latest valid checkpoint."""
+
+
+
+
 
 
 
@@ -1683,7 +3323,15 @@ class RecoveryManager:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1691,7 +3339,15 @@ class RecoveryManager:
 
 
 
+
+
+
+
                               
+
+
+
+
 
 
 
@@ -1699,7 +3355,15 @@ class RecoveryManager:
 
 
 
+
+
+
+
                 import torch
+
+
+
+
 
 
 
@@ -1707,7 +3371,15 @@ class RecoveryManager:
 
 
 
+
+
+
+
                 if 'model_state_dict' in checkpoint and 'optimizer_state_dict' in checkpoint:
+
+
+
+
 
 
 
@@ -1715,7 +3387,15 @@ class RecoveryManager:
 
 
 
+
+
+
+
             except Exception:
+
+
+
+
 
 
 
@@ -1723,7 +3403,15 @@ class RecoveryManager:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1731,7 +3419,15 @@ class RecoveryManager:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1739,7 +3435,15 @@ class RecoveryManager:
 
 
 
+
+
+
+
         """Check if we should retry after failure."""
+
+
+
+
 
 
 
@@ -1747,7 +3451,15 @@ class RecoveryManager:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1755,7 +3467,15 @@ class RecoveryManager:
 
 
 
+
+
+
+
         """Record a retry attempt."""
+
+
+
+
 
 
 
@@ -1763,7 +3483,15 @@ class RecoveryManager:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1771,11 +3499,31 @@ class RecoveryManager:
 
 
 
+
+
+
+
         """Reset retry counter after successful step."""
 
 
 
+
+
+
+
         self.retry_count = 0
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1791,7 +3539,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
                    
+
+
+
+
 
 
 
@@ -1799,7 +3555,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1807,7 +3571,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1815,7 +3587,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
     for step in range(100):
+
+
+
+
 
 
 
@@ -1823,7 +3603,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
             step=step,
+
+
+
+
 
 
 
@@ -1831,7 +3619,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
             learning_rate=1e-4,
+
+
+
+
 
 
 
@@ -1839,7 +3635,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
             tokens_per_second=10000 + np.random.randn() * 1000,
+
+
+
+
 
 
 
@@ -1847,7 +3651,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
             timestamp=time.time(),
+
+
+
+
 
 
 
@@ -1855,7 +3667,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1863,7 +3683,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
         if step == 50:
+
+
+
+
 
 
 
@@ -1871,7 +3699,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1879,7 +3715,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1887,7 +3731,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
             logger.info("Spike detected! Should checkpoint and reduce LR")
+
+
+
+
 
 
 
@@ -1895,7 +3747,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
         if step % 10 == 0:
+
+
+
+
 
 
 
@@ -1903,7 +3763,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1911,7 +3779,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
     logger.info("Training monitor test complete")
+
+
+
+
 
 
 

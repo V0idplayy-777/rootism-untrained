@@ -18,7 +18,19 @@ Generates diverse instruction-response pairs for training:
 
 
 
+
+
+
+
+
+
+
+
 import random
+
+
+
+
 
 
 
@@ -26,7 +38,15 @@ import json
 
 
 
+
+
+
+
 from typing import List, Dict, Any, Optional, Tuple
+
+
+
+
 
 
 
@@ -42,7 +62,23 @@ from dataclasses import dataclass
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @dataclass
+
+
+
+
 
 
 
@@ -50,7 +86,15 @@ class InstructionSample:
 
 
 
+
+
+
+
     """A single instruction-following training example."""
+
+
+
+
 
 
 
@@ -58,7 +102,15 @@ class InstructionSample:
 
 
 
+
+
+
+
     input_context: str
+
+
+
+
 
 
 
@@ -66,11 +118,23 @@ class InstructionSample:
 
 
 
+
+
+
+
     category: str
 
 
 
+
+
+
+
     language: Optional[str] = None
+
+
+
+
 
 
 
@@ -86,7 +150,23 @@ class InstructionSample:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class InstructionGenerator:
+
+
+
+
 
 
 
@@ -98,7 +178,19 @@ class InstructionGenerator:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self):
+
+
+
+
 
 
 
@@ -106,7 +198,15 @@ class InstructionGenerator:
 
 
 
+
+
+
+
             self._generate_code_gen_instructions,
+
+
+
+
 
 
 
@@ -114,7 +214,15 @@ class InstructionGenerator:
 
 
 
+
+
+
+
             self._generate_code_review_instructions,
+
+
+
+
 
 
 
@@ -122,7 +230,15 @@ class InstructionGenerator:
 
 
 
+
+
+
+
             self._generate_refactor_instructions,
+
+
+
+
 
 
 
@@ -130,7 +246,15 @@ class InstructionGenerator:
 
 
 
+
+
+
+
             self._generate_multiturn_conversations,
+
+
+
+
 
 
 
@@ -138,11 +262,23 @@ class InstructionGenerator:
 
 
 
+
+
+
+
             self._generate_algorithm_instructions,
 
 
 
+
+
+
+
             self._generate_debug_instructions,
+
+
+
+
 
 
 
@@ -154,7 +290,19 @@ class InstructionGenerator:
 
 
 
+
+
+
+
+
+
+
+
     def generate_batch(self, count: int) -> List[InstructionSample]:
+
+
+
+
 
 
 
@@ -162,7 +310,15 @@ class InstructionGenerator:
 
 
 
+
+
+
+
         samples = []
+
+
+
+
 
 
 
@@ -170,7 +326,15 @@ class InstructionGenerator:
 
 
 
+
+
+
+
             gen = random.choice(self.generators)
+
+
+
+
 
 
 
@@ -178,7 +342,15 @@ class InstructionGenerator:
 
 
 
+
+
+
+
             samples.extend(batch)
+
+
+
+
 
 
 
@@ -190,7 +362,19 @@ class InstructionGenerator:
 
 
 
+
+
+
+
+
+
+
+
     def _generate_code_gen_instructions(self) -> List[InstructionSample]:
+
+
+
+
 
 
 
@@ -198,7 +382,15 @@ class InstructionGenerator:
 
 
 
+
+
+
+
         templates = [
+
+
+
+
 
 
 
@@ -206,11 +398,23 @@ class InstructionGenerator:
 
 
 
+
+
+
+
                 "instruction": "Write a function that finds all prime numbers up to n using the Sieve of Eratosthenes algorithm.",
 
 
 
+
+
+
+
                 "input_context": "",
+
+
+
+
 
 
 
@@ -236,7 +440,15 @@ class InstructionGenerator:
 
 
 
+
+
+
+
                 "category": "code_generation",
+
+
+
+
 
 
 
@@ -244,7 +456,15 @@ class InstructionGenerator:
 
 
 
+
+
+
+
             },
+
+
+
+
 
 
 
@@ -252,11 +472,23 @@ class InstructionGenerator:
 
 
 
+
+
+
+
                 "instruction": "Implement a thread-safe singleton pattern in Python.",
 
 
 
+
+
+
+
                 "input_context": "",
+
+
+
+
 
 
 
@@ -303,7 +535,15 @@ assert db1 is db2  # Same instance''',
 
 
 
+
+
+
+
                 "category": "code_generation",
+
+
+
+
 
 
 
@@ -311,7 +551,15 @@ assert db1 is db2  # Same instance''',
 
 
 
+
+
+
+
             },
+
+
+
+
 
 
 
@@ -319,11 +567,23 @@ assert db1 is db2  # Same instance''',
 
 
 
+
+
+
+
                 "instruction": "Create a Python decorator that caches function results with TTL (time-to-live) expiration.",
 
 
 
+
+
+
+
                 "input_context": "",
+
+
+
+
 
 
 
@@ -395,7 +655,15 @@ result2 = expensive_computation(2, 10)  # Returns 1024 instantly''',
 
 
 
+
+
+
+
                 "category": "code_generation",
+
+
+
+
 
 
 
@@ -403,7 +671,15 @@ result2 = expensive_computation(2, 10)  # Returns 1024 instantly''',
 
 
 
+
+
+
+
             },
+
+
+
+
 
 
 
@@ -411,11 +687,23 @@ result2 = expensive_computation(2, 10)  # Returns 1024 instantly''',
 
 
 
+
+
+
+
                 "instruction": "Write a JavaScript function that debounces another function with configurable delay and immediate option.",
 
 
 
+
+
+
+
                 "input_context": "",
+
+
+
+
 
 
 
@@ -495,7 +783,15 @@ document.getElementById("search").addEventListener("input", (e) => {
 
 
 
+
+
+
+
                 "category": "code_generation",
+
+
+
+
 
 
 
@@ -503,11 +799,27 @@ document.getElementById("search").addEventListener("input", (e) => {
 
 
 
+
+
+
+
             },
 
 
 
+
+
+
+
         ]
+
+
+
+
+
+
+
+
 
 
 
@@ -519,7 +831,15 @@ document.getElementById("search").addEventListener("input", (e) => {
 
 
 
+
+
+
+
             InstructionSample(
+
+
+
+
 
 
 
@@ -527,7 +847,15 @@ document.getElementById("search").addEventListener("input", (e) => {
 
 
 
+
+
+
+
                 input_context=t["input_context"],
+
+
+
+
 
 
 
@@ -535,7 +863,15 @@ document.getElementById("search").addEventListener("input", (e) => {
 
 
 
+
+
+
+
                 category=t["category"],
+
+
+
+
 
 
 
@@ -543,11 +879,23 @@ document.getElementById("search").addEventListener("input", (e) => {
 
 
 
+
+
+
+
             )
 
 
 
+
+
+
+
             for t in templates
+
+
+
+
 
 
 
@@ -559,7 +907,19 @@ document.getElementById("search").addEventListener("input", (e) => {
 
 
 
+
+
+
+
+
+
+
+
     def _generate_bug_fix_instructions(self) -> List[InstructionSample]:
+
+
+
+
 
 
 
@@ -567,7 +927,15 @@ document.getElementById("search").addEventListener("input", (e) => {
 
 
 
+
+
+
+
         templates = [
+
+
+
+
 
 
 
@@ -575,7 +943,15 @@ document.getElementById("search").addEventListener("input", (e) => {
 
 
 
+
+
+
+
                 "instruction": "The following code has a bug where the linked list reverse function doesn't work correctly. Find and fix the bug.",
+
+
+
+
 
 
 
@@ -589,6 +965,10 @@ document.getElementById("search").addEventListener("input", (e) => {
         prev = current
         # Bug: forgot to advance current
     return prev''',
+
+
+
+
 
 
 
@@ -617,7 +997,15 @@ Without this, `current` stays the same and the loop never terminates.
 
 
 
+
+
+
+
                 "category": "bug_fixing",
+
+
+
+
 
 
 
@@ -625,7 +1013,15 @@ Without this, `current` stays the same and the loop never terminates.
 
 
 
+
+
+
+
             },
+
+
+
+
 
 
 
@@ -633,7 +1029,15 @@ Without this, `current` stays the same and the loop never terminates.
 
 
 
+
+
+
+
                 "instruction": "This Python function is supposed to find the maximum subarray sum (Kadane's algorithm) but returns wrong results for all-negative arrays. Fix it.",
+
+
+
+
 
 
 
@@ -648,6 +1052,10 @@ Without this, `current` stays the same and the loop never terminates.
         if current_sum > max_sum:
             max_sum = current_sum
     return max_sum''',
+
+
+
+
 
 
 
@@ -684,7 +1092,15 @@ def max_subarray_sum(arr):
 
 
 
+
+
+
+
                 "category": "bug_fixing",
+
+
+
+
 
 
 
@@ -692,11 +1108,27 @@ def max_subarray_sum(arr):
 
 
 
+
+
+
+
             },
 
 
 
+
+
+
+
         ]
+
+
+
+
+
+
+
+
 
 
 
@@ -708,7 +1140,15 @@ def max_subarray_sum(arr):
 
 
 
+
+
+
+
             InstructionSample(
+
+
+
+
 
 
 
@@ -716,7 +1156,15 @@ def max_subarray_sum(arr):
 
 
 
+
+
+
+
                 input_context=t["input_context"],
+
+
+
+
 
 
 
@@ -724,7 +1172,15 @@ def max_subarray_sum(arr):
 
 
 
+
+
+
+
                 category=t["category"],
+
+
+
+
 
 
 
@@ -732,11 +1188,23 @@ def max_subarray_sum(arr):
 
 
 
+
+
+
+
             )
 
 
 
+
+
+
+
             for t in templates
+
+
+
+
 
 
 
@@ -748,7 +1216,19 @@ def max_subarray_sum(arr):
 
 
 
+
+
+
+
+
+
+
+
     def _generate_code_review_instructions(self) -> List[InstructionSample]:
+
+
+
+
 
 
 
@@ -756,7 +1236,15 @@ def max_subarray_sum(arr):
 
 
 
+
+
+
+
         templates = [
+
+
+
+
 
 
 
@@ -764,7 +1252,15 @@ def max_subarray_sum(arr):
 
 
 
+
+
+
+
                 "instruction": "Review this code for performance issues, security vulnerabilities, and best practices. Provide specific recommendations.",
+
+
+
+
 
 
 
@@ -788,6 +1284,10 @@ def get_user(id):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE id = " + id)
     return str(cursor.fetchone())''',
+
+
+
+
 
 
 
@@ -882,7 +1382,15 @@ if len(query) < 2:
 
 
 
+
+
+
+
                 "category": "code_review",
+
+
+
+
 
 
 
@@ -890,11 +1398,27 @@ if len(query) < 2:
 
 
 
+
+
+
+
             },
 
 
 
+
+
+
+
         ]
+
+
+
+
+
+
+
+
 
 
 
@@ -906,7 +1430,15 @@ if len(query) < 2:
 
 
 
+
+
+
+
             InstructionSample(
+
+
+
+
 
 
 
@@ -914,7 +1446,15 @@ if len(query) < 2:
 
 
 
+
+
+
+
                 input_context=t["input_context"],
+
+
+
+
 
 
 
@@ -922,7 +1462,15 @@ if len(query) < 2:
 
 
 
+
+
+
+
                 category=t["category"],
+
+
+
+
 
 
 
@@ -930,11 +1478,23 @@ if len(query) < 2:
 
 
 
+
+
+
+
             )
 
 
 
+
+
+
+
             for t in templates
+
+
+
+
 
 
 
@@ -946,7 +1506,19 @@ if len(query) < 2:
 
 
 
+
+
+
+
+
+
+
+
     def _generate_explanation_instructions(self) -> List[InstructionSample]:
+
+
+
+
 
 
 
@@ -954,7 +1526,15 @@ if len(query) < 2:
 
 
 
+
+
+
+
         templates = [
+
+
+
+
 
 
 
@@ -962,11 +1542,23 @@ if len(query) < 2:
 
 
 
+
+
+
+
                 "instruction": "Explain how Python's GIL (Global Interpreter Lock) works and its implications for multi-threaded programs.",
 
 
 
+
+
+
+
                 "input_context": "",
+
+
+
+
 
 
 
@@ -1040,7 +1632,15 @@ experimental and may change C extension compatibility.
 
 
 
+
+
+
+
                 "category": "explanation",
+
+
+
+
 
 
 
@@ -1048,11 +1648,27 @@ experimental and may change C extension compatibility.
 
 
 
+
+
+
+
             },
 
 
 
+
+
+
+
         ]
+
+
+
+
+
+
+
+
 
 
 
@@ -1064,7 +1680,15 @@ experimental and may change C extension compatibility.
 
 
 
+
+
+
+
             InstructionSample(
+
+
+
+
 
 
 
@@ -1072,7 +1696,15 @@ experimental and may change C extension compatibility.
 
 
 
+
+
+
+
                 input_context=t["input_context"],
+
+
+
+
 
 
 
@@ -1080,7 +1712,15 @@ experimental and may change C extension compatibility.
 
 
 
+
+
+
+
                 category=t["category"],
+
+
+
+
 
 
 
@@ -1088,11 +1728,23 @@ experimental and may change C extension compatibility.
 
 
 
+
+
+
+
             )
 
 
 
+
+
+
+
             for t in templates
+
+
+
+
 
 
 
@@ -1104,7 +1756,19 @@ experimental and may change C extension compatibility.
 
 
 
+
+
+
+
+
+
+
+
     def _generate_refactor_instructions(self) -> List[InstructionSample]:
+
+
+
+
 
 
 
@@ -1112,11 +1776,23 @@ experimental and may change C extension compatibility.
 
 
 
+
+
+
+
             {
 
 
 
+
+
+
+
                 "instruction": "Refactor this code to follow SOLID principles and improve maintainability. The current code mixes concerns and has tight coupling.",
+
+
+
+
 
 
 
@@ -1153,6 +1829,10 @@ experimental and may change C extension compatibility.
         server.quit()
         
         return {"status": "success", "total": final}''',
+
+
+
+
 
 
 
@@ -1337,7 +2017,15 @@ def create_order_processor() -> OrderProcessor:
 
 
 
+
+
+
+
                 "category": "refactoring",
+
+
+
+
 
 
 
@@ -1345,11 +2033,27 @@ def create_order_processor() -> OrderProcessor:
 
 
 
+
+
+
+
             },
 
 
 
+
+
+
+
         ]
+
+
+
+
+
+
+
+
 
 
 
@@ -1361,7 +2065,15 @@ def create_order_processor() -> OrderProcessor:
 
 
 
+
+
+
+
             InstructionSample(
+
+
+
+
 
 
 
@@ -1369,7 +2081,15 @@ def create_order_processor() -> OrderProcessor:
 
 
 
+
+
+
+
                 input_context=t["input_context"],
+
+
+
+
 
 
 
@@ -1377,7 +2097,15 @@ def create_order_processor() -> OrderProcessor:
 
 
 
+
+
+
+
                 category=t["category"],
+
+
+
+
 
 
 
@@ -1385,11 +2113,23 @@ def create_order_processor() -> OrderProcessor:
 
 
 
+
+
+
+
             )
 
 
 
+
+
+
+
             for t in templates
+
+
+
+
 
 
 
@@ -1401,7 +2141,19 @@ def create_order_processor() -> OrderProcessor:
 
 
 
+
+
+
+
+
+
+
+
     def _generate_test_gen_instructions(self) -> List[InstructionSample]:
+
+
+
+
 
 
 
@@ -1409,11 +2161,23 @@ def create_order_processor() -> OrderProcessor:
 
 
 
+
+
+
+
             {
 
 
 
+
+
+
+
                 "instruction": "Write comprehensive unit tests for this function, including edge cases, error cases, and boundary conditions.",
+
+
+
+
 
 
 
@@ -1441,6 +2205,10 @@ def create_order_processor() -> OrderProcessor:
     seconds = int(match.group(3) or 0)
     
     return hours * 3600 + minutes * 60 + seconds''',
+
+
+
+
 
 
 
@@ -1557,7 +2325,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                 "category": "test_generation",
+
+
+
+
 
 
 
@@ -1565,11 +2341,27 @@ class TestParseDuration:
 
 
 
+
+
+
+
             },
 
 
 
+
+
+
+
         ]
+
+
+
+
+
+
+
+
 
 
 
@@ -1581,7 +2373,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
             InstructionSample(
+
+
+
+
 
 
 
@@ -1589,7 +2389,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                 input_context=t["input_context"],
+
+
+
+
 
 
 
@@ -1597,7 +2405,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                 category=t["category"],
+
+
+
+
 
 
 
@@ -1605,7 +2421,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
             )
+
+
+
+
 
 
 
@@ -1613,7 +2437,19 @@ class TestParseDuration:
 
 
 
+
+
+
+
         ]
+
+
+
+
+
+
+
+
 
 
 
@@ -1625,7 +2461,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
         """Generate multi-turn coding conversations."""
+
+
+
+
 
 
 
@@ -1633,7 +2477,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
             {
+
+
+
+
 
 
 
@@ -1641,7 +2493,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                 "input_context": "",
+
+
+
+
 
 
 
@@ -1649,7 +2509,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                     "messages": [
+
+
+
+
 
 
 
@@ -1657,7 +2525,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                         {"role": "assistant", "content": "For a Python REST API, I recommend **FastAPI** — it's modern, fast, has automatic docs, and great type support.\n\nHere's a starter:\n\n```python\nfrom fastapi import FastAPI, HTTPException\nfrom pydantic import BaseModel\n\napp = FastAPI(title=\"Todo API\")\n\nclass Todo(BaseModel):\n    id: int | None = None\n    title: str\n    completed: bool = False\n\ntodos = []\n\n@app.post(\"/todos\", response_model=Todo)\nasync def create_todo(todo: Todo):\n    todo.id = len(todos) + 1\n    todos.append(todo)\n    return todo\n\n@app.get(\"/todos\")\nasync def list_todos():\n    return todos\n\n@app.get(\"/todos/{todo_id}\")\nasync def get_todo(todo_id: int):\n    for todo in todos:\n        if todo.id == todo_id:\n            return todo\n    raise HTTPException(status_code=404, detail=\"Todo not found\")\n```\n\nWould you like me to add database persistence or authentication?"},
+
+
+
+
 
 
 
@@ -1665,7 +2541,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                         {"role": "assistant", "content": "Here's the FastAPI app with SQLAlchemy persistence:\n\n```python\nfrom fastapi import FastAPI, HTTPException, Depends\nfrom pydantic import BaseModel\nfrom sqlalchemy import create_engine, Column, Integer, String, Boolean\nfrom sqlalchemy.orm import declarative_base, sessionmaker, Session\n\n# Database setup\nengine = create_engine(\"sqlite:///todos.db\")\nSessionLocal = sessionmaker(bind=engine)\nBase = declarative_base()\n\n# SQLAlchemy Model\nclass TodoModel(Base):\n    __tablename__ = \"todos\"\n    id = Column(Integer, primary_key=True, index=True)\n    title = Column(String, nullable=False)\n    completed = Column(Boolean, default=False)\n\nBase.metadata.create_all(engine)\n\n# Pydantic schemas\nclass TodoCreate(BaseModel):\n    title: str\n\nclass TodoResponse(BaseModel):\n    id: int\n    title: str\n    completed: bool\n    class Config:\n        from_attributes = True\n\n# Dependency\ndef get_db():\n    db = SessionLocal()\n    try:\n        yield db\n    finally:\n        db.close()\n\napp = FastAPI(title=\"Todo API\")\n\n@app.post(\"/todos\", response_model=TodoResponse)\nasync def create_todo(todo: TodoCreate, db: Session = Depends(get_db)):\n    db_todo = TodoModel(title=todo.title)\n    db.add(db_todo)\n    db.commit()\n    db.refresh(db_todo)\n    return db_todo\n\n@app.get(\"/todos\", response_model=list[TodoResponse])\nasync def list_todos(db: Session = Depends(get_db)):\n    return db.query(TodoModel).all()\n\n@app.get(\"/todos/{todo_id}\", response_model=TodoResponse)\nasync def get_todo(todo_id: int, db: Session = Depends(get_db)):\n    todo = db.query(TodoModel).filter(TodoModel.id == todo_id).first()\n    if not todo:\n        raise HTTPException(404, \"Todo not found\")\n    return todo\n```"},
+
+
+
+
 
 
 
@@ -1673,7 +2557,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                 }),
+
+
+
+
 
 
 
@@ -1681,7 +2573,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                 "language": "python",
+
+
+
+
 
 
 
@@ -1689,7 +2589,19 @@ class TestParseDuration:
 
 
 
+
+
+
+
         ]
+
+
+
+
+
+
+
+
 
 
 
@@ -1701,7 +2613,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
             InstructionSample(
+
+
+
+
 
 
 
@@ -1709,7 +2629,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                 input_context=c["input_context"],
+
+
+
+
 
 
 
@@ -1717,7 +2645,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                 category=c["category"],
+
+
+
+
 
 
 
@@ -1725,7 +2661,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
             )
+
+
+
+
 
 
 
@@ -1733,7 +2677,19 @@ class TestParseDuration:
 
 
 
+
+
+
+
         ]
+
+
+
+
+
+
+
+
 
 
 
@@ -1745,7 +2701,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
         """Generate tool/function calling examples."""
+
+
+
+
 
 
 
@@ -1753,7 +2717,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
             {
+
+
+
+
 
 
 
@@ -1761,7 +2733,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                 "input_context": 'Available tools: [search_docs(query: str), run_code(code: str), read_file(path: str), write_file(path: str, content: str)]',
+
+
+
+
 
 
 
@@ -1769,7 +2749,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                     "thought": "The user wants to learn about Python decorators. I'll search the documentation first, then provide a code example they can run.",
+
+
+
+
 
 
 
@@ -1777,7 +2765,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                         {"tool": "search_docs", "args": {"query": "Python decorators how to use"}},
+
+
+
+
 
 
 
@@ -1785,7 +2781,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                     "response": "Let me look up the documentation on decorators for you.",
+
+
+
+
 
 
 
@@ -1793,7 +2797,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                         "thought": "Based on the documentation results, I'll now provide a working example.",
+
+
+
+
 
 
 
@@ -1801,7 +2813,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                             {"tool": "run_code", "args": {"code": "def my_decorator(func):\n    def wrapper(*args, **kwargs):\n        print(f'Calling {func.__name__}')\n        result = func(*args, **kwargs)\n        print(f'{func.__name__} returned {result}')\n        return result\n    return wrapper\n\n@my_decorator\ndef add(a, b):\n    return a + b\n\nprint(add(3, 4))"}},
+
+
+
+
 
 
 
@@ -1809,7 +2829,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                         "response": "Here's a practical decorator example you can try.",
+
+
+
+
 
 
 
@@ -1817,7 +2845,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                 }),
+
+
+
+
 
 
 
@@ -1825,11 +2861,27 @@ class TestParseDuration:
 
 
 
+
+
+
+
             },
 
 
 
+
+
+
+
         ]
+
+
+
+
+
+
+
+
 
 
 
@@ -1841,7 +2893,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
             InstructionSample(
+
+
+
+
 
 
 
@@ -1849,7 +2909,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                 input_context=t["input_context"],
+
+
+
+
 
 
 
@@ -1857,7 +2925,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                 category=t["category"],
+
+
+
+
 
 
 
@@ -1865,7 +2941,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
             for t in templates
+
+
+
+
 
 
 
@@ -1877,7 +2961,19 @@ class TestParseDuration:
 
 
 
+
+
+
+
+
+
+
+
     def _generate_algorithm_instructions(self) -> List[InstructionSample]:
+
+
+
+
 
 
 
@@ -1885,7 +2981,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
             {
+
+
+
+
 
 
 
@@ -1893,7 +2997,15 @@ class TestParseDuration:
 
 
 
+
+
+
+
                 "input_context": "",
+
+
+
+
 
 
 
@@ -1992,7 +3104,15 @@ def bfs_shortest_path(graph: Graph, start: str, end: str) -> List[str]:
 
 
 
+
+
+
+
                 "category": "algorithm_explanation",
+
+
+
+
 
 
 
@@ -2000,11 +3120,27 @@ def bfs_shortest_path(graph: Graph, start: str, end: str) -> List[str]:
 
 
 
+
+
+
+
             },
 
 
 
+
+
+
+
         ]
+
+
+
+
+
+
+
+
 
 
 
@@ -2016,7 +3152,15 @@ def bfs_shortest_path(graph: Graph, start: str, end: str) -> List[str]:
 
 
 
+
+
+
+
             InstructionSample(
+
+
+
+
 
 
 
@@ -2024,7 +3168,15 @@ def bfs_shortest_path(graph: Graph, start: str, end: str) -> List[str]:
 
 
 
+
+
+
+
                 input_context=t["input_context"],
+
+
+
+
 
 
 
@@ -2032,7 +3184,15 @@ def bfs_shortest_path(graph: Graph, start: str, end: str) -> List[str]:
 
 
 
+
+
+
+
                 category=t["category"],
+
+
+
+
 
 
 
@@ -2040,11 +3200,23 @@ def bfs_shortest_path(graph: Graph, start: str, end: str) -> List[str]:
 
 
 
+
+
+
+
             )
 
 
 
+
+
+
+
             for t in templates
+
+
+
+
 
 
 
@@ -2056,7 +3228,19 @@ def bfs_shortest_path(graph: Graph, start: str, end: str) -> List[str]:
 
 
 
+
+
+
+
+
+
+
+
     def _generate_debug_instructions(self) -> List[InstructionSample]:
+
+
+
+
 
 
 
@@ -2064,11 +3248,23 @@ def bfs_shortest_path(graph: Graph, start: str, end: str) -> List[str]:
 
 
 
+
+
+
+
             {
 
 
 
+
+
+
+
                 "instruction": "My Python program is running slowly. Here's the profiling output. Help me identify and fix the performance bottleneck.",
+
+
+
+
 
 
 
@@ -2089,6 +3285,10 @@ def find_duplicates(items):
             if items[i] == items[j] and items[i] not in duplicates:
                 duplicates.append(items[i])
     return duplicates''',
+
+
+
+
 
 
 
@@ -2154,7 +3354,15 @@ if item in my_set:   # Hash lookup
 
 
 
+
+
+
+
                 "category": "debugging",
+
+
+
+
 
 
 
@@ -2162,11 +3370,27 @@ if item in my_set:   # Hash lookup
 
 
 
+
+
+
+
             },
 
 
 
+
+
+
+
         ]
+
+
+
+
+
+
+
+
 
 
 
@@ -2178,7 +3402,15 @@ if item in my_set:   # Hash lookup
 
 
 
+
+
+
+
             InstructionSample(
+
+
+
+
 
 
 
@@ -2186,7 +3418,15 @@ if item in my_set:   # Hash lookup
 
 
 
+
+
+
+
                 input_context=t["input_context"],
+
+
+
+
 
 
 
@@ -2194,7 +3434,15 @@ if item in my_set:   # Hash lookup
 
 
 
+
+
+
+
                 category=t["category"],
+
+
+
+
 
 
 
@@ -2202,7 +3450,15 @@ if item in my_set:   # Hash lookup
 
 
 
+
+
+
+
             )
+
+
+
+
 
 
 
@@ -2210,7 +3466,15 @@ if item in my_set:   # Hash lookup
 
 
 
+
+
+
+
         ]
+
+
+
+
 
 
 

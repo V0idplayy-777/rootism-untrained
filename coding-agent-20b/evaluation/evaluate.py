@@ -24,7 +24,19 @@ Usage:
 
 
 
+
+
+
+
+
+
+
+
 import os
+
+
+
+
 
 
 
@@ -32,7 +44,15 @@ import sys
 
 
 
+
+
+
+
 import json
+
+
+
+
 
 
 
@@ -40,7 +60,15 @@ import argparse
 
 
 
+
+
+
+
 import logging
+
+
+
+
 
 
 
@@ -48,7 +76,15 @@ import tempfile
 
 
 
+
+
+
+
 import subprocess
+
+
+
+
 
 
 
@@ -56,7 +92,15 @@ from pathlib import Path
 
 
 
+
+
+
+
 from typing import List, Dict, Any, Optional, Callable
+
+
+
+
 
 
 
@@ -64,7 +108,15 @@ from dataclasses import dataclass
 
 
 
+
+
+
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+
+
+
 
 
 
@@ -76,7 +128,19 @@ import multiprocessing as mp
 
 
 
+
+
+
+
+
+
+
+
 import torch
+
+
+
+
 
 
 
@@ -88,7 +152,19 @@ import numpy as np
 
 
 
+
+
+
+
+
+
+
+
                     
+
+
+
+
 
 
 
@@ -100,7 +176,19 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 
+
+
+
+
+
+
+
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+
+
+
 
 
 
@@ -116,7 +204,23 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -124,7 +228,19 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -136,7 +252,15 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
 class EvaluationProblem:
+
+
+
+
 
 
 
@@ -144,7 +268,15 @@ class EvaluationProblem:
 
 
 
+
+
+
+
     id: str
+
+
+
+
 
 
 
@@ -152,7 +284,15 @@ class EvaluationProblem:
 
 
 
+
+
+
+
     canonical_solution: str
+
+
+
+
 
 
 
@@ -160,7 +300,15 @@ class EvaluationProblem:
 
 
 
+
+
+
+
     entry_point: str
+
+
+
+
 
 
 
@@ -176,7 +324,23 @@ class EvaluationProblem:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def load_humaneval() -> List[EvaluationProblem]:
+
+
+
+
 
 
 
@@ -184,7 +348,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
     try:
+
+
+
+
 
 
 
@@ -192,11 +364,23 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         dataset = load_dataset("openai_humaneval", split="test")
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -204,7 +388,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         for item in dataset:
+
+
+
+
 
 
 
@@ -212,7 +404,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 id=item["task_id"],
+
+
+
+
 
 
 
@@ -220,7 +420,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 canonical_solution=item["canonical_solution"],
+
+
+
+
 
 
 
@@ -228,7 +436,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 entry_point=item["entry_point"],
+
+
+
+
 
 
 
@@ -236,7 +452,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -244,7 +468,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         return problems
+
+
+
+
 
 
 
@@ -252,7 +484,15 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
     except Exception as e:
+
+
+
+
 
 
 
@@ -260,11 +500,31 @@ def load_humaneval() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         logger.info("Install datasets: pip install datasets")
 
 
 
+
+
+
+
         return []
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -280,7 +540,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
     """Load MBPP benchmark."""
+
+
+
+
 
 
 
@@ -288,7 +556,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         from datasets import load_dataset
+
+
+
+
 
 
 
@@ -296,7 +572,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -304,7 +588,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         for i, item in enumerate(dataset):
+
+
+
+
 
 
 
@@ -312,7 +604,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
             prompt = f'"""{item["text"]}\n\n{item.get("test_setup_code", "")}\n"""'
+
+
+
+
 
 
 
@@ -320,7 +620,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
             problems.append(EvaluationProblem(
+
+
+
+
 
 
 
@@ -328,7 +636,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 prompt=prompt,
+
+
+
+
 
 
 
@@ -336,7 +652,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 test_cases="\n".join(item["test_list"]),
+
+
+
+
 
 
 
@@ -344,7 +668,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
             ))
+
+
+
+
 
 
 
@@ -352,7 +684,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         logger.info(f"Loaded {len(problems)} MBPP problems")
+
+
+
+
 
 
 
@@ -360,7 +700,15 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -368,11 +716,31 @@ def load_mbpp() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         logger.error(f"Error loading MBPP: {e}")
 
 
 
+
+
+
+
         return []
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -388,7 +756,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
     """Load LiveCodeBench (competitive programming)."""
+
+
+
+
 
 
 
@@ -396,7 +772,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         from datasets import load_dataset
+
+
+
+
 
 
 
@@ -404,7 +788,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -412,7 +804,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         for i, item in enumerate(dataset):
+
+
+
+
 
 
 
@@ -420,7 +820,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 id=item.get("problem_id", f"lcb_{i}"),
+
+
+
+
 
 
 
@@ -428,7 +836,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 canonical_solution=item.get("canonical_solution", ""),
+
+
+
+
 
 
 
@@ -436,7 +852,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                 entry_point=item.get("entry_point", ""),
+
+
+
+
 
 
 
@@ -444,7 +868,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -452,7 +884,15 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
         return problems
+
+
+
+
 
 
 
@@ -460,11 +900,23 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
     except Exception as e:
 
 
 
+
+
+
+
         logger.error(f"Error loading LiveCodeBench: {e}")
+
+
+
+
 
 
 
@@ -480,7 +932,23 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -488,7 +956,19 @@ def load_livecodebench() -> List[EvaluationProblem]:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -500,11 +980,23 @@ class CodeGenerator:
 
 
 
+
+
+
+
     """Generate code completions using the model."""
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -512,7 +1004,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
         self.model = model
+
+
+
+
 
 
 
@@ -520,7 +1020,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
         self.max_new_tokens = max_new_tokens
+
+
+
+
 
 
 
@@ -528,7 +1036,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
     def generate(self, prompt: str, temperature: float = 0.2, 
+
+
+
+
 
 
 
@@ -536,7 +1052,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
         """Generate code completions."""
+
+
+
+
 
 
 
@@ -544,7 +1068,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -552,7 +1084,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
         for _ in range(num_samples):
+
+
+
+
 
 
 
@@ -560,7 +1100,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
             input_ids = self.tokenizer.encode(prompt, add_special_tokens=True)
+
+
+
+
 
 
 
@@ -568,7 +1116,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -576,7 +1132,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
             with torch.no_grad():
+
+
+
+
 
 
 
@@ -584,7 +1148,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
                     input_tensor,
+
+
+
+
 
 
 
@@ -592,7 +1164,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
                     temperature=temperature,
+
+
+
+
 
 
 
@@ -600,7 +1180,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
                     do_sample=(num_samples > 1),
+
+
+
+
 
 
 
@@ -608,7 +1196,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -616,7 +1212,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
             completion = self.tokenizer.decode(output_ids[0][len(input_ids):])
+
+
+
+
 
 
 
@@ -624,7 +1228,15 @@ class CodeGenerator:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -640,7 +1252,23 @@ class CodeGenerator:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -648,7 +1276,19 @@ class CodeGenerator:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -657,6 +1297,10 @@ class CodeGenerator:
 
 
 def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Dict[str, Any]:
+
+
+
+
 
 
 
@@ -669,7 +1313,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
                             
+
+
+
+
 
 
 
@@ -677,7 +1329,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -685,7 +1345,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
         with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+
+
+
+
 
 
 
@@ -693,11 +1361,23 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
             temp_path = f.name
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -705,7 +1385,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
             ['python3', temp_path],
+
+
+
+
 
 
 
@@ -713,7 +1401,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
             text=True,
+
+
+
+
 
 
 
@@ -721,11 +1417,23 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
         )
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -733,7 +1441,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -741,11 +1457,23 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
         if result.returncode == 0:
 
 
 
+
+
+
+
             return {
+
+
+
+
 
 
 
@@ -753,7 +1481,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
                 "failed": False,
+
+
+
+
 
 
 
@@ -761,7 +1497,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
                 "stdout": result.stdout,
+
+
+
+
 
 
 
@@ -769,7 +1513,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
             }
+
+
+
+
 
 
 
@@ -777,7 +1529,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
             return {
+
+
+
+
 
 
 
@@ -785,7 +1545,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
                 "failed": True,
+
+
+
+
 
 
 
@@ -793,7 +1561,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
                 "stdout": result.stdout,
+
+
+
+
 
 
 
@@ -801,7 +1577,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
             }
+
+
+
+
 
 
 
@@ -809,7 +1593,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
     except subprocess.TimeoutExpired:
+
+
+
+
 
 
 
@@ -817,11 +1609,23 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
             "passed": False,
 
 
 
+
+
+
+
             "failed": True,
+
+
+
+
 
 
 
@@ -829,7 +1633,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
             "stdout": "",
+
+
+
+
 
 
 
@@ -837,7 +1649,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -845,7 +1665,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
         return {
+
+
+
+
 
 
 
@@ -853,7 +1681,15 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
             "failed": True,
+
+
+
+
 
 
 
@@ -861,11 +1697,23 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
             "stdout": "",
 
 
 
+
+
+
+
             "stderr": "",
+
+
+
+
 
 
 
@@ -881,7 +1729,23 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -889,7 +1753,19 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -898,6 +1774,10 @@ def execute_code_with_tests(code: str, test_cases: str, timeout: int = 10) -> Di
 
 
 def compute_pass_at_k(n: int, c: int, k: int) -> float:
+
+
+
+
 
 
 
@@ -915,11 +1795,23 @@ def compute_pass_at_k(n: int, c: int, k: int) -> float:
 
 
 
+
+
+
+
     if n - c < k:
 
 
 
+
+
+
+
         return 1.0
+
+
+
+
 
 
 
@@ -935,7 +1827,23 @@ def compute_pass_at_k(n: int, c: int, k: int) -> float:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def evaluate_benchmark(
+
+
+
+
 
 
 
@@ -943,7 +1851,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     generator: CodeGenerator,
+
+
+
+
 
 
 
@@ -951,7 +1867,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     temperature: float = 0.2,
+
+
+
+
 
 
 
@@ -959,7 +1883,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
 ) -> Dict[str, Any]:
+
+
+
+
 
 
 
@@ -979,11 +1911,23 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     results = []
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -991,7 +1935,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -999,11 +1951,23 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         """Process a single problem."""
 
 
 
+
+
+
+
                               
+
+
+
+
 
 
 
@@ -1011,7 +1975,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
             problem.prompt,
+
+
+
+
 
 
 
@@ -1019,7 +1991,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
             num_samples=num_samples,
+
+
+
+
 
 
 
@@ -1027,7 +2007,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1035,7 +2023,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         correct = 0
+
+
+
+
 
 
 
@@ -1043,7 +2039,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
             full_code = problem.prompt + completion
+
+
+
+
 
 
 
@@ -1051,7 +2055,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
             if result["passed"]:
+
+
+
+
 
 
 
@@ -1059,7 +2071,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1067,7 +2087,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         n = num_samples
+
+
+
+
 
 
 
@@ -1075,7 +2103,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1083,7 +2119,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
             "id": problem.id,
+
+
+
+
 
 
 
@@ -1091,7 +2135,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
             "num_correct": c,
+
+
+
+
 
 
 
@@ -1099,7 +2151,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
             "pass_at_5": compute_pass_at_k(n, c, 5) if n >= 5 else None,
+
+
+
+
 
 
 
@@ -1107,11 +2167,23 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         }
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1119,7 +2191,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
+
+
+
+
 
 
 
@@ -1127,7 +2207,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1135,7 +2223,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
             try:
+
+
+
+
 
 
 
@@ -1143,7 +2239,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
                 results.append(result)
+
+
+
+
 
 
 
@@ -1151,7 +2255,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
                 if i % 10 == 0:
+
+
+
+
 
 
 
@@ -1159,7 +2271,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
             except Exception as e:
+
+
+
+
 
 
 
@@ -1167,7 +2287,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1175,7 +2303,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     pass_at_1_scores = [r["pass_at_1"] for r in results]
+
+
+
+
 
 
 
@@ -1183,11 +2319,23 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     pass_at_10_scores = [r["pass_at_10"] for r in results if r["pass_at_10"] is not None]
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1195,7 +2343,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         "num_problems": len(problems),
+
+
+
+
 
 
 
@@ -1203,7 +2359,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         "pass_at_1": np.mean(pass_at_1_scores) if pass_at_1_scores else 0,
+
+
+
+
 
 
 
@@ -1211,7 +2375,15 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
         "pass_at_10": np.mean(pass_at_10_scores) if pass_at_10_scores else None,
+
+
+
+
 
 
 
@@ -1219,11 +2391,23 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1239,7 +2423,23 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -1247,7 +2447,19 @@ def evaluate_benchmark(
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -1259,7 +2471,15 @@ def main():
 
 
 
+
+
+
+
     parser = argparse.ArgumentParser(description="Evaluate code generation model")
+
+
+
+
 
 
 
@@ -1267,7 +2487,15 @@ def main():
 
 
 
+
+
+
+
                        choices=["humaneval", "mbpp", "livecodebench", "all"],
+
+
+
+
 
 
 
@@ -1275,7 +2503,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--model_path", type=str, required=True,
+
+
+
+
 
 
 
@@ -1283,7 +2519,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--tokenizer_path", type=str, default=None,
+
+
+
+
 
 
 
@@ -1291,7 +2535,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--num_samples", type=int, default=10,
+
+
+
+
 
 
 
@@ -1299,7 +2551,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--temperature", type=float, default=0.2,
+
+
+
+
 
 
 
@@ -1307,7 +2567,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--max_new_tokens", type=int, default=512,
+
+
+
+
 
 
 
@@ -1315,7 +2583,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--num_workers", type=int, default=4,
+
+
+
+
 
 
 
@@ -1323,7 +2599,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--output", type=str, default="evaluation_results.json",
+
+
+
+
 
 
 
@@ -1331,11 +2615,23 @@ def main():
 
 
 
+
+
+
+
     args = parser.parse_args()
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1343,11 +2639,23 @@ def main():
 
 
 
+
+
+
+
     logger.info(f"Loading model from {args.model_path}")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1355,7 +2663,15 @@ def main():
 
 
 
+
+
+
+
     from model.model import CodingAgentModel
+
+
+
+
 
 
 
@@ -1363,7 +2679,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1371,11 +2695,23 @@ def main():
 
 
 
+
+
+
+
     config = CodingAgentConfig.load(config_path)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1383,7 +2719,15 @@ def main():
 
 
 
+
+
+
+
     checkpoint = torch.load(os.path.join(args.model_path, "model.pt"), map_location="cpu")
+
+
+
+
 
 
 
@@ -1391,7 +2735,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1399,7 +2751,15 @@ def main():
 
 
 
+
+
+
+
     model = model.to(device)
+
+
+
+
 
 
 
@@ -1407,7 +2767,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1415,11 +2783,23 @@ def main():
 
 
 
+
+
+
+
     tokenizer = CodeTokenizer.load(tokenizer_path)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1427,7 +2807,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1435,11 +2823,23 @@ def main():
 
 
 
+
+
+
+
     all_results = {}
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1447,7 +2847,15 @@ def main():
 
 
 
+
+
+
+
         logger.info("\n" + "="*60)
+
+
+
+
 
 
 
@@ -1455,7 +2863,15 @@ def main():
 
 
 
+
+
+
+
         logger.info("="*60)
+
+
+
+
 
 
 
@@ -1463,7 +2879,15 @@ def main():
 
 
 
+
+
+
+
         if problems:
+
+
+
+
 
 
 
@@ -1471,7 +2895,15 @@ def main():
 
 
 
+
+
+
+
                 problems, generator,
+
+
+
+
 
 
 
@@ -1479,7 +2911,15 @@ def main():
 
 
 
+
+
+
+
                 temperature=args.temperature,
+
+
+
+
 
 
 
@@ -1487,7 +2927,15 @@ def main():
 
 
 
+
+
+
+
             )
+
+
+
+
 
 
 
@@ -1495,11 +2943,23 @@ def main():
 
 
 
+
+
+
+
             logger.info(f"HumanEval pass@1: {metrics['pass_at_1']:.4f}")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1507,7 +2967,15 @@ def main():
 
 
 
+
+
+
+
         logger.info("\n" + "="*60)
+
+
+
+
 
 
 
@@ -1515,7 +2983,15 @@ def main():
 
 
 
+
+
+
+
         logger.info("="*60)
+
+
+
+
 
 
 
@@ -1523,7 +2999,15 @@ def main():
 
 
 
+
+
+
+
         if problems:
+
+
+
+
 
 
 
@@ -1531,7 +3015,15 @@ def main():
 
 
 
+
+
+
+
                 problems, generator,
+
+
+
+
 
 
 
@@ -1539,7 +3031,15 @@ def main():
 
 
 
+
+
+
+
                 temperature=args.temperature,
+
+
+
+
 
 
 
@@ -1547,7 +3047,15 @@ def main():
 
 
 
+
+
+
+
             )
+
+
+
+
 
 
 
@@ -1555,11 +3063,23 @@ def main():
 
 
 
+
+
+
+
             logger.info(f"MBPP pass@1: {metrics['pass_at_1']:.4f}")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1567,7 +3087,15 @@ def main():
 
 
 
+
+
+
+
         logger.info("\n" + "="*60)
+
+
+
+
 
 
 
@@ -1575,7 +3103,15 @@ def main():
 
 
 
+
+
+
+
         logger.info("="*60)
+
+
+
+
 
 
 
@@ -1583,7 +3119,15 @@ def main():
 
 
 
+
+
+
+
         if problems:
+
+
+
+
 
 
 
@@ -1591,7 +3135,15 @@ def main():
 
 
 
+
+
+
+
                 problems, generator,
+
+
+
+
 
 
 
@@ -1599,7 +3151,15 @@ def main():
 
 
 
+
+
+
+
                 temperature=args.temperature,
+
+
+
+
 
 
 
@@ -1607,7 +3167,15 @@ def main():
 
 
 
+
+
+
+
             )
+
+
+
+
 
 
 
@@ -1615,11 +3183,23 @@ def main():
 
 
 
+
+
+
+
             logger.info(f"LiveCodeBench pass@1: {metrics['pass_at_1']:.4f}")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1627,7 +3207,15 @@ def main():
 
 
 
+
+
+
+
     with open(args.output, 'w') as f:
+
+
+
+
 
 
 
@@ -1635,7 +3223,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1643,7 +3239,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1651,7 +3255,15 @@ def main():
 
 
 
+
+
+
+
     print("\n" + "="*60)
+
+
+
+
 
 
 
@@ -1659,7 +3271,15 @@ def main():
 
 
 
+
+
+
+
     print("="*60)
+
+
+
+
 
 
 
@@ -1667,7 +3287,15 @@ def main():
 
 
 
+
+
+
+
         print(f"\n{benchmark.upper()}:")
+
+
+
+
 
 
 
@@ -1675,7 +3303,15 @@ def main():
 
 
 
+
+
+
+
         if metrics.get('pass_at_5'):
+
+
+
+
 
 
 
@@ -1683,7 +3319,15 @@ def main():
 
 
 
+
+
+
+
         if metrics.get('pass_at_10'):
+
+
+
+
 
 
 
@@ -1699,11 +3343,31 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
 
 
 
+
+
+
+
     main()
+
+
+
+
 
 
 

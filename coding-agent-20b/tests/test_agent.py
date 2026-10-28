@@ -6,7 +6,23 @@ import json
 
 
 
+
+
+
+
+
+
+
+
 import pytest
+
+
+
+
+
+
+
+
 
 
 
@@ -18,7 +34,15 @@ from agent.parser import parse_tool_call, repair_prompt
 
 
 
+
+
+
+
 from agent.production_agent import TOOL_SCHEMAS
+
+
+
+
 
 
 
@@ -26,7 +50,15 @@ from agent.sandbox import HardenedSandbox, SandboxConfig, SandboxUnavailable
 
 
 
+
+
+
+
 from agent.safety import check_code_safety, redact_secrets, sanitize_observation
+
+
+
+
 
 
 
@@ -42,7 +74,23 @@ from agent.tools import ToolExecutor
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def test_parse_native_fenced_and_repaired_calls():
+
+
+
+
 
 
 
@@ -50,7 +98,15 @@ def test_parse_native_fenced_and_repaired_calls():
 
 
 
+
+
+
+
     assert err is None and call["tool"] == "read_file"
+
+
+
+
 
 
 
@@ -58,11 +114,23 @@ def test_parse_native_fenced_and_repaired_calls():
 
 
 
+
+
+
+
     assert call["tool"] == "git_log" and call["arguments"]["n"] == 10                  
 
 
 
+
+
+
+
     call, err = parse_tool_call('{"tool": "read_file", "arguments": {"path": "a.py",}}', TOOL_SCHEMAS)
+
+
+
+
 
 
 
@@ -78,7 +146,23 @@ def test_parse_native_fenced_and_repaired_calls():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def test_parse_rejects_unknown_tool_and_bad_types():
+
+
+
+
 
 
 
@@ -86,7 +170,15 @@ def test_parse_rejects_unknown_tool_and_bad_types():
 
 
 
+
+
+
+
     assert call is None and "unknown tool" in err
+
+
+
+
 
 
 
@@ -102,7 +194,23 @@ def test_parse_rejects_unknown_tool_and_bad_types():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def test_sandbox_fail_closed_without_docker():
+
+
+
+
 
 
 
@@ -110,11 +218,23 @@ def test_sandbox_fail_closed_without_docker():
 
 
 
+
+
+
+
     if not sandbox.available:
 
 
 
+
+
+
+
         with pytest.raises(SandboxUnavailable):
+
+
+
+
 
 
 
@@ -130,7 +250,23 @@ def test_sandbox_fail_closed_without_docker():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def test_tools_patch_ast_git_and_safety(tmp_path):
+
+
+
+
 
 
 
@@ -138,7 +274,15 @@ def test_tools_patch_ast_git_and_safety(tmp_path):
 
 
 
+
+
+
+
     ex = ToolExecutor(str(tmp_path), sandbox)
+
+
+
+
 
 
 
@@ -146,7 +290,15 @@ def test_tools_patch_ast_git_and_safety(tmp_path):
 
 
 
+
+
+
+
     assert ex.edit_function("m.py", "old", "def old():\n    return 42\n")["success"]
+
+
+
+
 
 
 
@@ -154,7 +306,15 @@ def test_tools_patch_ast_git_and_safety(tmp_path):
 
 
 
+
+
+
+
     patch = "--- a/m.py\n+++ b/m.py\n@@ -1,2 +1,2 @@\n def old():\n-    return 42\n+    return 43\n"
+
+
+
+
 
 
 
@@ -162,7 +322,15 @@ def test_tools_patch_ast_git_and_safety(tmp_path):
 
 
 
+
+
+
+
     assert "return 43" in ex.read_file("m.py")["content"]
+
+
+
+
 
 
 
@@ -170,7 +338,15 @@ def test_tools_patch_ast_git_and_safety(tmp_path):
 
 
 
+
+
+
+
     assert check_code_safety("import os; os.system('x')")[0] is True
+
+
+
+
 
 
 
@@ -178,7 +354,15 @@ def test_tools_patch_ast_git_and_safety(tmp_path):
 
 
 
+
+
+
+
     assert "redacted" in redact_secrets("api_key = hunter2secret")
+
+
+
+
 
 
 
@@ -194,7 +378,23 @@ def test_tools_patch_ast_git_and_safety(tmp_path):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def test_path_escape_blocked(tmp_path):
+
+
+
+
 
 
 
@@ -202,7 +402,15 @@ def test_path_escape_blocked(tmp_path):
 
 
 
+
+
+
+
     ex = ToolExecutor(str(tmp_path), sandbox)
+
+
+
+
 
 
 
@@ -218,11 +426,31 @@ def test_path_escape_blocked(tmp_path):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def test_production_agent_repair_loop_end_to_end(tmp_path):
 
 
 
+
+
+
+
     torch = pytest.importorskip("torch")
+
+
+
+
 
 
 
@@ -234,7 +462,19 @@ def test_production_agent_repair_loop_end_to_end(tmp_path):
 
 
 
+
+
+
+
+
+
+
+
     class StubTok:
+
+
+
+
 
 
 
@@ -242,7 +482,15 @@ def test_production_agent_repair_loop_end_to_end(tmp_path):
 
 
 
+
+
+
+
         def encode(self, text, add_special_tokens=True):
+
+
+
+
 
 
 
@@ -250,7 +498,15 @@ def test_production_agent_repair_loop_end_to_end(tmp_path):
 
 
 
+
+
+
+
         def decode(self, ids, skip_special_tokens=True):
+
+
+
+
 
 
 
@@ -262,7 +518,19 @@ def test_production_agent_repair_loop_end_to_end(tmp_path):
 
 
 
+
+
+
+
+
+
+
+
     class StubModel:
+
+
+
+
 
 
 
@@ -270,7 +538,15 @@ def test_production_agent_repair_loop_end_to_end(tmp_path):
 
 
 
+
+
+
+
             self.calls = 0
+
+
+
+
 
 
 
@@ -278,7 +554,15 @@ def test_production_agent_repair_loop_end_to_end(tmp_path):
 
 
 
+
+
+
+
             self.calls += 1
+
+
+
+
 
 
 
@@ -286,7 +570,15 @@ def test_production_agent_repair_loop_end_to_end(tmp_path):
 
 
 
+
+
+
+
                 StubTok.next_response = '{"tool": "read_file", "arguments": {"path": 123}}'
+
+
+
+
 
 
 
@@ -294,7 +586,15 @@ def test_production_agent_repair_loop_end_to_end(tmp_path):
 
 
 
+
+
+
+
                 StubTok.next_response = '<|tool_call|>\n{"tool": "write_file", "arguments": {"path": "hi.py", "content": "x = 1\\n"}}'
+
+
+
+
 
 
 
@@ -302,7 +602,15 @@ def test_production_agent_repair_loop_end_to_end(tmp_path):
 
 
 
+
+
+
+
                 StubTok.next_response = "FINAL ANSWER: done"
+
+
+
+
 
 
 
@@ -314,7 +622,19 @@ def test_production_agent_repair_loop_end_to_end(tmp_path):
 
 
 
+
+
+
+
+
+
+
+
     sandbox = HardenedSandbox(SandboxConfig(allow_local_fallback=True))
+
+
+
+
 
 
 
@@ -322,7 +642,15 @@ def test_production_agent_repair_loop_end_to_end(tmp_path):
 
 
 
+
+
+
+
     result = agent.run("write hi.py", verbose=False)
+
+
+
+
 
 
 
@@ -330,7 +658,15 @@ def test_production_agent_repair_loop_end_to_end(tmp_path):
 
 
 
+
+
+
+
     assert (tmp_path / "hi.py").exists()
+
+
+
+
 
 
 

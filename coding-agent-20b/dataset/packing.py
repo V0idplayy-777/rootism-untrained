@@ -10,7 +10,19 @@ Packing rules (no cross-document attention leakage):
 
 
 
+
+
+
+
 from __future__ import annotations
+
+
+
+
+
+
+
+
 
 
 
@@ -22,7 +34,19 @@ from dataclasses import dataclass, field
 
 
 
+
+
+
+
 from typing import Dict, Iterable, List, Optional
+
+
+
+
+
+
+
+
 
 
 
@@ -42,7 +66,23 @@ import numpy as np
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @dataclass
+
+
+
+
 
 
 
@@ -50,7 +90,15 @@ class PackedSequence:
 
 
 
+
+
+
+
     input_ids: np.ndarray                  
+
+
+
+
 
 
 
@@ -58,7 +106,15 @@ class PackedSequence:
 
 
 
+
+
+
+
     position_ids: np.ndarray                                    
+
+
+
+
 
 
 
@@ -66,7 +122,15 @@ class PackedSequence:
 
 
 
+
+
+
+
     num_docs: int = 0
+
+
+
+
 
 
 
@@ -82,7 +146,23 @@ class PackedSequence:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @dataclass
+
+
+
+
 
 
 
@@ -90,7 +170,15 @@ class PackingStats:
 
 
 
+
+
+
+
     sequences: int = 0
+
+
+
+
 
 
 
@@ -98,7 +186,15 @@ class PackingStats:
 
 
 
+
+
+
+
     tokens: int = 0
+
+
+
+
 
 
 
@@ -110,11 +206,27 @@ class PackingStats:
 
 
 
+
+
+
+
+
+
+
+
     @property
 
 
 
+
+
+
+
     def efficiency(self) -> float:
+
+
+
+
 
 
 
@@ -130,7 +242,23 @@ class PackingStats:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class SequencePacker:
+
+
+
+
 
 
 
@@ -144,7 +272,19 @@ class SequencePacker:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, tokenizer, seq_length: int = 8192, pad_id: Optional[int] = None):
+
+
+
+
 
 
 
@@ -152,7 +292,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         self.seq_length = seq_length
+
+
+
+
 
 
 
@@ -160,7 +308,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         self.eos_id = tokenizer.eos_token_id
+
+
+
+
 
 
 
@@ -168,7 +324,19 @@ class SequencePacker:
 
 
 
+
+
+
+
         self._reset()
+
+
+
+
+
+
+
+
 
 
 
@@ -180,7 +348,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         self._ids: List[int] = []
+
+
+
+
 
 
 
@@ -188,7 +364,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         self._doc: List[int] = []
+
+
+
+
 
 
 
@@ -200,7 +384,19 @@ class SequencePacker:
 
 
 
+
+
+
+
+
+
+
+
     def _flush(self) -> PackedSequence:
+
+
+
+
 
 
 
@@ -208,7 +404,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         pad = self.seq_length - n
+
+
+
+
 
 
 
@@ -216,7 +420,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         labels = np.full(self.seq_length, -100, dtype=np.int64)
+
+
+
+
 
 
 
@@ -224,7 +436,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         doc_ids = np.full(self.seq_length, -1, dtype=np.int64)
+
+
+
+
 
 
 
@@ -232,7 +452,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         labels[:n] = self._ids                                              
+
+
+
+
 
 
 
@@ -240,7 +468,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         doc_ids[:n] = self._doc
+
+
+
+
 
 
 
@@ -248,7 +484,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         self.stats.sequences += 1
+
+
+
+
 
 
 
@@ -256,11 +500,23 @@ class SequencePacker:
 
 
 
+
+
+
+
         self.stats.pad_tokens += pad
 
 
 
+
+
+
+
         self._reset()
+
+
+
+
 
 
 
@@ -272,7 +528,19 @@ class SequencePacker:
 
 
 
+
+
+
+
+
+
+
+
     def add_tokens(self, tokens: List[int]) -> List[PackedSequence]:
+
+
+
+
 
 
 
@@ -280,7 +548,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         if not tokens:
+
+
+
+
 
 
 
@@ -288,7 +564,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         if tokens[-1] != self.eos_id:
+
+
+
+
 
 
 
@@ -296,7 +580,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         done: List[PackedSequence] = []
+
+
+
+
 
 
 
@@ -304,7 +596,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         while len(tokens) > self.seq_length:
+
+
+
+
 
 
 
@@ -312,7 +612,15 @@ class SequencePacker:
 
 
 
+
+
+
+
                 done.append(self._flush())
+
+
+
+
 
 
 
@@ -320,7 +628,15 @@ class SequencePacker:
 
 
 
+
+
+
+
             self._ids, self._pos = list(chunk), list(range(len(chunk)))
+
+
+
+
 
 
 
@@ -328,7 +644,15 @@ class SequencePacker:
 
 
 
+
+
+
+
             self._ndocs += 1
+
+
+
+
 
 
 
@@ -336,7 +660,15 @@ class SequencePacker:
 
 
 
+
+
+
+
             done.append(self._flush())
+
+
+
+
 
 
 
@@ -344,7 +676,15 @@ class SequencePacker:
 
 
 
+
+
+
+
             done.append(self._flush())
+
+
+
+
 
 
 
@@ -352,7 +692,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         self._ids.extend(tokens)
+
+
+
+
 
 
 
@@ -360,7 +708,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         self._doc.extend([self._ndocs] * len(tokens))
+
+
+
+
 
 
 
@@ -368,7 +724,15 @@ class SequencePacker:
 
 
 
+
+
+
+
         self.stats.documents += 1
+
+
+
+
 
 
 
@@ -376,7 +740,15 @@ class SequencePacker:
 
 
 
+
+
+
+
             done.append(self._flush())
+
+
+
+
 
 
 
@@ -388,7 +760,19 @@ class SequencePacker:
 
 
 
+
+
+
+
+
+
+
+
     def add_document(self, text: str) -> List[PackedSequence]:
+
+
+
+
 
 
 
@@ -400,7 +784,19 @@ class SequencePacker:
 
 
 
+
+
+
+
+
+
+
+
     def flush(self) -> List[PackedSequence]:
+
+
+
+
 
 
 
@@ -416,7 +812,23 @@ class SequencePacker:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def pack_documents(tokenizer, texts: Iterable[str], seq_length: int = 8192) -> List[PackedSequence]:
+
+
+
+
 
 
 
@@ -424,7 +836,15 @@ def pack_documents(tokenizer, texts: Iterable[str], seq_length: int = 8192) -> L
 
 
 
+
+
+
+
     out: List[PackedSequence] = []
+
+
+
+
 
 
 
@@ -432,11 +852,23 @@ def pack_documents(tokenizer, texts: Iterable[str], seq_length: int = 8192) -> L
 
 
 
+
+
+
+
         out.extend(packer.add_document(t))
 
 
 
+
+
+
+
     out.extend(packer.flush())
+
+
+
+
 
 
 
@@ -452,7 +884,23 @@ def pack_documents(tokenizer, texts: Iterable[str], seq_length: int = 8192) -> L
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def collate_packed(sequences: List[PackedSequence]) -> Dict[str, np.ndarray]:
+
+
+
+
 
 
 
@@ -460,7 +908,15 @@ def collate_packed(sequences: List[PackedSequence]) -> Dict[str, np.ndarray]:
 
 
 
+
+
+
+
     return {
+
+
+
+
 
 
 
@@ -468,7 +924,15 @@ def collate_packed(sequences: List[PackedSequence]) -> Dict[str, np.ndarray]:
 
 
 
+
+
+
+
         "labels": np.stack([s.labels for s in sequences]),
+
+
+
+
 
 
 
@@ -476,11 +940,23 @@ def collate_packed(sequences: List[PackedSequence]) -> Dict[str, np.ndarray]:
 
 
 
+
+
+
+
         "doc_ids": np.stack([s.doc_ids for s in sequences]),
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 

@@ -7,7 +7,19 @@ no absolute paths outside it). Patch application is atomic per file
 
 
 
+
+
+
+
 from __future__ import annotations
+
+
+
+
+
+
+
+
 
 
 
@@ -19,7 +31,15 @@ import ast
 
 
 
+
+
+
+
 import re
+
+
+
+
 
 
 
@@ -27,7 +47,15 @@ import subprocess
 
 
 
+
+
+
+
 from pathlib import Path
+
+
+
+
 
 
 
@@ -39,7 +67,19 @@ from typing import Dict, List, Optional
 
 
 
+
+
+
+
+
+
+
+
 from .safety import check_code_safety
+
+
+
+
 
 
 
@@ -51,7 +91,19 @@ from .sandbox import HardenedSandbox
 
 
 
+
+
+
+
+
+
+
+
 try:
+
+
+
+
 
 
 
@@ -59,11 +111,23 @@ try:
 
 
 
+
+
+
+
     HAS_GITPYTHON = True
 
 
 
+
+
+
+
 except ImportError:
+
+
+
+
 
 
 
@@ -75,7 +139,19 @@ except ImportError:
 
 
 
+
+
+
+
+
+
+
+
 LANG_BY_EXT = {".py": "python", ".js": "node", ".mjs": "node", ".sh": "bash",
+
+
+
+
 
 
 
@@ -91,7 +167,23 @@ LANG_BY_EXT = {".py": "python", ".js": "node", ".mjs": "node", ".sh": "bash",
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class ToolExecutor:
+
+
+
+
 
 
 
@@ -99,7 +191,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         self.workspace = Path(workspace_path).resolve()
+
+
+
+
 
 
 
@@ -107,7 +207,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         self.sandbox = sandbox
+
+
+
+
 
 
 
@@ -115,7 +223,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         if HAS_GITPYTHON:
+
+
+
+
 
 
 
@@ -123,7 +239,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                 self.repo = gitpython.Repo(self.workspace)
+
+
+
+
 
 
 
@@ -131,7 +255,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                 try:
+
+
+
+
 
 
 
@@ -139,7 +271,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                 except Exception:
+
+
+
+
 
 
 
@@ -151,7 +291,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
                                                                              
+
+
+
+
 
 
 
@@ -159,7 +311,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         p = (self.workspace / path).resolve()
+
+
+
+
 
 
 
@@ -167,7 +327,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             raise ValueError(f"path escapes workspace: {path!r}")
+
+
+
+
 
 
 
@@ -179,7 +347,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
                                                                               
+
+
+
+
 
 
 
@@ -187,7 +367,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -195,7 +383,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             if not f.exists():
+
+
+
+
 
 
 
@@ -203,7 +399,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             content = f.read_text(encoding="utf-8", errors="replace")
+
+
+
+
 
 
 
@@ -211,11 +415,27 @@ class ToolExecutor:
 
 
 
+
+
+
+
         except Exception as e:
 
 
 
+
+
+
+
             return {"error": str(e)}
+
+
+
+
+
+
+
+
 
 
 
@@ -227,7 +447,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -235,7 +463,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             f.parent.mkdir(parents=True, exist_ok=True)
+
+
+
+
 
 
 
@@ -243,7 +479,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             return {"success": True, "path": path, "size": len(content)}
+
+
+
+
 
 
 
@@ -251,7 +495,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
             return {"error": str(e)}
+
+
+
+
+
+
+
+
 
 
 
@@ -263,7 +519,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -271,7 +535,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             files = [str(p.relative_to(self.workspace)) for p in base.rglob(pattern) if p.is_file()]
+
+
+
+
 
 
 
@@ -279,11 +551,27 @@ class ToolExecutor:
 
 
 
+
+
+
+
         except Exception as e:
 
 
 
+
+
+
+
             return {"error": str(e)}
+
+
+
+
+
+
+
+
 
 
 
@@ -295,7 +583,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -303,7 +599,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         except re.error as e:
+
+
+
+
 
 
 
@@ -311,7 +615,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         hits = []
+
+
+
+
 
 
 
@@ -319,11 +631,23 @@ class ToolExecutor:
 
 
 
+
+
+
+
             if not f.is_file() or ".git" in f.parts:
 
 
 
+
+
+
+
                 continue
+
+
+
+
 
 
 
@@ -331,7 +655,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                 for i, line in enumerate(f.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
+
+
+
+
 
 
 
@@ -339,7 +671,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                         hits.append({"file": str(f.relative_to(self.workspace)), "line": i, "text": line[:300]})
+
+
+
+
 
 
 
@@ -347,7 +687,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                             return {"matches": hits, "truncated": True}
+
+
+
+
 
 
 
@@ -355,7 +703,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                 continue
+
+
+
+
 
 
 
@@ -367,7 +723,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
                                                                                
+
+
+
+
 
 
 
@@ -375,7 +743,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         """Apply a unified diff (multi-file). All files validate before any write."""
+
+
+
+
 
 
 
@@ -383,7 +759,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             files = _parse_unified_diff(patch)
+
+
+
+
 
 
 
@@ -391,7 +775,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             return {"error": str(e)}
+
+
+
+
 
 
 
@@ -399,7 +791,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         for rel, hunks in files.items():
+
+
+
+
 
 
 
@@ -407,7 +807,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                 f = self._safe(rel)
+
+
+
+
 
 
 
@@ -415,7 +823,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                 staged[f] = _apply_hunks(original, hunks, rel)
+
+
+
+
 
 
 
@@ -423,7 +839,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                 return {"error": f"patch failed for {rel}: {e} (no files modified)"}
+
+
+
+
 
 
 
@@ -431,7 +855,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             f.parent.mkdir(parents=True, exist_ok=True)
+
+
+
+
 
 
 
@@ -439,7 +871,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                 f.unlink(missing_ok=True)
+
+
+
+
 
 
 
@@ -447,7 +887,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                 f.write_text(content, encoding="utf-8")
+
+
+
+
 
 
 
@@ -459,7 +907,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
     def edit_function(self, path: str, function: str, new_source: str) -> Dict:
+
+
+
+
 
 
 
@@ -467,7 +927,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -475,7 +943,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             tree = ast.parse(f.read_text(encoding="utf-8"))
+
+
+
+
 
 
 
@@ -483,7 +959,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             for node in ast.walk(tree):
+
+
+
+
 
 
 
@@ -491,7 +975,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                     target = node
+
+
+
+
 
 
 
@@ -499,7 +991,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             if target is None or target.end_lineno is None:
+
+
+
+
 
 
 
@@ -507,7 +1007,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             try:
+
+
+
+
 
 
 
@@ -515,7 +1023,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             except SyntaxError as e:
+
+
+
+
 
 
 
@@ -523,7 +1039,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             lines = f.read_text(encoding="utf-8").splitlines(keepends=True)
+
+
+
+
 
 
 
@@ -531,7 +1055,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             repl = "".join((indent + ln if ln.strip() else ln) for ln in new_source.splitlines(keepends=True))
+
+
+
+
 
 
 
@@ -539,7 +1071,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                 repl += "\n"
+
+
+
+
 
 
 
@@ -547,7 +1087,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             ast.parse(new_text)                             
+
+
+
+
 
 
 
@@ -555,11 +1103,23 @@ class ToolExecutor:
 
 
 
+
+
+
+
             return {"success": True, "path": path, "function": function}
 
 
 
+
+
+
+
         except Exception as e:
+
+
+
+
 
 
 
@@ -571,7 +1131,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
                                                                                  
+
+
+
+
 
 
 
@@ -579,7 +1151,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                      language: str = "python") -> Dict:
+
+
+
+
 
 
 
@@ -587,7 +1167,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         if not allowed:
+
+
+
+
 
 
 
@@ -595,7 +1183,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         return self.sandbox.execute(code=code, workspace_path=str(self.workspace),
+
+
+
+
 
 
 
@@ -607,7 +1203,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
     def run_tests(self, test_path: str = ".", verbose: bool = False) -> Dict:
+
+
+
+
 
 
 
@@ -615,7 +1223,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                 f"r = subprocess.run([sys.executable, '-m', 'pytest', {test_path!r}]"
+
+
+
+
 
 
 
@@ -623,7 +1239,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                 "print(r.stdout[-15000:]); print(r.stderr[-5000:], file=sys.stderr); sys.exit(r.returncode)\n")
+
+
+
+
 
 
 
@@ -635,7 +1259,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
                                                                                    
+
+
+
+
 
 
 
@@ -643,7 +1279,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         r = subprocess.run(["git", *args], cwd=self.workspace, capture_output=True, text=True, timeout=30)
+
+
+
+
 
 
 
@@ -651,7 +1295,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             return {"error": (r.stderr or r.stdout).strip()[:2000], "exit_code": r.returncode}
+
+
+
+
 
 
 
@@ -663,7 +1315,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
     def git_status(self) -> Dict:
+
+
+
+
 
 
 
@@ -675,7 +1339,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
     def git_diff(self, staged: bool = False) -> Dict:
+
+
+
+
 
 
 
@@ -687,7 +1363,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
     def git_log(self, n: int = 10) -> Dict:
+
+
+
+
 
 
 
@@ -699,7 +1387,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
     def git_commit(self, message: str, add_all: bool = True) -> Dict:
+
+
+
+
 
 
 
@@ -707,7 +1407,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             r = self._git("add", "-A")
+
+
+
+
 
 
 
@@ -715,7 +1423,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
                 return r
+
+
+
+
 
 
 
@@ -727,7 +1443,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
     def git_branch(self, name: str = None, checkout: bool = False) -> Dict:
+
+
+
+
 
 
 
@@ -735,7 +1463,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             return self._git("branch", "--list")
+
+
+
+
 
 
 
@@ -747,7 +1483,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
     def git_checkout(self, ref: str) -> Dict:
+
+
+
+
 
 
 
@@ -759,7 +1507,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
     def git_show(self, ref: str = "HEAD") -> Dict:
+
+
+
+
 
 
 
@@ -771,7 +1531,19 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
                                                                                      
+
+
+
+
 
 
 
@@ -779,7 +1551,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         dispatch = {
+
+
+
+
 
 
 
@@ -787,7 +1567,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             "write_file": self.write_file, "list_files": self.list_files,
+
+
+
+
 
 
 
@@ -795,7 +1583,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             "edit_function": self.edit_function, "run_tests": self.run_tests,
+
+
+
+
 
 
 
@@ -803,7 +1599,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
             "git_commit": self.git_commit, "git_branch": self.git_branch,
+
+
+
+
 
 
 
@@ -811,7 +1615,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -819,7 +1631,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         if fn is None:
+
+
+
+
 
 
 
@@ -827,7 +1647,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -835,7 +1663,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         except TypeError as e:
+
+
+
+
 
 
 
@@ -843,7 +1679,15 @@ class ToolExecutor:
 
 
 
+
+
+
+
         except Exception as e:
+
+
+
+
 
 
 
@@ -859,7 +1703,23 @@ class ToolExecutor:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def _parse_unified_diff(patch: str) -> Dict[str, list]:
+
+
+
+
 
 
 
@@ -867,7 +1727,15 @@ def _parse_unified_diff(patch: str) -> Dict[str, list]:
 
 
 
+
+
+
+
     current, hunks = None, None
+
+
+
+
 
 
 
@@ -875,7 +1743,15 @@ def _parse_unified_diff(patch: str) -> Dict[str, list]:
 
 
 
+
+
+
+
         if line.startswith("+++ b/"):
+
+
+
+
 
 
 
@@ -883,7 +1759,15 @@ def _parse_unified_diff(patch: str) -> Dict[str, list]:
 
 
 
+
+
+
+
             files[current] = hunks = []
+
+
+
+
 
 
 
@@ -891,7 +1775,15 @@ def _parse_unified_diff(patch: str) -> Dict[str, list]:
 
 
 
+
+
+
+
             current = line[4:].strip().removeprefix("b/")
+
+
+
+
 
 
 
@@ -899,7 +1791,15 @@ def _parse_unified_diff(patch: str) -> Dict[str, list]:
 
 
 
+
+
+
+
         elif line.startswith("--- "):
+
+
+
+
 
 
 
@@ -907,7 +1807,15 @@ def _parse_unified_diff(patch: str) -> Dict[str, list]:
 
 
 
+
+
+
+
         elif line.startswith("@@") and hunks is not None:
+
+
+
+
 
 
 
@@ -915,7 +1823,15 @@ def _parse_unified_diff(patch: str) -> Dict[str, list]:
 
 
 
+
+
+
+
             if not m:
+
+
+
+
 
 
 
@@ -923,7 +1839,15 @@ def _parse_unified_diff(patch: str) -> Dict[str, list]:
 
 
 
+
+
+
+
             hunks.append({"old_start": int(m.group(1)), "lines": []})
+
+
+
+
 
 
 
@@ -931,7 +1855,15 @@ def _parse_unified_diff(patch: str) -> Dict[str, list]:
 
 
 
+
+
+
+
             hunks[-1]["lines"].append(line)
+
+
+
+
 
 
 
@@ -939,7 +1871,15 @@ def _parse_unified_diff(patch: str) -> Dict[str, list]:
 
 
 
+
+
+
+
         raise ValueError("no file hunks found in patch")
+
+
+
+
 
 
 
@@ -955,7 +1895,23 @@ def _parse_unified_diff(patch: str) -> Dict[str, list]:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def _apply_hunks(original: str, hunks: list, rel: str) -> Optional[str]:
+
+
+
+
 
 
 
@@ -963,7 +1919,15 @@ def _apply_hunks(original: str, hunks: list, rel: str) -> Optional[str]:
 
 
 
+
+
+
+
     offset = 0
+
+
+
+
 
 
 
@@ -971,7 +1935,15 @@ def _apply_hunks(original: str, hunks: list, rel: str) -> Optional[str]:
 
 
 
+
+
+
+
         idx = (hunk["old_start"] - 1) + offset
+
+
+
+
 
 
 
@@ -979,7 +1951,15 @@ def _apply_hunks(original: str, hunks: list, rel: str) -> Optional[str]:
 
 
 
+
+
+
+
         for raw in hunk["lines"]:
+
+
+
+
 
 
 
@@ -987,7 +1967,15 @@ def _apply_hunks(original: str, hunks: list, rel: str) -> Optional[str]:
 
 
 
+
+
+
+
             src = raw[1:]
+
+
+
+
 
 
 
@@ -995,7 +1983,15 @@ def _apply_hunks(original: str, hunks: list, rel: str) -> Optional[str]:
 
 
 
+
+
+
+
                 if idx + consumed >= len(lines) or lines[idx + consumed].rstrip("\n") != src:
+
+
+
+
 
 
 
@@ -1003,7 +1999,15 @@ def _apply_hunks(original: str, hunks: list, rel: str) -> Optional[str]:
 
 
 
+
+
+
+
                 out.append(lines[idx + consumed]); consumed += 1
+
+
+
+
 
 
 
@@ -1011,7 +2015,15 @@ def _apply_hunks(original: str, hunks: list, rel: str) -> Optional[str]:
 
 
 
+
+
+
+
                 if idx + consumed >= len(lines) or lines[idx + consumed].rstrip("\n") != src:
+
+
+
+
 
 
 
@@ -1019,7 +2031,15 @@ def _apply_hunks(original: str, hunks: list, rel: str) -> Optional[str]:
 
 
 
+
+
+
+
                 consumed += 1
+
+
+
+
 
 
 
@@ -1027,7 +2047,15 @@ def _apply_hunks(original: str, hunks: list, rel: str) -> Optional[str]:
 
 
 
+
+
+
+
                 out.append(src + "\n")
+
+
+
+
 
 
 
@@ -1035,7 +2063,15 @@ def _apply_hunks(original: str, hunks: list, rel: str) -> Optional[str]:
 
 
 
+
+
+
+
                 continue
+
+
+
+
 
 
 
@@ -1043,11 +2079,23 @@ def _apply_hunks(original: str, hunks: list, rel: str) -> Optional[str]:
 
 
 
+
+
+
+
         offset += len(out) - consumed
 
 
 
+
+
+
+
     return "".join(lines)
+
+
+
+
 
 
 

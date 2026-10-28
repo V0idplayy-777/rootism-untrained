@@ -2,7 +2,19 @@
 
 
 
+
+
+
+
 from __future__ import annotations
+
+
+
+
+
+
+
+
 
 
 
@@ -14,7 +26,15 @@ import random
 
 
 
+
+
+
+
 from dataclasses import dataclass, field
+
+
+
+
 
 
 
@@ -30,7 +50,23 @@ from typing import Dict, Iterator, List, Sequence
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @dataclass
+
+
+
+
 
 
 
@@ -38,7 +74,15 @@ class SourceSpec:
 
 
 
+
+
+
+
     name: str
+
+
+
+
 
 
 
@@ -46,7 +90,15 @@ class SourceSpec:
 
 
 
+
+
+
+
     upsample: float = 1.0                                                     
+
+
+
+
 
 
 
@@ -62,7 +114,23 @@ class SourceSpec:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                                               
+
+
+
+
 
 
 
@@ -70,7 +138,15 @@ DEFAULT_MIXTURE: List[SourceSpec] = [
 
 
 
+
+
+
+
     SourceSpec("the-stack-code", 0.62, 1.0, "code"),
+
+
+
+
 
 
 
@@ -78,7 +154,15 @@ DEFAULT_MIXTURE: List[SourceSpec] = [
 
 
 
+
+
+
+
     SourceSpec("github-prs", 0.08, 2.0, "prs"),
+
+
+
+
 
 
 
@@ -86,11 +170,23 @@ DEFAULT_MIXTURE: List[SourceSpec] = [
 
 
 
+
+
+
+
     SourceSpec("docs-and-comments", 0.06, 1.5, "docs"),
 
 
 
+
+
+
+
     SourceSpec("instruction-sft", 0.10, 1.0, "instruction"),
+
+
+
+
 
 
 
@@ -106,7 +202,23 @@ DEFAULT_MIXTURE: List[SourceSpec] = [
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class MixtureSampler:
+
+
+
+
 
 
 
@@ -118,7 +230,19 @@ class MixtureSampler:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, pools: Dict[str, Sequence], mixture: List[SourceSpec] = None,
+
+
+
+
 
 
 
@@ -126,7 +250,15 @@ class MixtureSampler:
 
 
 
+
+
+
+
         self.pools = pools
+
+
+
+
 
 
 
@@ -134,7 +266,15 @@ class MixtureSampler:
 
 
 
+
+
+
+
         self.rng = random.Random(seed)
+
+
+
+
 
 
 
@@ -142,7 +282,15 @@ class MixtureSampler:
 
 
 
+
+
+
+
         if total <= 0:
+
+
+
+
 
 
 
@@ -150,7 +298,15 @@ class MixtureSampler:
 
 
 
+
+
+
+
         self._weights = [(s, s.weight * s.upsample / total) for s in self.mixture if s.name in pools]
+
+
+
+
 
 
 
@@ -162,7 +318,19 @@ class MixtureSampler:
 
 
 
+
+
+
+
+
+
+
+
     def _next_from(self, name: str):
+
+
+
+
 
 
 
@@ -170,7 +338,15 @@ class MixtureSampler:
 
 
 
+
+
+
+
         i = self._cursors[name] % len(pool)
+
+
+
+
 
 
 
@@ -178,7 +354,15 @@ class MixtureSampler:
 
 
 
+
+
+
+
         if self._cursors[name] % len(pool) == 0:
+
+
+
+
 
 
 
@@ -186,7 +370,15 @@ class MixtureSampler:
 
 
 
+
+
+
+
             pass
+
+
+
+
 
 
 
@@ -198,7 +390,19 @@ class MixtureSampler:
 
 
 
+
+
+
+
+
+
+
+
     def sample(self, n: int) -> Iterator:
+
+
+
+
 
 
 
@@ -206,7 +410,15 @@ class MixtureSampler:
 
 
 
+
+
+
+
         weights = [w for _, w in self._weights]
+
+
+
+
 
 
 
@@ -214,7 +426,15 @@ class MixtureSampler:
 
 
 
+
+
+
+
             name = self.rng.choices(names, weights=weights, k=1)[0]
+
+
+
+
 
 
 
@@ -230,7 +450,23 @@ class MixtureSampler:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def curriculum_order(docs: List[dict], step: int, total_steps: int) -> List[dict]:
+
+
+
+
 
 
 
@@ -239,7 +475,15 @@ def curriculum_order(docs: List[dict], step: int, total_steps: int) -> List[dict
 
 
 
+
+
+
+
     progress = min(max(step / max(total_steps, 1), 0.0), 1.0)
+
+
+
+
 
 
 
@@ -247,7 +491,15 @@ def curriculum_order(docs: List[dict], step: int, total_steps: int) -> List[dict
 
 
 
+
+
+
+
                                                                                    
+
+
+
+
 
 
 
@@ -255,7 +507,15 @@ def curriculum_order(docs: List[dict], step: int, total_steps: int) -> List[dict
 
 
 
+
+
+
+
     hard = scored[len(scored) - n_hard:] if n_hard else []
+
+
+
+
 
 
 
@@ -263,7 +523,15 @@ def curriculum_order(docs: List[dict], step: int, total_steps: int) -> List[dict
 
 
 
+
+
+
+
     out: List[dict] = []
+
+
+
+
 
 
 
@@ -271,7 +539,15 @@ def curriculum_order(docs: List[dict], step: int, total_steps: int) -> List[dict
 
 
 
+
+
+
+
     for i, d in enumerate(easy):
+
+
+
+
 
 
 
@@ -279,7 +555,15 @@ def curriculum_order(docs: List[dict], step: int, total_steps: int) -> List[dict
 
 
 
+
+
+
+
         if progress > 0 and i % 4 == 3:
+
+
+
+
 
 
 
@@ -287,7 +571,15 @@ def curriculum_order(docs: List[dict], step: int, total_steps: int) -> List[dict
 
 
 
+
+
+
+
                 out.append(next(hi))
+
+
+
+
 
 
 
@@ -295,7 +587,15 @@ def curriculum_order(docs: List[dict], step: int, total_steps: int) -> List[dict
 
 
 
+
+
+
+
                 break
+
+
+
+
 
 
 
@@ -303,7 +603,15 @@ def curriculum_order(docs: List[dict], step: int, total_steps: int) -> List[dict
 
 
 
+
+
+
+
     return out
+
+
+
+
 
 
 

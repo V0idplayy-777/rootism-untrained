@@ -17,7 +17,19 @@ Handles:
 
 
 
+
+
+
+
+
+
+
+
 import os
+
+
+
+
 
 
 
@@ -25,7 +37,15 @@ import json
 
 
 
+
+
+
+
 import hashlib
+
+
+
+
 
 
 
@@ -33,7 +53,15 @@ import logging
 
 
 
+
+
+
+
 from pathlib import Path
+
+
+
+
 
 
 
@@ -41,7 +69,15 @@ from typing import Iterator, Dict, List, Optional, Tuple
 
 
 
+
+
+
+
 from dataclasses import dataclass
+
+
+
+
 
 
 
@@ -49,7 +85,19 @@ import multiprocessing as mp
 
 
 
+
+
+
+
 from functools import partial
+
+
+
+
+
+
+
+
 
 
 
@@ -65,7 +113,19 @@ import numpy as np
 
 
 
+
+
+
+
+
+
+
+
                                       
+
+
+
+
 
 
 
@@ -73,7 +133,15 @@ try:
 
 
 
+
+
+
+
     import datasketch
+
+
+
+
 
 
 
@@ -81,7 +149,15 @@ try:
 
 
 
+
+
+
+
 except ImportError:
+
+
+
+
 
 
 
@@ -93,7 +169,19 @@ except ImportError:
 
 
 
+
+
+
+
+
+
+
+
 try:
+
+
+
+
 
 
 
@@ -101,7 +189,15 @@ try:
 
 
 
+
+
+
+
     from pygments.lexers import get_lexer_by_name
+
+
+
+
 
 
 
@@ -109,11 +205,31 @@ try:
 
 
 
+
+
+
+
 except ImportError:
 
 
 
+
+
+
+
     HAS_PYGMENTS = False
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -137,7 +253,23 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @dataclass
+
+
+
+
 
 
 
@@ -145,7 +277,15 @@ class Document:
 
 
 
+
+
+
+
     """A single code document with metadata."""
+
+
+
+
 
 
 
@@ -153,7 +293,15 @@ class Document:
 
 
 
+
+
+
+
     language: str
+
+
+
+
 
 
 
@@ -161,7 +309,15 @@ class Document:
 
 
 
+
+
+
+
     license: Optional[str] = None
+
+
+
+
 
 
 
@@ -169,7 +325,15 @@ class Document:
 
 
 
+
+
+
+
     metadata: Dict = None
+
+
+
+
 
 
 
@@ -177,11 +341,23 @@ class Document:
 
 
 
+
+
+
+
     def __post_init__(self):
 
 
 
+
+
+
+
         if self.metadata is None:
+
+
+
+
 
 
 
@@ -197,7 +373,23 @@ class Document:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 PERMISSIVE_LICENSES = {
+
+
+
+
 
 
 
@@ -205,11 +397,23 @@ PERMISSIVE_LICENSES = {
 
 
 
+
+
+
+
     "isc", "mpl-2.0", "unlicense", "cc0-1.0", "lgpl-2.1", "lgpl-3.0",
 
 
 
+
+
+
+
 }
+
+
+
+
 
 
 
@@ -225,7 +429,23 @@ NON_PERMISSIVE_MARKERS = ("gpl-3.0", "gpl-2.0", "agpl", "proprietary", "all righ
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class LicenseFilter:
+
+
+
+
 
 
 
@@ -237,7 +457,19 @@ class LicenseFilter:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, allow_unknown: bool = False):
+
+
+
+
 
 
 
@@ -249,7 +481,19 @@ class LicenseFilter:
 
 
 
+
+
+
+
+
+
+
+
     def allows(self, license_str) -> bool:
+
+
+
+
 
 
 
@@ -257,7 +501,15 @@ class LicenseFilter:
 
 
 
+
+
+
+
             return self.allow_unknown
+
+
+
+
 
 
 
@@ -265,7 +517,15 @@ class LicenseFilter:
 
 
 
+
+
+
+
         if any(m in norm for m in NON_PERMISSIVE_MARKERS) and norm not in PERMISSIVE_LICENSES:
+
+
+
+
 
 
 
@@ -273,7 +533,15 @@ class LicenseFilter:
 
 
 
+
+
+
+
         if norm in PERMISSIVE_LICENSES:
+
+
+
+
 
 
 
@@ -281,7 +549,15 @@ class LicenseFilter:
 
 
 
+
+
+
+
                                                                                    
+
+
+
+
 
 
 
@@ -297,7 +573,23 @@ class LicenseFilter:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class LanguageDetector:
+
+
+
+
 
 
 
@@ -305,7 +597,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -313,7 +613,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
         'python': ['def ', 'import ', 'class ', 'if __name__', 'print('],
+
+
+
+
 
 
 
@@ -321,7 +629,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
         'typescript': ['interface ', 'type ', 'enum ', ': string', ': number'],
+
+
+
+
 
 
 
@@ -329,7 +645,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
         'cpp': ['#include', 'std::', 'cout <<', 'int main('],
+
+
+
+
 
 
 
@@ -337,7 +661,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
         'go': ['package main', 'func ', 'fmt.Println', 'import ('],
+
+
+
+
 
 
 
@@ -345,7 +677,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
         'ruby': ['def ', 'end', 'puts ', 'class ', 'module '],
+
+
+
+
 
 
 
@@ -353,7 +693,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -361,7 +709,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
     @classmethod
+
+
+
+
 
 
 
@@ -369,7 +725,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
         """Detect language from content and optional file extension."""
+
+
+
+
 
 
 
@@ -377,7 +741,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
         ext_map = {
+
+
+
+
 
 
 
@@ -385,7 +757,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
             '.java': 'java', '.cpp': 'cpp', '.c': 'c', '.h': 'c',
+
+
+
+
 
 
 
@@ -393,11 +773,23 @@ class LanguageDetector:
 
 
 
+
+
+
+
         }
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -405,7 +797,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
             return ext_map[file_ext]
+
+
+
+
 
 
 
@@ -413,7 +813,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
                                                             
+
+
+
+
 
 
 
@@ -421,7 +829,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
         if first.startswith('#!'):
+
+
+
+
 
 
 
@@ -429,11 +845,23 @@ class LanguageDetector:
 
 
 
+
+
+
+
                                ('ruby', 'ruby'), ('bash', 'shell'), ('sh', 'shell')):
 
 
 
+
+
+
+
                 if name in first.split('\n')[0]:
+
+
+
+
 
 
 
@@ -445,7 +873,19 @@ class LanguageDetector:
 
 
 
+
+
+
+
+
+
+
+
                                                            
+
+
+
+
 
 
 
@@ -453,7 +893,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
         for lang, signatures in cls.LANGUAGE_SIGNATURES.items():
+
+
+
+
 
 
 
@@ -461,7 +909,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
             if score > 0:
+
+
+
+
 
 
 
@@ -469,7 +925,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
         if scores:
+
+
+
+
 
 
 
@@ -477,7 +941,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
                                                           
+
+
+
+
 
 
 
@@ -489,7 +961,19 @@ class LanguageDetector:
 
 
 
+
+
+
+
+
+
+
+
                                                                      
+
+
+
+
 
 
 
@@ -497,7 +981,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
             try:
+
+
+
+
 
 
 
@@ -505,7 +997,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
                 from pygments.util import ClassNotFound
+
+
+
+
 
 
 
@@ -513,7 +1013,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
                     lexer = guess_lexer(content[:4000])
+
+
+
+
 
 
 
@@ -521,7 +1029,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
                     alias_map = {'py': 'python', 'python3': 'python', 'js': 'javascript',
+
+
+
+
 
 
 
@@ -529,7 +1045,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
                                  'golang': 'go', 'sh': 'shell', 'bash': 'shell'}
+
+
+
+
 
 
 
@@ -537,7 +1061,15 @@ class LanguageDetector:
 
 
 
+
+
+
+
                 except ClassNotFound:
+
+
+
+
 
 
 
@@ -545,11 +1077,23 @@ class LanguageDetector:
 
 
 
+
+
+
+
             except Exception:
 
 
 
+
+
+
+
                 pass
+
+
+
+
 
 
 
@@ -565,7 +1109,23 @@ class LanguageDetector:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class QualityScorer:
+
+
+
+
 
 
 
@@ -573,7 +1133,15 @@ class QualityScorer:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -581,7 +1149,15 @@ class QualityScorer:
 
 
 
+
+
+
+
     def score(doc: Document) -> float:
+
+
+
+
 
 
 
@@ -598,7 +1174,15 @@ class QualityScorer:
 
 
 
+
+
+
+
         content = doc.content
+
+
+
+
 
 
 
@@ -610,7 +1194,19 @@ class QualityScorer:
 
 
 
+
+
+
+
+
+
+
+
                                                                        
+
+
+
+
 
 
 
@@ -618,7 +1214,15 @@ class QualityScorer:
 
 
 
+
+
+
+
             import ast as _ast
+
+
+
+
 
 
 
@@ -626,7 +1230,15 @@ class QualityScorer:
 
 
 
+
+
+
+
                 _ast.parse(content)
+
+
+
+
 
 
 
@@ -634,7 +1246,15 @@ class QualityScorer:
 
 
 
+
+
+
+
                 return 0.0
+
+
+
+
 
 
 
@@ -642,7 +1262,15 @@ class QualityScorer:
 
 
 
+
+
+
+
             return 0.05
+
+
+
+
 
 
 
@@ -650,7 +1278,15 @@ class QualityScorer:
 
 
 
+
+
+
+
         if lines:
+
+
+
+
 
 
 
@@ -658,11 +1294,23 @@ class QualityScorer:
 
 
 
+
+
+
+
             if avg_line > 300:                 
 
 
 
+
+
+
+
                 return 0.05
+
+
+
+
 
 
 
@@ -670,11 +1318,27 @@ class QualityScorer:
 
 
 
+
+
+
+
             if uniq < 0.3:
 
 
 
+
+
+
+
                 return 0.05
+
+
+
+
+
+
+
+
 
 
 
@@ -686,7 +1350,15 @@ class QualityScorer:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -694,7 +1366,15 @@ class QualityScorer:
 
 
 
+
+
+
+
         num_lines = len(lines)
+
+
+
+
 
 
 
@@ -702,7 +1382,15 @@ class QualityScorer:
 
 
 
+
+
+
+
             score += 0.2
+
+
+
+
 
 
 
@@ -710,11 +1398,23 @@ class QualityScorer:
 
 
 
+
+
+
+
             score += 0.1
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -722,7 +1422,15 @@ class QualityScorer:
 
 
 
+
+
+
+
         comment_lines = sum(1 for line in lines if line.strip().startswith('#') or 
+
+
+
+
 
 
 
@@ -730,7 +1438,15 @@ class QualityScorer:
 
 
 
+
+
+
+
         comment_ratio = comment_lines / max(num_lines, 1)
+
+
+
+
 
 
 
@@ -738,7 +1454,15 @@ class QualityScorer:
 
 
 
+
+
+
+
             score += 0.2
+
+
+
+
 
 
 
@@ -746,11 +1470,23 @@ class QualityScorer:
 
 
 
+
+
+
+
             score += 0.1
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -758,7 +1494,15 @@ class QualityScorer:
 
 
 
+
+
+
+
         has_functions = any(kw in content for kw in ['def ', 'function ', 'func ', 'fn '])
+
+
+
+
 
 
 
@@ -766,11 +1510,23 @@ class QualityScorer:
 
 
 
+
+
+
+
         if has_functions:
 
 
 
+
+
+
+
             score += 0.2
+
+
+
+
 
 
 
@@ -778,11 +1534,23 @@ class QualityScorer:
 
 
 
+
+
+
+
             score += 0.1
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -790,7 +1558,15 @@ class QualityScorer:
 
 
 
+
+
+
+
         indented_lines = sum(1 for line in lines if line and (line[0] == ' ' or line[0] == '\t'))
+
+
+
+
 
 
 
@@ -798,7 +1574,15 @@ class QualityScorer:
 
 
 
+
+
+
+
         if indent_ratio > 0.3:
+
+
+
+
 
 
 
@@ -806,7 +1590,15 @@ class QualityScorer:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -814,7 +1606,15 @@ class QualityScorer:
 
 
 
+
+
+
+
         open_brackets = content.count('(') + content.count('[') + content.count('{')
+
+
+
+
 
 
 
@@ -822,7 +1622,15 @@ class QualityScorer:
 
 
 
+
+
+
+
         if abs(open_brackets - close_brackets) < 5:
+
+
+
+
 
 
 
@@ -830,7 +1638,15 @@ class QualityScorer:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -846,7 +1662,23 @@ class QualityScorer:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class Deduplicator:
+
+
+
+
 
 
 
@@ -854,11 +1686,23 @@ class Deduplicator:
 
 
 
+
+
+
+
     
 
 
 
+
+
+
+
     def __init__(self, threshold: float = 0.8, num_perm: int = 128):
+
+
+
+
 
 
 
@@ -872,7 +1716,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         self.threshold = threshold
+
+
+
+
 
 
 
@@ -880,7 +1732,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         self._exact = set()
+
+
+
+
 
 
 
@@ -888,7 +1748,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         self._buckets = {}
+
+
+
+
 
 
 
@@ -896,7 +1764,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         if HAS_DATASKETCH:
+
+
+
+
 
 
 
@@ -904,7 +1780,15 @@ class Deduplicator:
 
 
 
+
+
+
+
             self.seen = set()
+
+
+
+
 
 
 
@@ -912,7 +1796,15 @@ class Deduplicator:
 
 
 
+
+
+
+
             logger.warning("datasketch not installed, deduplication disabled")
+
+
+
+
 
 
 
@@ -920,7 +1812,15 @@ class Deduplicator:
 
 
 
+
+
+
+
             self.seen = set()
+
+
+
+
 
 
 
@@ -928,7 +1828,15 @@ class Deduplicator:
 
 
 
+
+
+
+
     @staticmethod
+
+
+
+
 
 
 
@@ -936,7 +1844,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         """Dependency-free MinHash signature (universal hashing over shingles)."""
+
+
+
+
 
 
 
@@ -944,7 +1860,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         shingles = {content[i:i+5] for i in range(max(len(content) - 4, 0))} or {content}
+
+
+
+
 
 
 
@@ -952,7 +1876,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         for sh in shingles:
+
+
+
+
 
 
 
@@ -960,7 +1892,15 @@ class Deduplicator:
 
 
 
+
+
+
+
                                            
+
+
+
+
 
 
 
@@ -968,7 +1908,15 @@ class Deduplicator:
 
 
 
+
+
+
+
             for i in range(num_perm):
+
+
+
+
 
 
 
@@ -976,7 +1924,15 @@ class Deduplicator:
 
 
 
+
+
+
+
                 y = x
+
+
+
+
 
 
 
@@ -984,7 +1940,15 @@ class Deduplicator:
 
 
 
+
+
+
+
                 y = (y ^ (y >> 27)) * 0x94D049BB133111EB & 0xFFFFFFFFFFFFFFFF
+
+
+
+
 
 
 
@@ -992,7 +1956,15 @@ class Deduplicator:
 
 
 
+
+
+
+
                 if y < sig[i]:
+
+
+
+
 
 
 
@@ -1000,7 +1972,15 @@ class Deduplicator:
 
 
 
+
+
+
+
                 x = y
+
+
+
+
 
 
 
@@ -1012,7 +1992,19 @@ class Deduplicator:
 
 
 
+
+
+
+
+
+
+
+
     def _create_minhash(self, content: str) -> Optional['datasketch.MinHash']:
+
+
+
+
 
 
 
@@ -1020,7 +2012,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         if not HAS_DATASKETCH:
+
+
+
+
 
 
 
@@ -1028,7 +2028,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1036,11 +2044,23 @@ class Deduplicator:
 
 
 
+
+
+
+
         shingles = set(content[i:i+5] for i in range(len(content) - 4))
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1048,11 +2068,23 @@ class Deduplicator:
 
 
 
+
+
+
+
             return None
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1060,7 +2092,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         for shingle in shingles:
+
+
+
+
 
 
 
@@ -1068,7 +2108,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1076,7 +2124,15 @@ class Deduplicator:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1084,7 +2140,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         """Check if document is a near-duplicate (exact + MinHash LSH)."""
+
+
+
+
 
 
 
@@ -1092,11 +2156,23 @@ class Deduplicator:
 
 
 
+
+
+
+
         if content_hash in getattr(self, '_exact', set()):
 
 
 
+
+
+
+
             return True
+
+
+
+
 
 
 
@@ -1104,7 +2180,15 @@ class Deduplicator:
 
 
 
+
+
+
+
                                                                                     
+
+
+
+
 
 
 
@@ -1112,7 +2196,15 @@ class Deduplicator:
 
 
 
+
+
+
+
             bands, rows = 16, self.num_perm // 16
+
+
+
+
 
 
 
@@ -1120,7 +2212,15 @@ class Deduplicator:
 
 
 
+
+
+
+
                 key = (b, tuple(sig[b * rows:(b + 1) * rows].tolist()))
+
+
+
+
 
 
 
@@ -1128,7 +2228,15 @@ class Deduplicator:
 
 
 
+
+
+
+
                     sim = float(np.mean(sig == self._sigs[other]))
+
+
+
+
 
 
 
@@ -1136,7 +2244,15 @@ class Deduplicator:
 
 
 
+
+
+
+
                         return True
+
+
+
+
 
 
 
@@ -1144,7 +2260,15 @@ class Deduplicator:
 
 
 
+
+
+
+
             for b in range(bands):
+
+
+
+
 
 
 
@@ -1152,7 +2276,15 @@ class Deduplicator:
 
 
 
+
+
+
+
                 self._buckets.setdefault(key, []).append(doc_id)
+
+
+
+
 
 
 
@@ -1160,11 +2292,23 @@ class Deduplicator:
 
 
 
+
+
+
+
             self.seen.add(doc_id)
 
 
 
+
+
+
+
             return False
+
+
+
+
 
 
 
@@ -1172,7 +2316,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1180,7 +2332,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         if doc_id in self.seen:
+
+
+
+
 
 
 
@@ -1188,7 +2348,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1196,7 +2364,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         minhash = self._create_minhash(content)
+
+
+
+
 
 
 
@@ -1204,11 +2380,23 @@ class Deduplicator:
 
 
 
+
+
+
+
             return False
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1216,7 +2404,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         candidates = self.lsh.query(minhash)
+
+
+
+
 
 
 
@@ -1224,11 +2420,23 @@ class Deduplicator:
 
 
 
+
+
+
+
             return True
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1236,7 +2444,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         self.lsh.insert(doc_id, minhash)
+
+
+
+
 
 
 
@@ -1244,7 +2460,15 @@ class Deduplicator:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1260,7 +2484,23 @@ class Deduplicator:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class DataProcessor:
+
+
+
+
 
 
 
@@ -1268,7 +2508,15 @@ class DataProcessor:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1276,7 +2524,15 @@ class DataProcessor:
 
 
 
+
+
+
+
         self,
+
+
+
+
 
 
 
@@ -1284,7 +2540,15 @@ class DataProcessor:
 
 
 
+
+
+
+
         dedup_threshold: float = 0.8,
+
+
+
+
 
 
 
@@ -1292,7 +2556,15 @@ class DataProcessor:
 
 
 
+
+
+
+
         max_length: int = 100000,
+
+
+
+
 
 
 
@@ -1300,7 +2572,15 @@ class DataProcessor:
 
 
 
+
+
+
+
     ):
+
+
+
+
 
 
 
@@ -1308,7 +2588,15 @@ class DataProcessor:
 
 
 
+
+
+
+
         self.min_length = min_length
+
+
+
+
 
 
 
@@ -1316,11 +2604,23 @@ class DataProcessor:
 
 
 
+
+
+
+
         self.languages = languages or ['python', 'javascript', 'typescript', 'java', 'cpp', 'go', 'rust']
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1328,7 +2628,15 @@ class DataProcessor:
 
 
 
+
+
+
+
         self.scorer = QualityScorer()
+
+
+
+
 
 
 
@@ -1336,7 +2644,15 @@ class DataProcessor:
 
 
 
+
+
+
+
         self.license_filter = LicenseFilter(allow_unknown=False)
+
+
+
+
 
 
 
@@ -1344,7 +2660,15 @@ class DataProcessor:
 
 
 
+
+
+
+
         self.stats = {
+
+
+
+
 
 
 
@@ -1352,7 +2676,15 @@ class DataProcessor:
 
 
 
+
+
+
+
             'filtered_length': 0,
+
+
+
+
 
 
 
@@ -1360,7 +2692,15 @@ class DataProcessor:
 
 
 
+
+
+
+
             'filtered_quality': 0,
+
+
+
+
 
 
 
@@ -1368,7 +2708,15 @@ class DataProcessor:
 
 
 
+
+
+
+
             'kept': 0,
+
+
+
+
 
 
 
@@ -1376,11 +2724,23 @@ class DataProcessor:
 
 
 
+
+
+
+
     
 
 
 
+
+
+
+
     def process_document(self, content: str, source: str, license: str = None) -> Optional[Document]:
+
+
+
+
 
 
 
@@ -1392,11 +2752,23 @@ class DataProcessor:
 
 
 
+
+
+
+
         self.stats['total'] += 1
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1404,7 +2776,15 @@ class DataProcessor:
 
 
 
+
+
+
+
         if len(content) < self.min_length or len(content) > self.max_length:
+
+
+
+
 
 
 
@@ -1412,7 +2792,15 @@ class DataProcessor:
 
 
 
+
+
+
+
             return None
+
+
+
+
 
 
 
@@ -1420,7 +2808,15 @@ class DataProcessor:
 
 
 
+
+
+
+
                                                                     
+
+
+
+
 
 
 
@@ -1428,11 +2824,27 @@ class DataProcessor:
 
 
 
+
+
+
+
             self.stats['filtered_license'] = self.stats.get('filtered_license', 0) + 1
 
 
 
+
+
+
+
             return None
+
+
+
+
+
+
+
+
 
 
 
@@ -1444,7 +2856,15 @@ class DataProcessor:
 
 
 
+
+
+
+
         language = self.detector.detect(content)
+
+
+
+
 
 
 
@@ -1452,7 +2872,15 @@ class DataProcessor:
 
 
 
+
+
+
+
             self.stats['filtered_language'] += 1
+
+
+
+
 
 
 
@@ -1460,11 +2888,23 @@ class DataProcessor:
 
 
 
+
+
+
+
         
 
 
 
+
+
+
+
                          
+
+
+
+
 
 
 
@@ -1472,7 +2912,15 @@ class DataProcessor:
 
 
 
+
+
+
+
             content=content,
+
+
+
+
 
 
 
@@ -1480,7 +2928,15 @@ class DataProcessor:
 
 
 
+
+
+
+
             source=source,
+
+
+
+
 
 
 
@@ -1488,11 +2944,23 @@ class DataProcessor:
 
 
 
+
+
+
+
         )
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1500,7 +2968,15 @@ class DataProcessor:
 
 
 
+
+
+
+
         doc.quality_score = self.scorer.score(doc)
+
+
+
+
 
 
 
@@ -1508,7 +2984,15 @@ class DataProcessor:
 
 
 
+
+
+
+
             self.stats['filtered_quality'] += 1
+
+
+
+
 
 
 
@@ -1516,7 +3000,15 @@ class DataProcessor:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1524,7 +3016,15 @@ class DataProcessor:
 
 
 
+
+
+
+
         doc_id = hashlib.md5(content[:1000].encode()).hexdigest()
+
+
+
+
 
 
 
@@ -1532,7 +3032,15 @@ class DataProcessor:
 
 
 
+
+
+
+
             self.stats['filtered_duplicate'] += 1
+
+
+
+
 
 
 
@@ -1540,7 +3048,15 @@ class DataProcessor:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1548,7 +3064,15 @@ class DataProcessor:
 
 
 
+
+
+
+
         return doc
+
+
+
+
 
 
 
@@ -1556,7 +3080,15 @@ class DataProcessor:
 
 
 
+
+
+
+
     def process_stream(self, documents: Iterator[Tuple[str, str, str]]) -> Iterator[Document]:
+
+
+
+
 
 
 
@@ -1568,7 +3100,15 @@ class DataProcessor:
 
 
 
+
+
+
+
         for content, source, license in documents:
+
+
+
+
 
 
 
@@ -1576,7 +3116,15 @@ class DataProcessor:
 
 
 
+
+
+
+
             if doc:
+
+
+
+
 
 
 
@@ -1584,7 +3132,15 @@ class DataProcessor:
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1592,7 +3148,15 @@ class DataProcessor:
 
 
 
+
+
+
+
             if self.stats['total'] % 10000 == 0:
+
+
+
+
 
 
 
@@ -1600,7 +3164,15 @@ class DataProcessor:
 
 
 
+
+
+
+
                           f"({self.stats['kept']/self.stats['total']*100:.1f}%)")
+
+
+
+
 
 
 
@@ -1608,11 +3180,23 @@ class DataProcessor:
 
 
 
+
+
+
+
     def get_stats(self) -> Dict:
 
 
 
+
+
+
+
         """Get processing statistics."""
+
+
+
+
 
 
 
@@ -1628,7 +3212,23 @@ class DataProcessor:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class DataPacker:
+
+
+
+
 
 
 
@@ -1636,7 +3236,15 @@ class DataPacker:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1644,7 +3252,15 @@ class DataPacker:
 
 
 
+
+
+
+
         self.tokenizer = tokenizer
+
+
+
+
 
 
 
@@ -1652,7 +3268,15 @@ class DataPacker:
 
 
 
+
+
+
+
         self.buffer = []
+
+
+
+
 
 
 
@@ -1660,11 +3284,23 @@ class DataPacker:
 
 
 
+
+
+
+
     
 
 
 
+
+
+
+
     def add_document(self, doc: Document) -> List[np.ndarray]:
+
+
+
+
 
 
 
@@ -1676,7 +3312,15 @@ class DataPacker:
 
 
 
+
+
+
+
                                                                         
+
+
+
+
 
 
 
@@ -1684,7 +3328,15 @@ class DataPacker:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1692,7 +3344,15 @@ class DataPacker:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1700,7 +3360,15 @@ class DataPacker:
 
 
 
+
+
+
+
         self.buffer.extend(tokens)
+
+
+
+
 
 
 
@@ -1708,7 +3376,15 @@ class DataPacker:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1716,7 +3392,15 @@ class DataPacker:
 
 
 
+
+
+
+
         while self.buffer_tokens >= self.seq_length:
+
+
+
+
 
 
 
@@ -1724,7 +3408,15 @@ class DataPacker:
 
 
 
+
+
+
+
             completed_sequences.append(seq)
+
+
+
+
 
 
 
@@ -1732,7 +3424,15 @@ class DataPacker:
 
 
 
+
+
+
+
             self.buffer = self.buffer[self.seq_length:]
+
+
+
+
 
 
 
@@ -1740,7 +3440,15 @@ class DataPacker:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1748,7 +3456,15 @@ class DataPacker:
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1756,7 +3472,15 @@ class DataPacker:
 
 
 
+
+
+
+
         """Flush remaining buffer (may be shorter than seq_length)."""
+
+
+
+
 
 
 
@@ -1764,7 +3488,15 @@ class DataPacker:
 
 
 
+
+
+
+
                                
+
+
+
+
 
 
 
@@ -1772,7 +3504,15 @@ class DataPacker:
 
 
 
+
+
+
+
             seq[:len(self.buffer)] = self.buffer
+
+
+
+
 
 
 
@@ -1780,11 +3520,23 @@ class DataPacker:
 
 
 
+
+
+
+
             self.buffer_tokens = 0
 
 
 
+
+
+
+
             return [seq]
+
+
+
+
 
 
 
@@ -1800,7 +3552,23 @@ class DataPacker:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def process_dataset_parallel(
+
+
+
+
 
 
 
@@ -1808,7 +3576,15 @@ def process_dataset_parallel(
 
 
 
+
+
+
+
     processor: DataProcessor,
+
+
+
+
 
 
 
@@ -1816,7 +3592,15 @@ def process_dataset_parallel(
 
 
 
+
+
+
+
 ) -> Iterator[Document]:
+
+
+
+
 
 
 
@@ -1828,7 +3612,15 @@ def process_dataset_parallel(
 
 
 
+
+
+
+
     if num_workers is None:
+
+
+
+
 
 
 
@@ -1836,7 +3628,15 @@ def process_dataset_parallel(
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1844,7 +3644,15 @@ def process_dataset_parallel(
 
 
 
+
+
+
+
     def process_no_dedup(args):
+
+
+
+
 
 
 
@@ -1852,7 +3660,15 @@ def process_dataset_parallel(
 
 
 
+
+
+
+
                                                   
+
+
+
+
 
 
 
@@ -1860,7 +3676,15 @@ def process_dataset_parallel(
 
 
 
+
+
+
+
             min_quality=processor.min_quality,
+
+
+
+
 
 
 
@@ -1868,7 +3692,15 @@ def process_dataset_parallel(
 
 
 
+
+
+
+
             max_length=processor.max_length,
+
+
+
+
 
 
 
@@ -1876,7 +3708,15 @@ def process_dataset_parallel(
 
 
 
+
+
+
+
         )
+
+
+
+
 
 
 
@@ -1884,7 +3724,15 @@ def process_dataset_parallel(
 
 
 
+
+
+
+
         return temp_proc.process_document(content, source, license)
+
+
+
+
 
 
 
@@ -1892,7 +3740,15 @@ def process_dataset_parallel(
 
 
 
+
+
+
+
     with mp.Pool(num_workers) as pool:
+
+
+
+
 
 
 
@@ -1900,7 +3756,15 @@ def process_dataset_parallel(
 
 
 
+
+
+
+
             if doc:
+
+
+
+
 
 
 
@@ -1908,11 +3772,23 @@ def process_dataset_parallel(
 
 
 
+
+
+
+
                 doc_id = hashlib.md5(doc.content[:1000].encode()).hexdigest()
 
 
 
+
+
+
+
                 if not processor.dedup.is_duplicate(doc_id, doc.content):
+
+
+
+
 
 
 
@@ -1928,7 +3804,23 @@ def process_dataset_parallel(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == '__main__':
+
+
+
+
 
 
 
@@ -1936,11 +3828,23 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
     logging.basicConfig(level=logging.INFO)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1948,7 +3852,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
     processor = DataProcessor(
+
+
+
+
 
 
 
@@ -1956,7 +3868,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
         dedup_threshold=0.8,
+
+
+
+
 
 
 
@@ -1964,11 +3884,23 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
     )
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1976,7 +3908,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
     docs = [
+
+
+
+
 
 
 
@@ -1984,7 +3924,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
         ("function test() { return 42; }", "example.js", "MIT"),
+
+
+
+
 
 
 
@@ -1992,7 +3940,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2000,7 +3956,15 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
     for doc in processor.process_stream(iter(docs)):
+
+
+
+
 
 
 
@@ -2008,11 +3972,23 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
     
 
 
 
+
+
+
+
     print("\nStats:", processor.get_stats())
+
+
+
+
 
 
 

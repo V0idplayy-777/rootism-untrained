@@ -2,6 +2,10 @@
 
 
 
+
+
+
+
 """
 Production Dataset Builder - Integrates Real Code Datasets.
 
@@ -29,7 +33,19 @@ Usage:
 
 
 
+
+
+
+
+
+
+
+
 import os
+
+
+
+
 
 
 
@@ -37,7 +53,15 @@ import sys
 
 
 
+
+
+
+
 import json
+
+
+
+
 
 
 
@@ -45,7 +69,15 @@ import argparse
 
 
 
+
+
+
+
 import logging
+
+
+
+
 
 
 
@@ -53,7 +85,15 @@ import hashlib
 
 
 
+
+
+
+
 from pathlib import Path
+
+
+
+
 
 
 
@@ -61,7 +101,15 @@ from typing import List, Dict, Any, Iterator, Optional
 
 
 
+
+
+
+
 from dataclasses import dataclass
+
+
+
+
 
 
 
@@ -69,7 +117,19 @@ import tempfile
 
 
 
+
+
+
+
 import shutil
+
+
+
+
+
+
+
+
 
 
 
@@ -85,7 +145,19 @@ import numpy as np
 
 
 
+
+
+
+
+
+
+
+
                     
+
+
+
+
 
 
 
@@ -97,7 +169,19 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 
+
+
+
+
+
+
+
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+
+
+
 
 
 
@@ -113,7 +197,23 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -121,7 +221,19 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -133,7 +245,15 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
 class DatasetConfig:
+
+
+
+
 
 
 
@@ -141,7 +261,15 @@ class DatasetConfig:
 
 
 
+
+
+
+
     name: str
+
+
+
+
 
 
 
@@ -149,7 +277,15 @@ class DatasetConfig:
 
 
 
+
+
+
+
     description: str
+
+
+
+
 
 
 
@@ -157,11 +293,23 @@ class DatasetConfig:
 
 
 
+
+
+
+
     estimated_tokens: str
 
 
 
+
+
+
+
     license: str
+
+
+
+
 
 
 
@@ -177,7 +325,23 @@ class DatasetConfig:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 DATASETS = {
+
+
+
+
 
 
 
@@ -185,7 +349,15 @@ DATASETS = {
 
 
 
+
+
+
+
         name="The Stack",
+
+
+
+
 
 
 
@@ -193,7 +365,15 @@ DATASETS = {
 
 
 
+
+
+
+
         description="300B+ tokens of permissively licensed code from GitHub",
+
+
+
+
 
 
 
@@ -201,7 +381,15 @@ DATASETS = {
 
 
 
+
+
+
+
         estimated_tokens="300B+",
+
+
+
+
 
 
 
@@ -209,11 +397,23 @@ DATASETS = {
 
 
 
+
+
+
+
         url="https://huggingface.co/datasets/bigcode/the-stack",
 
 
 
+
+
+
+
     ),
+
+
+
+
 
 
 
@@ -221,7 +421,15 @@ DATASETS = {
 
 
 
+
+
+
+
         name="StarCoderData",
+
+
+
+
 
 
 
@@ -229,7 +437,15 @@ DATASETS = {
 
 
 
+
+
+
+
         description="1T+ tokens of code and GitHub issues/PRs",
+
+
+
+
 
 
 
@@ -237,7 +453,15 @@ DATASETS = {
 
 
 
+
+
+
+
         estimated_tokens="1T+",
+
+
+
+
 
 
 
@@ -245,11 +469,23 @@ DATASETS = {
 
 
 
+
+
+
+
         url="https://huggingface.co/datasets/bigcode/starcoderdata",
 
 
 
+
+
+
+
     ),
+
+
+
+
 
 
 
@@ -257,7 +493,15 @@ DATASETS = {
 
 
 
+
+
+
+
         name="OpenCoder",
+
+
+
+
 
 
 
@@ -265,7 +509,15 @@ DATASETS = {
 
 
 
+
+
+
+
         description="High-quality instruction-tuning code data",
+
+
+
+
 
 
 
@@ -273,11 +525,23 @@ DATASETS = {
 
 
 
+
+
+
+
         estimated_tokens="5B",
 
 
 
+
+
+
+
         license="Apache 2.0",
+
+
+
+
 
 
 
@@ -285,7 +549,15 @@ DATASETS = {
 
 
 
+
+
+
+
     ),
+
+
+
+
 
 
 
@@ -293,7 +565,15 @@ DATASETS = {
 
 
 
+
+
+
+
         name="CodeAlpaca",
+
+
+
+
 
 
 
@@ -301,7 +581,15 @@ DATASETS = {
 
 
 
+
+
+
+
         description="20K instruction-following code examples",
+
+
+
+
 
 
 
@@ -309,7 +597,15 @@ DATASETS = {
 
 
 
+
+
+
+
         estimated_tokens="100M",
+
+
+
+
 
 
 
@@ -317,11 +613,23 @@ DATASETS = {
 
 
 
+
+
+
+
         url="https://huggingface.co/datasets/sahil2801/Code-Feedback-66K",
 
 
 
+
+
+
+
     ),
+
+
+
+
 
 
 
@@ -337,7 +645,23 @@ DATASETS = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -345,7 +669,19 @@ DATASETS = {
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -357,7 +693,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
     dataset_id: str,
+
+
+
+
 
 
 
@@ -365,7 +709,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
     max_samples: int = None,
+
+
+
+
 
 
 
@@ -373,7 +725,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
 ) -> Iterator[Dict[str, Any]]:
+
+
+
+
 
 
 
@@ -392,7 +752,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
     try:
+
+
+
+
 
 
 
@@ -400,7 +768,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
     except ImportError:
+
+
+
+
 
 
 
@@ -408,11 +784,23 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
         sys.exit(1)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -420,7 +808,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -428,7 +824,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
     if streaming:
+
+
+
+
 
 
 
@@ -436,7 +840,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
     else:
+
+
+
+
 
 
 
@@ -444,7 +856,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -452,7 +872,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
     for sample in dataset:
+
+
+
+
 
 
 
@@ -460,7 +888,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
         if languages:
+
+
+
+
 
 
 
@@ -468,7 +904,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
             if lang and lang not in languages:
+
+
+
+
 
 
 
@@ -476,7 +920,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -484,7 +936,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
         content = None
+
+
+
+
 
 
 
@@ -492,7 +952,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
             content = sample["content"]
+
+
+
+
 
 
 
@@ -500,7 +968,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
             content = sample["text"]
+
+
+
+
 
 
 
@@ -508,7 +984,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
             content = sample["code"]
+
+
+
+
 
 
 
@@ -516,7 +1000,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
                                 
+
+
+
+
 
 
 
@@ -524,7 +1016,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -532,7 +1032,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
             yield {
+
+
+
+
 
 
 
@@ -540,7 +1048,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
                 "language": sample.get("lang", sample.get("language", "unknown")),
+
+
+
+
 
 
 
@@ -548,11 +1064,23 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
             }
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -560,7 +1088,15 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
             if max_samples and count >= max_samples:
+
+
+
+
 
 
 
@@ -568,11 +1104,23 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
             
 
 
 
+
+
+
+
             if count % 10000 == 0:
+
+
+
+
 
 
 
@@ -588,7 +1136,23 @@ def download_huggingface_dataset(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def format_instruction(sample: Dict) -> str:
+
+
+
+
 
 
 
@@ -596,11 +1160,23 @@ def format_instruction(sample: Dict) -> str:
 
 
 
+
+
+
+
     parts = []
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -608,11 +1184,23 @@ def format_instruction(sample: Dict) -> str:
 
 
 
+
+
+
+
         parts.append(f"<|user|>\n{sample['instruction']}\n<eos>")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -620,11 +1208,23 @@ def format_instruction(sample: Dict) -> str:
 
 
 
+
+
+
+
         parts.append(f"```\n{sample['input']}\n```\n<eos>")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -632,11 +1232,23 @@ def format_instruction(sample: Dict) -> str:
 
 
 
+
+
+
+
         parts.append(f"<|assistant|>\n{sample['output']}\n<eos>")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -652,7 +1264,23 @@ def format_instruction(sample: Dict) -> str:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[Dict[str, Any]]:
+
+
+
+
 
 
 
@@ -669,7 +1297,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
     if extensions is None:
+
+
+
+
 
 
 
@@ -677,7 +1313,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -685,7 +1329,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -693,7 +1345,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
     repos = [d for d in repos_path.iterdir() if d.is_dir() and (d / '.git').exists()]
+
+
+
+
 
 
 
@@ -701,7 +1361,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -709,7 +1377,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
         logger.info(f"  Processing {repo.name}")
+
+
+
+
 
 
 
@@ -717,7 +1393,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
         for ext in extensions:
+
+
+
+
 
 
 
@@ -725,11 +1409,23 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
                 try:
 
 
 
+
+
+
+
                                                         
+
+
+
+
 
 
 
@@ -737,11 +1433,23 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
                         continue
 
 
 
+
+
+
+
                     
+
+
+
+
 
 
 
@@ -749,7 +1457,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
                         content = f.read()
+
+
+
+
 
 
 
@@ -757,7 +1473,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
                     if len(content) > 100:
+
+
+
+
 
 
 
@@ -765,7 +1489,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
                         lang_map = {
+
+
+
+
 
 
 
@@ -773,7 +1505,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
                             '.java': 'java', '.cpp': 'cpp', '.c': 'c', '.go': 'go',
+
+
+
+
 
 
 
@@ -781,7 +1521,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
                         }
+
+
+
+
 
 
 
@@ -789,7 +1537,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
                         
+
+
+
+
 
 
 
@@ -797,7 +1553,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
                             "content": content,
+
+
+
+
 
 
 
@@ -805,7 +1569,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
                             "metadata": {
+
+
+
+
 
 
 
@@ -813,7 +1585,15 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
                                 "file": str(filepath.relative_to(repo)),
+
+
+
+
 
 
 
@@ -821,11 +1601,23 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
                         }
 
 
 
+
+
+
+
                 except Exception as e:
+
+
+
+
 
 
 
@@ -841,7 +1633,23 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -849,7 +1657,19 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -858,6 +1678,10 @@ def load_local_repos(repos_dir: str, extensions: List[str] = None) -> Iterator[D
 
 
 def deduplicate_documents(documents: Iterator[Dict[str, Any]], threshold: float = 0.85) -> Iterator[Dict[str, Any]]:
+
+
+
+
 
 
 
@@ -874,11 +1698,23 @@ def deduplicate_documents(documents: Iterator[Dict[str, Any]], threshold: float 
 
 
 
+
+
+
+
     from dataset.processor import TextDeduplicator
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -886,7 +1722,15 @@ def deduplicate_documents(documents: Iterator[Dict[str, Any]], threshold: float 
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -894,7 +1738,15 @@ def deduplicate_documents(documents: Iterator[Dict[str, Any]], threshold: float 
 
 
 
+
+
+
+
     duplicates = 0
+
+
+
+
 
 
 
@@ -902,7 +1754,15 @@ def deduplicate_documents(documents: Iterator[Dict[str, Any]], threshold: float 
 
 
 
+
+
+
+
     for doc in documents:
+
+
+
+
 
 
 
@@ -910,7 +1770,15 @@ def deduplicate_documents(documents: Iterator[Dict[str, Any]], threshold: float 
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -918,7 +1786,15 @@ def deduplicate_documents(documents: Iterator[Dict[str, Any]], threshold: float 
 
 
 
+
+
+
+
             yield doc
+
+
+
+
 
 
 
@@ -926,7 +1802,15 @@ def deduplicate_documents(documents: Iterator[Dict[str, Any]], threshold: float 
 
 
 
+
+
+
+
         else:
+
+
+
+
 
 
 
@@ -934,11 +1818,23 @@ def deduplicate_documents(documents: Iterator[Dict[str, Any]], threshold: float 
 
 
 
+
+
+
+
         
 
 
 
+
+
+
+
         if (count + duplicates) % 10000 == 0:
+
+
+
+
 
 
 
@@ -954,7 +1850,23 @@ def deduplicate_documents(documents: Iterator[Dict[str, Any]], threshold: float 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def quality_filter(documents: Iterator[Dict[str, Any]]) -> Iterator[Dict[str, Any]]:
+
+
+
+
 
 
 
@@ -962,11 +1874,23 @@ def quality_filter(documents: Iterator[Dict[str, Any]]) -> Iterator[Dict[str, An
 
 
 
+
+
+
+
     from dataset.processor import QualityFilter
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -974,7 +1898,15 @@ def quality_filter(documents: Iterator[Dict[str, Any]]) -> Iterator[Dict[str, An
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -982,7 +1914,15 @@ def quality_filter(documents: Iterator[Dict[str, Any]]) -> Iterator[Dict[str, An
 
 
 
+
+
+
+
     filtered = 0
+
+
+
+
 
 
 
@@ -990,7 +1930,15 @@ def quality_filter(documents: Iterator[Dict[str, Any]]) -> Iterator[Dict[str, An
 
 
 
+
+
+
+
     for doc in documents:
+
+
+
+
 
 
 
@@ -998,7 +1946,15 @@ def quality_filter(documents: Iterator[Dict[str, Any]]) -> Iterator[Dict[str, An
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1006,7 +1962,15 @@ def quality_filter(documents: Iterator[Dict[str, Any]]) -> Iterator[Dict[str, An
 
 
 
+
+
+
+
             yield doc
+
+
+
+
 
 
 
@@ -1014,7 +1978,15 @@ def quality_filter(documents: Iterator[Dict[str, Any]]) -> Iterator[Dict[str, An
 
 
 
+
+
+
+
         else:
+
+
+
+
 
 
 
@@ -1022,11 +1994,23 @@ def quality_filter(documents: Iterator[Dict[str, Any]]) -> Iterator[Dict[str, An
 
 
 
+
+
+
+
         
 
 
 
+
+
+
+
         if (count + filtered) % 10000 == 0:
+
+
+
+
 
 
 
@@ -1042,7 +2026,23 @@ def quality_filter(documents: Iterator[Dict[str, Any]]) -> Iterator[Dict[str, An
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -1050,7 +2050,19 @@ def quality_filter(documents: Iterator[Dict[str, Any]]) -> Iterator[Dict[str, An
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -1062,11 +2074,23 @@ class DatasetBuilder:
 
 
 
+
+
+
+
     """Build production training dataset from multiple sources."""
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1074,7 +2098,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         self.output_dir = Path(output_dir)
+
+
+
+
 
 
 
@@ -1082,7 +2114,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         self.tokenizer = tokenizer
+
+
+
+
 
 
 
@@ -1090,7 +2130,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
     def build(
+
+
+
+
 
 
 
@@ -1098,7 +2146,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         dataset_names: List[str],
+
+
+
+
 
 
 
@@ -1106,7 +2162,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         max_samples_per_dataset: Optional[int] = None,
+
+
+
+
 
 
 
@@ -1114,7 +2178,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
     ) -> Dict[str, Any]:
+
+
+
+
 
 
 
@@ -1133,7 +2205,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         stats = {
+
+
+
+
 
 
 
@@ -1141,7 +2221,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             "total_documents": 0,
+
+
+
+
 
 
 
@@ -1149,11 +2237,23 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         }
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1161,7 +2261,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1169,7 +2277,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         for name in dataset_names:
+
+
+
+
 
 
 
@@ -1177,7 +2293,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
                 logger.warning(f"Unknown dataset: {name}")
+
+
+
+
 
 
 
@@ -1185,7 +2309,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1193,7 +2325,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             logger.info(f"\n{'='*60}")
+
+
+
+
 
 
 
@@ -1201,7 +2341,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             logger.info(f"{'='*60}")
+
+
+
+
 
 
 
@@ -1209,11 +2357,23 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             logger.info(f"Estimated tokens: {config.estimated_tokens}")
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1221,7 +2381,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             documents = download_huggingface_dataset(
+
+
+
+
 
 
 
@@ -1229,7 +2397,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
                 languages=languages or config.languages,
+
+
+
+
 
 
 
@@ -1237,7 +2413,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
                 streaming=True,
+
+
+
+
 
 
 
@@ -1245,7 +2429,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1253,7 +2445,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             documents = quality_filter(documents)
+
+
+
+
 
 
 
@@ -1261,7 +2461,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1269,7 +2477,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             count = 0
+
+
+
+
 
 
 
@@ -1277,7 +2493,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
                 all_documents.append(doc)
+
+
+
+
 
 
 
@@ -1285,7 +2509,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1293,11 +2525,23 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             stats["total_documents"] += count
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1305,7 +2549,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1313,7 +2565,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         if local_repos:
+
+
+
+
 
 
 
@@ -1321,7 +2581,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             logger.info(f"Processing local repositories")
+
+
+
+
 
 
 
@@ -1329,7 +2597,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1337,7 +2613,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             documents = quality_filter(documents)
+
+
+
+
 
 
 
@@ -1345,7 +2629,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1353,7 +2645,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             for doc in documents:
+
+
+
+
 
 
 
@@ -1361,11 +2661,23 @@ class DatasetBuilder:
 
 
 
+
+
+
+
                 count += 1
 
 
 
+
+
+
+
             
+
+
+
+
 
 
 
@@ -1373,7 +2685,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             stats["total_documents"] += count
+
+
+
+
 
 
 
@@ -1381,11 +2701,23 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             logger.info(f"  Added {count:,} documents from local repos")
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1393,7 +2725,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         logger.info(f"\n{'='*60}")
+
+
+
+
 
 
 
@@ -1401,11 +2741,23 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         logger.info(f"{'='*60}")
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1413,7 +2765,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1421,7 +2781,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             max_seq_length=8192,
+
+
+
+
 
 
 
@@ -1429,7 +2797,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             val_split=0.04,
+
+
+
+
 
 
 
@@ -1437,11 +2813,23 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         )
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1449,7 +2837,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1457,7 +2853,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         raw_texts = [
+
+
+
+
 
 
 
@@ -1465,7 +2869,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             for doc in all_documents
+
+
+
+
 
 
 
@@ -1473,7 +2885,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1481,7 +2901,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1489,11 +2917,23 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         stats["total_tokens"] = proc_stats.get("total_tokens", 0)
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1501,7 +2941,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         manifest = {
+
+
+
+
 
 
 
@@ -1509,7 +2957,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             "local_repos": local_repos,
+
+
+
+
 
 
 
@@ -1517,7 +2973,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             "statistics": stats,
+
+
+
+
 
 
 
@@ -1525,7 +2989,15 @@ class DatasetBuilder:
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1533,11 +3005,23 @@ class DatasetBuilder:
 
 
 
+
+
+
+
             json.dump(manifest, f, indent=2)
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1553,7 +3037,23 @@ class DatasetBuilder:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -1561,7 +3061,19 @@ class DatasetBuilder:
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -1573,7 +3085,15 @@ def main():
 
 
 
+
+
+
+
     parser = argparse.ArgumentParser(description="Build production dataset from real sources")
+
+
+
+
 
 
 
@@ -1581,7 +3101,15 @@ def main():
 
 
 
+
+
+
+
                        help="Comma-separated dataset names (the-stack,starcoderdata,opencoder,codealpaca)")
+
+
+
+
 
 
 
@@ -1589,7 +3117,15 @@ def main():
 
 
 
+
+
+
+
                        help="Path to directory with local git repositories")
+
+
+
+
 
 
 
@@ -1597,7 +3133,15 @@ def main():
 
 
 
+
+
+
+
                        help="Output directory")
+
+
+
+
 
 
 
@@ -1605,7 +3149,15 @@ def main():
 
 
 
+
+
+
+
                        help="Path to trained tokenizer")
+
+
+
+
 
 
 
@@ -1613,7 +3165,15 @@ def main():
 
 
 
+
+
+
+
                        help="Comma-separated languages to filter (e.g., python,javascript)")
+
+
+
+
 
 
 
@@ -1621,7 +3181,15 @@ def main():
 
 
 
+
+
+
+
                        help="Max samples per dataset")
+
+
+
+
 
 
 
@@ -1629,7 +3197,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1637,7 +3213,15 @@ def main():
 
 
 
+
+
+
+
     dataset_names = [d.strip() for d in args.dataset.split(",")]
+
+
+
+
 
 
 
@@ -1645,7 +3229,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1653,7 +3245,15 @@ def main():
 
 
 
+
+
+
+
     logger.info(f"Loading tokenizer from {args.tokenizer}")
+
+
+
+
 
 
 
@@ -1661,7 +3261,15 @@ def main():
 
 
 
+
+
+
+
     tokenizer = CodeTokenizer.load(args.tokenizer)
+
+
+
+
 
 
 
@@ -1669,7 +3277,15 @@ def main():
 
 
 
+
+
+
+
                    
+
+
+
+
 
 
 
@@ -1677,7 +3293,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1685,7 +3309,15 @@ def main():
 
 
 
+
+
+
+
         dataset_names=dataset_names,
+
+
+
+
 
 
 
@@ -1693,7 +3325,15 @@ def main():
 
 
 
+
+
+
+
         max_samples_per_dataset=args.max_samples,
+
+
+
+
 
 
 
@@ -1701,11 +3341,23 @@ def main():
 
 
 
+
+
+
+
     )
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1713,7 +3365,15 @@ def main():
 
 
 
+
+
+
+
     logger.info(f"\n{'='*60}")
+
+
+
+
 
 
 
@@ -1721,7 +3381,15 @@ def main():
 
 
 
+
+
+
+
     logger.info(f"{'='*60}")
+
+
+
+
 
 
 
@@ -1729,7 +3397,15 @@ def main():
 
 
 
+
+
+
+
     logger.info(f"Total tokens: {stats['total_tokens']:,}")
+
+
+
+
 
 
 
@@ -1737,7 +3413,15 @@ def main():
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1745,7 +3429,15 @@ def main():
 
 
 
+
+
+
+
     for dataset, dataset_stats in stats["datasets"].items():
+
+
+
+
 
 
 
@@ -1753,11 +3445,23 @@ def main():
 
 
 
+
+
+
+
     
 
 
 
+
+
+
+
     print(f"\nReady for training!")
+
+
+
+
 
 
 
@@ -1773,11 +3477,31 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
 
 
 
+
+
+
+
     main()
+
+
+
+
 
 
 

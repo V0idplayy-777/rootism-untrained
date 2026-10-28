@@ -2,7 +2,19 @@ import numpy as np
 
 
 
+
+
+
+
 import pytest
+
+
+
+
+
+
+
+
 
 
 
@@ -14,7 +26,15 @@ from dataset.mixture import DEFAULT_MIXTURE, MixtureSampler, curriculum_order
 
 
 
+
+
+
+
 from dataset.packing import SequencePacker, pack_documents
+
+
+
+
 
 
 
@@ -22,7 +42,15 @@ from dataset.production_processor import DataProcessor, LanguageDetector, Licens
 
 
 
+
+
+
+
 from evaluation.production_evaluate import ContaminationChecker, compute_pass_at_k, evaluate_trajectories, Trajectory
+
+
+
+
 
 
 
@@ -38,7 +66,23 @@ from training.schedules import cosine_lr, dpo_loss, seq_length_at, wsd_lr
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def test_language_license_quality_gates():
+
+
+
+
 
 
 
@@ -46,7 +90,15 @@ def test_language_license_quality_gates():
 
 
 
+
+
+
+
     assert LanguageDetector.detect("#!/usr/bin/env python3\nprint(1)\n") == "python"
+
+
+
+
 
 
 
@@ -54,7 +106,15 @@ def test_language_license_quality_gates():
 
 
 
+
+
+
+
     assert lic.allows("MIT") and lic.allows("Apache-2.0") and not lic.allows("GPL-3.0") and not lic.allows(None)
+
+
+
+
 
 
 
@@ -62,7 +122,15 @@ def test_language_license_quality_gates():
 
 
 
+
+
+
+
     good = "def f(x):\n    \"\"\"doc\"\"\"\n    # comment\n    return x + 1\n" * 3
+
+
+
+
 
 
 
@@ -70,11 +138,23 @@ def test_language_license_quality_gates():
 
 
 
+
+
+
+
     assert proc.process_document(good, "a.py", "Proprietary") is None                    
 
 
 
+
+
+
+
     broken = "def broken(:\n" * 10
+
+
+
+
 
 
 
@@ -90,7 +170,23 @@ def test_language_license_quality_gates():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def test_packing_masks_pads_and_resets_positions(tokenizer):
+
+
+
+
 
 
 
@@ -98,7 +194,15 @@ def test_packing_masks_pads_and_resets_positions(tokenizer):
 
 
 
+
+
+
+
     assert seqs
+
+
+
+
 
 
 
@@ -106,11 +210,23 @@ def test_packing_masks_pads_and_resets_positions(tokenizer):
 
 
 
+
+
+
+
     assert (s.labels[s.doc_ids == -1] == -100).all()
 
 
 
+
+
+
+
     assert s.position_ids[0] == 0
+
+
+
+
 
 
 
@@ -126,7 +242,23 @@ def test_packing_masks_pads_and_resets_positions(tokenizer):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def test_mixture_and_curriculum():
+
+
+
+
 
 
 
@@ -134,7 +266,15 @@ def test_mixture_and_curriculum():
 
 
 
+
+
+
+
     items = list(MixtureSampler(pools, seed=1).sample(20))
+
+
+
+
 
 
 
@@ -142,11 +282,23 @@ def test_mixture_and_curriculum():
 
 
 
+
+
+
+
     docs = [{"content": "x" * i, "quality_score": 0.5} for i in (10, 500, 50)]
 
 
 
+
+
+
+
     assert len(curriculum_order(docs, step=0, total_steps=10)) == 3
+
+
+
+
 
 
 
@@ -162,7 +314,23 @@ def test_mixture_and_curriculum():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def test_eval_metrics_contamination_trajectories():
+
+
+
+
 
 
 
@@ -170,7 +338,15 @@ def test_eval_metrics_contamination_trajectories():
 
 
 
+
+
+
+
     chk = ContaminationChecker(n=3)
+
+
+
+
 
 
 
@@ -178,7 +354,15 @@ def test_eval_metrics_contamination_trajectories():
 
 
 
+
+
+
+
     assert chk.check("the quick brown fox sleeps")["contaminated"]
+
+
+
+
 
 
 
@@ -186,7 +370,15 @@ def test_eval_metrics_contamination_trajectories():
 
 
 
+
+
+
+
     metrics = evaluate_trajectories([
+
+
+
+
 
 
 
@@ -194,7 +386,15 @@ def test_eval_metrics_contamination_trajectories():
 
 
 
+
+
+
+
         Trajectory("t2", [{"tool": None, "result": {"error": "bad json"}},
+
+
+
+
 
 
 
@@ -202,7 +402,15 @@ def test_eval_metrics_contamination_trajectories():
 
 
 
+
+
+
+
     ])
+
+
+
+
 
 
 
@@ -218,7 +426,23 @@ def test_eval_metrics_contamination_trajectories():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def test_schedules_and_dpo():
+
+
+
+
 
 
 
@@ -226,7 +450,15 @@ def test_schedules_and_dpo():
 
 
 
+
+
+
+
     assert wsd_lr(500, 1e-3, 1e-5, 100, 800, 1000) == 1e-3
+
+
+
+
 
 
 
@@ -234,7 +466,15 @@ def test_schedules_and_dpo():
 
 
 
+
+
+
+
     loss, stats = dpo_loss(torch.tensor([1.0]), torch.tensor([0.0]),
+
+
+
+
 
 
 
@@ -242,7 +482,15 @@ def test_schedules_and_dpo():
 
 
 
+
+
+
+
     assert torch.isfinite(loss) and stats["margin"] > 0
+
+
+
+
 
 
 

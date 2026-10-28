@@ -2,6 +2,10 @@
 
 
 
+
+
+
+
 """
 Train a production-grade tokenizer on real code data.
 
@@ -25,7 +29,19 @@ Usage:
 
 
 
+
+
+
+
+
+
+
+
 import os
+
+
+
+
 
 
 
@@ -33,7 +49,15 @@ import sys
 
 
 
+
+
+
+
 import json
+
+
+
+
 
 
 
@@ -41,7 +65,15 @@ import argparse
 
 
 
+
+
+
+
 import logging
+
+
+
+
 
 
 
@@ -49,11 +81,23 @@ from pathlib import Path
 
 
 
+
+
+
+
 from typing import List, Iterator, Optional
 
 
 
+
+
+
+
 import tempfile
+
+
+
+
 
 
 
@@ -65,7 +109,19 @@ import shutil
 
 
 
+
+
+
+
+
+
+
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+
+
+
 
 
 
@@ -81,7 +137,23 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -89,7 +161,19 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -101,7 +185,15 @@ def load_code_from_directory(data_dir: str, extensions: List[str] = None) -> Ite
 
 
 
+
+
+
+
     """Load code files from a directory."""
+
+
+
+
 
 
 
@@ -109,7 +201,15 @@ def load_code_from_directory(data_dir: str, extensions: List[str] = None) -> Ite
 
 
 
+
+
+
+
         extensions = ['.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.cpp', '.c', '.h', 
+
+
+
+
 
 
 
@@ -117,7 +217,15 @@ def load_code_from_directory(data_dir: str, extensions: List[str] = None) -> Ite
 
 
 
+
+
+
+
                      '.html', '.css', '.sql', '.sh', '.bash', '.yml', '.yaml', '.json',
+
+
+
+
 
 
 
@@ -125,7 +233,15 @@ def load_code_from_directory(data_dir: str, extensions: List[str] = None) -> Ite
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -133,7 +249,15 @@ def load_code_from_directory(data_dir: str, extensions: List[str] = None) -> Ite
 
 
 
+
+
+
+
     files = []
+
+
+
+
 
 
 
@@ -141,11 +265,23 @@ def load_code_from_directory(data_dir: str, extensions: List[str] = None) -> Ite
 
 
 
+
+
+
+
         files.extend(data_path.rglob(f'*{ext}'))
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -153,7 +289,15 @@ def load_code_from_directory(data_dir: str, extensions: List[str] = None) -> Ite
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -161,7 +305,15 @@ def load_code_from_directory(data_dir: str, extensions: List[str] = None) -> Ite
 
 
 
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -169,7 +321,15 @@ def load_code_from_directory(data_dir: str, extensions: List[str] = None) -> Ite
 
 
 
+
+
+
+
                 content = f.read()
+
+
+
+
 
 
 
@@ -177,11 +337,23 @@ def load_code_from_directory(data_dir: str, extensions: List[str] = None) -> Ite
 
 
 
+
+
+
+
                     yield content
 
 
 
+
+
+
+
         except Exception as e:
+
+
+
+
 
 
 
@@ -197,7 +369,23 @@ def load_code_from_directory(data_dir: str, extensions: List[str] = None) -> Ite
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def load_from_huggingface(dataset_name: str, split: str = "train", 
+
+
+
+
 
 
 
@@ -205,7 +393,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
     """Load code from HuggingFace datasets."""
+
+
+
+
 
 
 
@@ -213,7 +409,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
         from datasets import load_dataset
+
+
+
+
 
 
 
@@ -221,7 +425,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
         logger.error("Install datasets: pip install datasets")
+
+
+
+
 
 
 
@@ -229,7 +441,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -237,7 +457,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -245,7 +473,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
         dataset = load_dataset(dataset_name, split=split, streaming=True)
+
+
+
+
 
 
 
@@ -253,7 +489,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
         for sample in dataset:
+
+
+
+
 
 
 
@@ -261,7 +505,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
             if 'content' in sample:
+
+
+
+
 
 
 
@@ -269,7 +521,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
             elif 'text' in sample:
+
+
+
+
 
 
 
@@ -277,11 +537,23 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
             elif 'code' in sample:
 
 
 
+
+
+
+
                 yield sample['code']
+
+
+
+
 
 
 
@@ -289,7 +561,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
             count += 1
+
+
+
+
 
 
 
@@ -297,7 +577,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
                 break
+
+
+
+
 
 
 
@@ -305,7 +593,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
                 logger.info(f"  Loaded {count} samples")
+
+
+
+
 
 
 
@@ -313,7 +609,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
         dataset = load_dataset(dataset_name, split=split)
+
+
+
+
 
 
 
@@ -321,7 +625,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
             if 'content' in sample:
+
+
+
+
 
 
 
@@ -329,7 +641,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
             elif 'text' in sample:
+
+
+
+
 
 
 
@@ -337,7 +657,15 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
             elif 'code' in sample:
+
+
+
+
 
 
 
@@ -353,7 +681,23 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -361,7 +705,19 @@ def load_from_huggingface(dataset_name: str, split: str = "train",
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -373,7 +729,15 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
     """Train a tiktoken BPE tokenizer."""
+
+
+
+
 
 
 
@@ -381,7 +745,15 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
         import tiktoken
+
+
+
+
 
 
 
@@ -389,7 +761,15 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
     except ImportError:
+
+
+
+
 
 
 
@@ -397,11 +777,23 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
         sys.exit(1)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -409,7 +801,15 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -417,7 +817,15 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
     logger.info("Collecting training text...")
+
+
+
+
 
 
 
@@ -425,11 +833,23 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
     total_chars = 0
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -437,7 +857,15 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
         training_text.append(text)
+
+
+
+
 
 
 
@@ -445,7 +873,15 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
         if total_chars > 10_000_000:                       
+
+
+
+
 
 
 
@@ -453,7 +889,15 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -461,7 +905,15 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -469,7 +921,15 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
                                                                                      
+
+
+
+
 
 
 
@@ -477,11 +937,23 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
     logger.info("Training BPE merges...")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -489,7 +961,15 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
                                                          
+
+
+
+
 
 
 
@@ -497,7 +977,15 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -505,11 +993,23 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
     tokenizer = trainer.train(training_text, verbose=True)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -517,7 +1017,15 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
     os.makedirs(output_dir, exist_ok=True)
+
+
+
+
 
 
 
@@ -525,7 +1033,15 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -533,11 +1049,23 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
     logger.info(f"Vocabulary size: {tokenizer.vocab_size}")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -553,7 +1081,23 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -561,7 +1105,19 @@ def train_tiktoken(text_iterator: Iterator[str], vocab_size: int, output_dir: st
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -573,7 +1129,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
     """Train a SentencePiece tokenizer."""
+
+
+
+
 
 
 
@@ -581,7 +1145,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
         import sentencepiece as spm
+
+
+
+
 
 
 
@@ -589,7 +1161,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
         logger.error("Install sentencepiece: pip install sentencepiece")
+
+
+
+
 
 
 
@@ -597,7 +1177,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -605,7 +1193,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -613,7 +1209,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
     with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as f:
+
+
+
+
 
 
 
@@ -621,7 +1225,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
         total_chars = 0
+
+
+
+
 
 
 
@@ -629,7 +1241,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
         for text in text_iterator:
+
+
+
+
 
 
 
@@ -637,7 +1257,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
             total_chars += len(text)
+
+
+
+
 
 
 
@@ -645,11 +1273,23 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
                 break
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -657,7 +1297,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -665,7 +1313,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
     os.makedirs(output_dir, exist_ok=True)
+
+
+
+
 
 
 
@@ -673,7 +1329,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -681,7 +1345,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
         input=temp_path,
+
+
+
+
 
 
 
@@ -689,7 +1361,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
         vocab_size=vocab_size,
+
+
+
+
 
 
 
@@ -697,7 +1377,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
         character_coverage=1.0,
+
+
+
+
 
 
 
@@ -705,7 +1393,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
         byte_fallback=True,                            
+
+
+
+
 
 
 
@@ -713,7 +1409,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
         split_by_whitespace=False,                      
+
+
+
+
 
 
 
@@ -721,7 +1425,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
         add_dummy_prefix=False,                                
+
+
+
+
 
 
 
@@ -729,7 +1441,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
         shuffle_input_sentence=True,
+
+
+
+
 
 
 
@@ -737,7 +1457,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -745,11 +1473,23 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
     os.unlink(temp_path)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -757,7 +1497,15 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -765,11 +1513,23 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
     create_sentencepiece_wrapper(model_prefix, output_dir)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -785,7 +1545,23 @@ def train_sentencepiece(text_iterator: Iterator[str], vocab_size: int, output_di
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def create_sentencepiece_wrapper(model_prefix: str, output_dir: str):
+
+
+
+
 
 
 
@@ -793,11 +1569,23 @@ def create_sentencepiece_wrapper(model_prefix: str, output_dir: str):
 
 
 
+
+
+
+
     import sentencepiece as spm
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -805,11 +1593,23 @@ def create_sentencepiece_wrapper(model_prefix: str, output_dir: str):
 
 
 
+
+
+
+
     sp.load(f"{model_prefix}.model")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -817,7 +1617,15 @@ def create_sentencepiece_wrapper(model_prefix: str, output_dir: str):
 
 
 
+
+
+
+
     vocab = {}
+
+
+
+
 
 
 
@@ -825,7 +1633,15 @@ def create_sentencepiece_wrapper(model_prefix: str, output_dir: str):
 
 
 
+
+
+
+
         piece = sp.id_to_piece(i)
+
+
+
+
 
 
 
@@ -833,7 +1649,15 @@ def create_sentencepiece_wrapper(model_prefix: str, output_dir: str):
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -841,7 +1665,15 @@ def create_sentencepiece_wrapper(model_prefix: str, output_dir: str):
 
 
 
+
+
+
+
     vocab_path = os.path.join(output_dir, "vocab.json")
+
+
+
+
 
 
 
@@ -849,11 +1681,23 @@ def create_sentencepiece_wrapper(model_prefix: str, output_dir: str):
 
 
 
+
+
+
+
         json.dump(vocab, f, indent=2)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -869,7 +1713,23 @@ def create_sentencepiece_wrapper(model_prefix: str, output_dir: str):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                               
+
+
+
+
 
 
 
@@ -877,7 +1737,19 @@ def create_sentencepiece_wrapper(model_prefix: str, output_dir: str):
 
 
 
+
+
+
+
                                                               
+
+
+
+
+
+
+
+
 
 
 
@@ -889,7 +1761,15 @@ def main():
 
 
 
+
+
+
+
     parser = argparse.ArgumentParser(description="Train tokenizer on code data")
+
+
+
+
 
 
 
@@ -897,7 +1777,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--dataset", type=str, help="HuggingFace dataset name")
+
+
+
+
 
 
 
@@ -905,7 +1793,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--vocab_size", type=int, default=128256, help="Vocabulary size")
+
+
+
+
 
 
 
@@ -913,7 +1809,15 @@ def main():
 
 
 
+
+
+
+
                        default="custom", help="Tokenizer backend")
+
+
+
+
 
 
 
@@ -921,11 +1825,23 @@ def main():
 
 
 
+
+
+
+
     args = parser.parse_args()
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -933,7 +1849,15 @@ def main():
 
 
 
+
+
+
+
     if args.data_dir:
+
+
+
+
 
 
 
@@ -941,7 +1865,15 @@ def main():
 
 
 
+
+
+
+
         text_iterator = load_code_from_directory(args.data_dir)
+
+
+
+
 
 
 
@@ -949,7 +1881,15 @@ def main():
 
 
 
+
+
+
+
         logger.info(f"Loading from HuggingFace: {args.dataset}")
+
+
+
+
 
 
 
@@ -957,7 +1897,15 @@ def main():
 
 
 
+
+
+
+
     else:
+
+
+
+
 
 
 
@@ -965,11 +1913,23 @@ def main():
 
 
 
+
+
+
+
         sys.exit(1)
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -977,7 +1937,15 @@ def main():
 
 
 
+
+
+
+
     if args.backend == "tiktoken":
+
+
+
+
 
 
 
@@ -985,7 +1953,15 @@ def main():
 
 
 
+
+
+
+
     elif args.backend == "sentencepiece":
+
+
+
+
 
 
 
@@ -993,7 +1969,15 @@ def main():
 
 
 
+
+
+
+
     else:          
+
+
+
+
 
 
 
@@ -1001,7 +1985,15 @@ def main():
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1009,11 +2001,23 @@ def main():
 
 
 
+
+
+
+
         trainer = BPETrainer(vocab_size=args.vocab_size, min_frequency=2)
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1021,7 +2025,15 @@ def main():
 
 
 
+
+
+
+
         texts = []
+
+
+
+
 
 
 
@@ -1029,7 +2041,15 @@ def main():
 
 
 
+
+
+
+
             texts.append(text)
+
+
+
+
 
 
 
@@ -1037,11 +2057,23 @@ def main():
 
 
 
+
+
+
+
                 break
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1049,7 +2081,15 @@ def main():
 
 
 
+
+
+
+
         
+
+
+
+
 
 
 
@@ -1057,7 +2097,15 @@ def main():
 
 
 
+
+
+
+
         tokenizer.save(args.output)
+
+
+
+
 
 
 
@@ -1065,11 +2113,23 @@ def main():
 
 
 
+
+
+
+
         logger.info(f"Tokenizer saved to {args.output}")
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1085,11 +2145,31 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
 
 
 
+
+
+
+
     main()
+
+
+
+
 
 
 

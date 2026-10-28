@@ -8,7 +8,19 @@ the packing-aware batch contract so stages cannot drift apart.
 
 
 
+
+
+
+
 from __future__ import annotations
+
+
+
+
+
+
+
+
 
 
 
@@ -20,6 +32,10 @@ from dataclasses import dataclass
 
 
 
+
+
+
+
 from typing import Dict, List
 
 
@@ -28,7 +44,23 @@ from typing import Dict, List
 
 
 
+
+
+
+
+
+
+
+
 import numpy as np
+
+
+
+
+
+
+
+
 
 
 
@@ -48,11 +80,31 @@ from .schedules import StageConfig, default_pipeline
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 @dataclass
 
 
 
+
+
+
+
 class Pipeline:
+
+
+
+
 
 
 
@@ -64,11 +116,27 @@ class Pipeline:
 
 
 
+
+
+
+
+
+
+
+
     @classmethod
 
 
 
+
+
+
+
     def default(cls) -> "Pipeline":
+
+
+
+
 
 
 
@@ -80,7 +148,19 @@ class Pipeline:
 
 
 
+
+
+
+
+
+
+
+
     def stage(self, name: str) -> StageConfig:
+
+
+
+
 
 
 
@@ -88,11 +168,23 @@ class Pipeline:
 
 
 
+
+
+
+
             if s.name == name:
 
 
 
+
+
+
+
                 return s
+
+
+
+
 
 
 
@@ -104,7 +196,19 @@ class Pipeline:
 
 
 
+
+
+
+
+
+
+
+
     def lineage(self) -> List[str]:
+
+
+
+
 
 
 
@@ -112,7 +216,15 @@ class Pipeline:
 
 
 
+
+
+
+
         return [f"{s.name} <- {self.stages[i - 1].name if i else 'random-init'}"
+
+
+
+
 
 
 
@@ -128,7 +240,23 @@ class Pipeline:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class PackingCollator:
+
+
+
+
 
 
 
@@ -144,7 +272,19 @@ class PackingCollator:
 
 
 
+
+
+
+
+
+
+
+
     def __call__(self, batch: List[Dict[str, np.ndarray]]) -> Dict:
+
+
+
+
 
 
 
@@ -152,7 +292,15 @@ class PackingCollator:
 
 
 
+
+
+
+
         keys = ["input_ids", "labels", "position_ids", "doc_ids"]
+
+
+
+
 
 
 
@@ -168,7 +316,23 @@ class PackingCollator:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def sft_mask_prompt(input_ids, prompt_len: int, eos_id: int) -> np.ndarray:
+
+
+
+
 
 
 
@@ -176,7 +340,15 @@ def sft_mask_prompt(input_ids, prompt_len: int, eos_id: int) -> np.ndarray:
 
 
 
+
+
+
+
     labels = np.array(input_ids, dtype=np.int64)
+
+
+
+
 
 
 
@@ -184,7 +356,15 @@ def sft_mask_prompt(input_ids, prompt_len: int, eos_id: int) -> np.ndarray:
 
 
 
+
+
+
+
     return labels
+
+
+
+
 
 
 

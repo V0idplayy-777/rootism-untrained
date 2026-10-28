@@ -17,7 +17,15 @@ Usage:
 
 
 
+
+
+
+
 import argparse
+
+
+
+
 
 
 
@@ -25,7 +33,15 @@ import logging
 
 
 
+
+
+
+
 import os
+
+
+
+
 
 
 
@@ -33,11 +49,27 @@ import sys
 
 
 
+
+
+
+
 from pathlib import Path
 
 
 
+
+
+
+
 from typing import Iterator
+
+
+
+
+
+
+
+
 
 
 
@@ -53,7 +85,23 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 
+
+
+
+
+
+
+
+
 from model.tokenizer import CodeTokenizer, EfficientBPETrainer, TokenizerValidator
+
+
+
+
+
+
+
+
 
 
 
@@ -65,7 +113,15 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
 EXTENSIONS = {".py", ".js", ".ts", ".java", ".cpp", ".cc", ".c", ".h", ".hpp",
+
+
+
+
 
 
 
@@ -81,7 +137,23 @@ EXTENSIONS = {".py", ".js", ".ts", ".java", ".cpp", ".cc", ".c", ".h", ".hpp",
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def iter_corpus(data_dir: str, max_chars: int = None) -> Iterator[str]:
+
+
+
+
 
 
 
@@ -89,7 +161,15 @@ def iter_corpus(data_dir: str, max_chars: int = None) -> Iterator[str]:
 
 
 
+
+
+
+
     total = 0
+
+
+
+
 
 
 
@@ -97,11 +177,23 @@ def iter_corpus(data_dir: str, max_chars: int = None) -> Iterator[str]:
 
 
 
+
+
+
+
         if filepath.suffix not in EXTENSIONS or not filepath.is_file():
 
 
 
+
+
+
+
             continue
+
+
+
+
 
 
 
@@ -109,7 +201,15 @@ def iter_corpus(data_dir: str, max_chars: int = None) -> Iterator[str]:
 
 
 
+
+
+
+
             content = filepath.read_text(encoding="utf-8", errors="ignore")
+
+
+
+
 
 
 
@@ -117,11 +217,23 @@ def iter_corpus(data_dir: str, max_chars: int = None) -> Iterator[str]:
 
 
 
+
+
+
+
             logger.warning(f"Error reading {filepath}: {e}")
 
 
 
+
+
+
+
             continue
+
+
+
+
 
 
 
@@ -129,7 +241,15 @@ def iter_corpus(data_dir: str, max_chars: int = None) -> Iterator[str]:
 
 
 
+
+
+
+
         if len(lines) < 10 or len(lines) > 5000:
+
+
+
+
 
 
 
@@ -137,7 +257,15 @@ def iter_corpus(data_dir: str, max_chars: int = None) -> Iterator[str]:
 
 
 
+
+
+
+
         yield content
+
+
+
+
 
 
 
@@ -145,11 +273,23 @@ def iter_corpus(data_dir: str, max_chars: int = None) -> Iterator[str]:
 
 
 
+
+
+
+
         if max_chars is not None and total >= max_chars:
 
 
 
+
+
+
+
             logger.info(f"Reached max corpus size: {total:,} chars")
+
+
+
+
 
 
 
@@ -165,7 +305,23 @@ def iter_corpus(data_dir: str, max_chars: int = None) -> Iterator[str]:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class ProductionTokenizerTrainer:
+
+
+
+
 
 
 
@@ -177,7 +333,19 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
+
+
+
+
     def __init__(self, vocab_size: int = 128256, min_frequency: int = 2,
+
+
+
+
 
 
 
@@ -185,7 +353,15 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
                  min_chars_per_token: float = 1.5):
+
+
+
+
 
 
 
@@ -193,7 +369,15 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
         self.vocab_size = vocab_size
+
+
+
+
 
 
 
@@ -201,7 +385,15 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
         self.max_corpus_size = max_corpus_size
+
+
+
+
 
 
 
@@ -209,7 +401,15 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
         self.min_chars_per_token = min_chars_per_token
+
+
+
+
 
 
 
@@ -221,7 +421,19 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
+
+
+
+
     def load_corpus(self, data_dir: str) -> Iterator[str]:
+
+
+
+
 
 
 
@@ -233,7 +445,19 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
+
+
+
+
     def train(self, data_dir: str, output_dir: str) -> CodeTokenizer:
+
+
+
+
 
 
 
@@ -241,7 +465,15 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
         held_out: list = []
+
+
+
+
 
 
 
@@ -249,7 +481,15 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
         def stream():
+
+
+
+
 
 
 
@@ -257,7 +497,15 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
                 seen[0] += 1
+
+
+
+
 
 
 
@@ -265,7 +513,15 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
                     held_out.append(doc)
+
+
+
+
 
 
 
@@ -273,7 +529,15 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
         tokenizer = self._trainer.train_from_iterator(stream())
+
+
+
+
 
 
 
@@ -281,7 +545,15 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
             raise RuntimeError(f"no usable documents under {data_dir!r} (quality filter: 10-5000 lines/file)")
+
+
+
+
 
 
 
@@ -289,7 +561,15 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
         tokenizer.save(str(output_dir))
+
+
+
+
 
 
 
@@ -297,7 +577,15 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
         logger.info(f"Validation: {report}")
+
+
+
+
 
 
 
@@ -305,7 +593,15 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
                                                                                   
+
+
+
+
 
 
 
@@ -313,7 +609,15 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
         with open(Path(output_dir) / "validation.json", "w") as f:
+
+
+
+
 
 
 
@@ -321,7 +625,15 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
         logger.info(f"Tokenizer saved to {output_dir}")
+
+
+
+
 
 
 
@@ -337,7 +649,23 @@ class ProductionTokenizerTrainer:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def train_from_huggingface(dataset_name: str, output_dir: str,
+
+
+
+
 
 
 
@@ -345,11 +673,23 @@ def train_from_huggingface(dataset_name: str, output_dir: str,
 
 
 
+
+
+
+
     from datasets import load_dataset                              
 
 
 
+
+
+
+
     logger.info(f"Loading dataset: {dataset_name}")
+
+
+
+
 
 
 
@@ -361,7 +701,19 @@ def train_from_huggingface(dataset_name: str, output_dir: str,
 
 
 
+
+
+
+
+
+
+
+
     def stream():
+
+
+
+
 
 
 
@@ -369,7 +721,15 @@ def train_from_huggingface(dataset_name: str, output_dir: str,
 
 
 
+
+
+
+
             if max_samples is not None and i >= max_samples:
+
+
+
+
 
 
 
@@ -377,11 +737,23 @@ def train_from_huggingface(dataset_name: str, output_dir: str,
 
 
 
+
+
+
+
             content = sample.get("content") or sample.get("text") or sample.get("code")
 
 
 
+
+
+
+
             if content:
+
+
+
+
 
 
 
@@ -393,7 +765,19 @@ def train_from_huggingface(dataset_name: str, output_dir: str,
 
 
 
+
+
+
+
+
+
+
+
     trainer = EfficientBPETrainer(vocab_size=vocab_size)
+
+
+
+
 
 
 
@@ -401,11 +785,23 @@ def train_from_huggingface(dataset_name: str, output_dir: str,
 
 
 
+
+
+
+
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
 
 
+
+
+
+
     tokenizer.save(str(output_dir))
+
+
+
+
 
 
 
@@ -421,7 +817,23 @@ def train_from_huggingface(dataset_name: str, output_dir: str,
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 def main():
+
+
+
+
 
 
 
@@ -429,7 +841,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--data_dir", type=str, help="Directory with code files")
+
+
+
+
 
 
 
@@ -437,7 +857,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--output_dir", type=str, required=True, help="Output directory")
+
+
+
+
 
 
 
@@ -445,7 +873,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--min_frequency", type=int, default=2)
+
+
+
+
 
 
 
@@ -453,7 +889,15 @@ def main():
 
 
 
+
+
+
+
     parser.add_argument("--min_chars_per_token", type=float, default=1.5)
+
+
+
+
 
 
 
@@ -461,7 +905,15 @@ def main():
 
 
 
+
+
+
+
                         help="Optional cap in chars (default: unlimited streaming)")
+
+
+
+
 
 
 
@@ -469,7 +921,15 @@ def main():
 
 
 
+
+
+
+
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+
+
+
 
 
 
@@ -477,7 +937,15 @@ def main():
 
 
 
+
+
+
+
         trainer = ProductionTokenizerTrainer(vocab_size=args.vocab_size,
+
+
+
+
 
 
 
@@ -485,7 +953,15 @@ def main():
 
 
 
+
+
+
+
                                              max_corpus_size=args.max_corpus_chars,
+
+
+
+
 
 
 
@@ -493,7 +969,15 @@ def main():
 
 
 
+
+
+
+
         tokenizer = trainer.train(args.data_dir, args.output_dir)
+
+
+
+
 
 
 
@@ -501,7 +985,15 @@ def main():
 
 
 
+
+
+
+
         tokenizer = train_from_huggingface(args.dataset, args.output_dir,
+
+
+
+
 
 
 
@@ -509,11 +1001,23 @@ def main():
 
 
 
+
+
+
+
     else:
 
 
 
+
+
+
+
         parser.error("Must specify either --data_dir or --dataset")
+
+
+
+
 
 
 
@@ -529,11 +1033,31 @@ def main():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
 
 
 
+
+
+
+
     main()
+
+
+
+
 
 
 

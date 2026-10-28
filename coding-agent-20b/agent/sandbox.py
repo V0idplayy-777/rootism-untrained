@@ -15,7 +15,19 @@ Hardening vs. the legacy DockerSandbox:
 
 
 
+
+
+
+
 from __future__ import annotations
+
+
+
+
+
+
+
+
 
 
 
@@ -27,7 +39,15 @@ import logging
 
 
 
+
+
+
+
 import os
+
+
+
+
 
 
 
@@ -35,7 +55,15 @@ import re
 
 
 
+
+
+
+
 import subprocess
+
+
+
+
 
 
 
@@ -43,7 +71,15 @@ import tempfile
 
 
 
+
+
+
+
 from dataclasses import dataclass, field
+
+
+
+
 
 
 
@@ -51,7 +87,19 @@ from pathlib import Path
 
 
 
+
+
+
+
 from typing import Dict, List, Optional
+
+
+
+
+
+
+
+
 
 
 
@@ -67,7 +115,19 @@ logger = logging.getLogger(__name__)
 
 
 
+
+
+
+
+
+
+
+
 try:
+
+
+
+
 
 
 
@@ -75,11 +135,23 @@ try:
 
 
 
+
+
+
+
     HAS_DOCKER_LIB = True
 
 
 
+
+
+
+
 except ImportError:
+
+
+
+
 
 
 
@@ -91,7 +163,19 @@ except ImportError:
 
 
 
+
+
+
+
+
+
+
+
 RUNTIMES = {
+
+
+
+
 
 
 
@@ -99,7 +183,15 @@ RUNTIMES = {
 
 
 
+
+
+
+
     "node": {"image": "node:20-slim", "cmd": ["node", "/script.js"], "suffix": ".js"},
+
+
+
+
 
 
 
@@ -107,7 +199,15 @@ RUNTIMES = {
 
 
 
+
+
+
+
     "go": {"image": "golang:1.22-alpine", "cmd": ["go", "run", "/script.go"], "suffix": ".go"},
+
+
+
+
 
 
 
@@ -115,7 +215,19 @@ RUNTIMES = {
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -127,7 +239,15 @@ RUNTIMES = {
 
 
 
+
+
+
+
 DEFAULT_PACKAGE_ALLOWLIST = {
+
+
+
+
 
 
 
@@ -135,11 +255,23 @@ DEFAULT_PACKAGE_ALLOWLIST = {
 
 
 
+
+
+
+
     "beautifulsoup4", "pandas", "click", "rich", "PyYAML", "yaml",
 
 
 
+
+
+
+
 }
+
+
+
+
 
 
 
@@ -151,7 +283,19 @@ _PKG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*(\[[A-Za-z0-9,._-]+\])?(==|>=|
 
 
 
+
+
+
+
+
+
+
+
 SECCOMP_PROFILE = {
+
+
+
+
 
 
 
@@ -159,7 +303,15 @@ SECCOMP_PROFILE = {
 
 
 
+
+
+
+
     "architectures": ["amd64", "aarch64"],
+
+
+
+
 
 
 
@@ -167,7 +319,15 @@ SECCOMP_PROFILE = {
 
 
 
+
+
+
+
                              "mprotect", "munmap", "fstat", "newfstatat", "lseek", "clone", "futex",
+
+
+
+
 
 
 
@@ -175,7 +335,15 @@ SECCOMP_PROFILE = {
 
 
 
+
+
+
+
                              "dup", "dup2", "dup3", "socket", "connect", "getpid", "getuid", "uname",
+
+
+
+
 
 
 
@@ -183,7 +351,15 @@ SECCOMP_PROFILE = {
 
 
 
+
+
+
+
                              "readlink", "readlinkat", "access", "faccessat", "stat", "statx", "getcwd",
+
+
+
+
 
 
 
@@ -191,7 +367,15 @@ SECCOMP_PROFILE = {
 
 
 
+
+
+
+
                              "epoll_create", "epoll_ctl", "epoll_pwait", "eventfd2", "signalfd", "timerfd_create",
+
+
+
+
 
 
 
@@ -199,7 +383,15 @@ SECCOMP_PROFILE = {
 
 
 
+
+
+
+
                              "rt_sigreturn", "exit", "wait4", "kill", "tkill", "tgkill", "sendmsg", "recvmsg",
+
+
+
+
 
 
 
@@ -207,7 +399,15 @@ SECCOMP_PROFILE = {
 
 
 
+
+
+
+
                              "getpeername", "setsockopt", "getsockopt", "shutdown", "mlock", "munlock"],
+
+
+
+
 
 
 
@@ -215,7 +415,23 @@ SECCOMP_PROFILE = {
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -231,7 +447,23 @@ class SandboxUnavailable(RuntimeError):
 
 
 
+
+
+
+
     """Raised (fail-closed) when no sandbox backend is available."""
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -247,7 +479,15 @@ class SandboxUnavailable(RuntimeError):
 
 
 
+
+
+
+
 class SandboxConfig:
+
+
+
+
 
 
 
@@ -255,7 +495,15 @@ class SandboxConfig:
 
 
 
+
+
+
+
     cpu_quota: int = 50000                             
+
+
+
+
 
 
 
@@ -263,7 +511,15 @@ class SandboxConfig:
 
 
 
+
+
+
+
     disk_mb: int = 256                                               
+
+
+
+
 
 
 
@@ -271,7 +527,15 @@ class SandboxConfig:
 
 
 
+
+
+
+
     user: str = "65534:65534"                  
+
+
+
+
 
 
 
@@ -279,7 +543,15 @@ class SandboxConfig:
 
 
 
+
+
+
+
     package_allowlist: set = field(default_factory=lambda: set(DEFAULT_PACKAGE_ALLOWLIST))
+
+
+
+
 
 
 
@@ -295,7 +567,23 @@ class SandboxConfig:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class HardenedSandbox:
+
+
+
+
 
 
 
@@ -303,7 +591,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
         self.config = config or SandboxConfig()
+
+
+
+
 
 
 
@@ -311,7 +607,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
         self.client = None
+
+
+
+
 
 
 
@@ -319,7 +623,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
         if HAS_DOCKER_LIB:
+
+
+
+
 
 
 
@@ -327,7 +639,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 self.client = docker.from_env()
+
+
+
+
 
 
 
@@ -335,7 +655,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 self.available = True
+
+
+
+
 
 
 
@@ -343,11 +671,23 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 logger.warning(f"Docker unavailable: {e}")
 
 
 
+
+
+
+
         if not self.available and not self.config.allow_local_fallback:
+
+
+
+
 
 
 
@@ -359,11 +699,27 @@ class HardenedSandbox:
 
 
 
+
+
+
+
+
+
+
+
                                                                             
 
 
 
+
+
+
+
     def __enter__(self):
+
+
+
+
 
 
 
@@ -375,11 +731,27 @@ class HardenedSandbox:
 
 
 
+
+
+
+
+
+
+
+
     def __exit__(self, *exc):
 
 
 
+
+
+
+
         self.close()
+
+
+
+
 
 
 
@@ -391,7 +763,19 @@ class HardenedSandbox:
 
 
 
+
+
+
+
+
+
+
+
     def close(self):
+
+
+
+
 
 
 
@@ -399,7 +783,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
             try:
+
+
+
+
 
 
 
@@ -407,11 +799,23 @@ class HardenedSandbox:
 
 
 
+
+
+
+
             except Exception:
 
 
 
+
+
+
+
                 pass
+
+
+
+
 
 
 
@@ -423,7 +827,19 @@ class HardenedSandbox:
 
 
 
+
+
+
+
+
+
+
+
     def _check_packages(self, packages: Optional[List[str]]) -> List[str]:
+
+
+
+
 
 
 
@@ -431,7 +847,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
         for raw in packages or []:
+
+
+
+
 
 
 
@@ -439,7 +863,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
             if not _PKG_RE.match(str(raw).strip()):
+
+
+
+
 
 
 
@@ -447,7 +879,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
             if name not in self.config.package_allowlist:
+
+
+
+
 
 
 
@@ -455,7 +895,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
             ok.append(str(raw).strip())
+
+
+
+
 
 
 
@@ -467,7 +915,19 @@ class HardenedSandbox:
 
 
 
+
+
+
+
+
+
+
+
     def execute(self, code: str, workspace_path: str, timeout: int = 30,
+
+
+
+
 
 
 
@@ -475,7 +935,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
         packages = self._check_packages(install_packages)
+
+
+
+
 
 
 
@@ -483,7 +951,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
             return {"stdout": "", "stderr": f"Unsupported language: {language}", "exit_code": -1,
+
+
+
+
 
 
 
@@ -491,7 +967,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
         if not self.available:
+
+
+
+
 
 
 
@@ -499,7 +983,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 return self._local_execute(code, workspace_path, timeout)
+
+
+
+
 
 
 
@@ -507,11 +999,23 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 "Docker sandbox unavailable and local fallback disabled (fail-closed). "
 
 
 
+
+
+
+
                 "Start Docker or construct with SandboxConfig(allow_local_fallback=True) for tests.")
+
+
+
+
 
 
 
@@ -523,7 +1027,19 @@ class HardenedSandbox:
 
 
 
+
+
+
+
+
+
+
+
     def _docker_execute(self, code, workspace_path, timeout, packages, language):
+
+
+
+
 
 
 
@@ -531,7 +1047,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
         if language in self.config.images:
+
+
+
+
 
 
 
@@ -539,7 +1063,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
         script_path = None
+
+
+
+
 
 
 
@@ -547,7 +1079,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -555,7 +1095,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 f.write(code)
+
+
+
+
 
 
 
@@ -563,7 +1111,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
             cmd = list(rt["cmd"])
+
+
+
+
 
 
 
@@ -571,7 +1127,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 if self.config.network_disabled:
+
+
+
+
 
 
 
@@ -579,7 +1143,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 joined = " ".join(packages)
+
+
+
+
 
 
 
@@ -587,7 +1159,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                     cmd = ["bash", "-c", f"pip install -q {joined} && {' '.join(cmd)}"]
+
+
+
+
 
 
 
@@ -595,7 +1175,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                     cmd = ["bash", "-c", f"npm install --prefix /work -s {joined} && {' '.join(cmd)}"]
+
+
+
+
 
 
 
@@ -603,7 +1191,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                     raise ValueError(f"install_packages unsupported for language={language}")
+
+
+
+
 
 
 
@@ -611,7 +1207,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 rt["image"], command=cmd,
+
+
+
+
 
 
 
@@ -619,7 +1223,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                          script_path: {"bind": f"/script{rt['suffix']}", "mode": "ro"}},
+
+
+
+
 
 
 
@@ -627,7 +1239,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 tmpfs={"/work": f"size={self.config.disk_mb}m,mode=1777"},
+
+
+
+
 
 
 
@@ -635,7 +1255,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 pids_limit=self.config.pids_limit,
+
+
+
+
 
 
 
@@ -643,7 +1271,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 user=self.config.user, cap_drop=["ALL"],
+
+
+
+
 
 
 
@@ -651,7 +1287,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 detach=True,
+
+
+
+
 
 
 
@@ -659,7 +1303,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
             self._containers.append(container)
+
+
+
+
 
 
 
@@ -667,7 +1319,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 result = container.wait(timeout=timeout)
+
+
+
+
 
 
 
@@ -675,7 +1335,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 stderr = container.logs(stdout=False, stderr=True).decode("utf-8", "replace")
+
+
+
+
 
 
 
@@ -683,7 +1351,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                         "exit_code": result["StatusCode"], "timed_out": False, "language": language}
+
+
+
+
 
 
 
@@ -691,7 +1367,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 try:
+
+
+
+
 
 
 
@@ -699,11 +1383,23 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 except Exception:
 
 
 
+
+
+
+
                     pass
+
+
+
+
 
 
 
@@ -711,7 +1407,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                         "exit_code": -1, "timed_out": True, "language": language}
+
+
+
+
 
 
 
@@ -719,11 +1423,23 @@ class HardenedSandbox:
 
 
 
+
+
+
+
             if container is not None:
 
 
 
+
+
+
+
                 try:
+
+
+
+
 
 
 
@@ -731,11 +1447,23 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 except Exception:
 
 
 
+
+
+
+
                     pass
+
+
+
+
 
 
 
@@ -743,7 +1471,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                     self._containers.remove(container)
+
+
+
+
 
 
 
@@ -751,7 +1487,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 try:
+
+
+
+
 
 
 
@@ -759,11 +1503,27 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 except OSError:
 
 
 
+
+
+
+
                     pass
+
+
+
+
+
+
+
+
 
 
 
@@ -775,8 +1535,16 @@ class HardenedSandbox:
 
 
 
+
+
+
+
         """TEST-ONLY fallback (never used when fail-closed). Resource limits
         via RLIMIT where the platform supports it; still not a security boundary."""
+
+
+
+
 
 
 
@@ -784,7 +1552,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
         try:
+
+
+
+
 
 
 
@@ -792,7 +1568,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 f.write(code)
+
+
+
+
 
 
 
@@ -800,11 +1584,23 @@ class HardenedSandbox:
 
 
 
+
+
+
+
             def _limits():
 
 
 
+
+
+
+
                 try:
+
+
+
+
 
 
 
@@ -812,7 +1608,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                     resource.setrlimit(resource.RLIMIT_AS, (512 * 1024 * 1024, 512 * 1024 * 1024))
+
+
+
+
 
 
 
@@ -820,7 +1624,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                     resource.setrlimit(resource.RLIMIT_NPROC, (64, 64))
+
+
+
+
 
 
 
@@ -828,7 +1640,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                     pass
+
+
+
+
 
 
 
@@ -836,7 +1656,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                                     text=True, timeout=timeout, preexec_fn=_limits if os.name == "posix" else None)
+
+
+
+
 
 
 
@@ -844,7 +1672,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                     "exit_code": result.returncode, "timed_out": False, "language": "python"}
+
+
+
+
 
 
 
@@ -852,7 +1688,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
             return {"stdout": "", "stderr": f"Execution timed out after {timeout}s",
+
+
+
+
 
 
 
@@ -860,7 +1704,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
         finally:
+
+
+
+
 
 
 
@@ -868,7 +1720,15 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 try:
+
+
+
+
 
 
 
@@ -876,11 +1736,31 @@ class HardenedSandbox:
 
 
 
+
+
+
+
                 except OSError:
 
 
 
+
+
+
+
                     pass
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -896,7 +1776,15 @@ def _seccomp_json() -> str:
 
 
 
+
+
+
+
     import json
+
+
+
+
 
 
 
@@ -912,11 +1800,31 @@ def _seccomp_json() -> str:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                                                                           
 
 
 
+
+
+
+
 DockerSandbox = HardenedSandbox
+
+
+
+
 
 
 
