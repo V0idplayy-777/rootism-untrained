@@ -14,15 +14,33 @@
 Run before any training that will use a new vocabulary:
 
 ```
-python scripts/evaluate_tokenizer.py --tokenizer <dir> --corpus_dir <held-out> --json out.json
+python scripts/train_production_tokenizer.py --data_dir <corpus> \
+    --output_dir tokenizer --vocab_size 128256 --max_corpus_chars 150000000 \
+    --benchmark_gate
 ```
 
-Reports, per corpus (python/typescript/rust/go/sql/yaml/diff/identifiers/prose):
-chars/token vs the strongest installed baseline, absolute fertility floors
-(`FERTILITY_FLOORS`), whole-identifier rate, tab/blank-line round-trip, and a
-pass/fail gate. The run **fails** if the candidate loses to a real baseline or
-falls below a floor — an untrained vocabulary (≈1.0 chars/token) always fails.
-Report the gate result and the vocab/corpus manifest hash with the model.
+Three gates run inside training, before any artifact is accepted:
+
+1. **Rust/Python parity** (`verify_parity`): the converted `CodeTokenizer`
+   must segment 100 held-out documents identically to the Rust tokenizer that
+   trained the merges. A failure self-diagnoses (pre-tokenizer drift vs BPE
+   conversion, with the offending sample). The pre-tokenizer uses explicit
+   character classes precisely because Python `re` and the Rust regex crate
+   disagree on `.`/newline, `\s`/`\x1c-\x1f` and `\w`/marks.
+2. **Validation** (`TokenizerValidator`): per-language fertility,
+   whole-identifier rate, whitespace/tab round-trip, unified-diff chars/token.
+3. **Competitive gate** (`--benchmark_gate`): chars/token vs bytes and
+   word/punct baselines with absolute fertility floors — an untrained
+   vocabulary (≈1.0 chars/token) always fails.
+
+Additionally `evaluation/tokenizer_ablation.py` compares the code-aware
+pre-tokenizer against generic GPT-2 pre-tokenization at equal vocab:
+atomicity (tokens per whole string/comment/number/identifier) must win, with
+fertility inside a documented 1.25x bound (measured structural cost
+1.19–1.20x — the generic pattern's punctuation-run and word-space grouping
+compresses better; we pay that for whole literals).
+
+Report the gate results and the vocab/corpus manifest hash with the model.
 
 ## Repo-level (SWE-bench Lite)
 `SweBenchHarness.evaluate`: clone at `base_commit`, apply `test_patch`, apply
@@ -52,7 +70,12 @@ production sandbox (max 40 steps recommended):
 - `loop_rate`: fraction of steps repeating an identical `(tool, arguments)`
   more than twice,
 - `plan_completion` and `state_coherence` (every `done` todo carries evidence),
-- `escalations` / `backtracks` from the recovery trace.
+- `escalations` / `backtracks` / `wrap_ups` from the recovery trace,
+- `milestones`: verified-progress checkpoints actually taken (progress that
+  would survive a later rollback),
+- `recovery_class_accuracy`: whether the intervention matched the failure
+  class (environment failures should switch/escalate; wrong-hypothesis
+  failures should reflect/backtrack, never re-argue).
 
 Drive the loop with `ProductionAgent(generate_fn=...)` and pass
 `result["steps"]`/`result["state"]`/`result["recoveries"]` into `Trajectory`.
@@ -69,6 +92,13 @@ Drive the loop with `ProductionAgent(generate_fn=...)` and pass
   `overall_vuln_rate`, per-CWE counts and `missing_safe_pattern`.
 - Gate: `assert_threshold` (default ≤10% vulnerable, 0 critical). Report the
   held-out set composition; never score on samples used in SFT.
+- The curated set (38 samples) has a **sha256-deterministic 32/6 train/held-out
+  split**: `SecurityDataGenerator(heldout=False)` emits training rows from the
+  train split only and `SecurityBenchmark.cases_from_dataset(heldout=True)` is
+  the held-out default, so the gate cannot see training data. Held-out ids:
+  zip-slip, crypto-mode, csrf-missing, redos-nested, unbounded-alloc,
+  auth-fail-open. Adversarial-request cases are scored on refusal-with-safe-
+  alternative, not just absence of the vulnerable pattern.
 
 ## Long-form synthesis
 `LongFormSynthesizer.synthesise` returns `SynthesisResult` with a compile check

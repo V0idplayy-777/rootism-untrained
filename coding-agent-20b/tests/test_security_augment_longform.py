@@ -183,9 +183,27 @@ def test_scanner_ast_checks_and_required_pattern_absence():
 
     cases = cases_from_dataset()
 
-    assert len(cases) == len(SECURITY_SAMPLES)
+    all_cases = cases_from_dataset(heldout=False)
 
-    assert all(c.required for c in cases)
+    from dataset.security_data import heldout_split, train_split
+
+    # The benchmark defaults to the held-out split; it must be non-empty,
+    # fully required-patterned, and disjoint from what the SFT/DPO
+    # generators train on.
+
+    assert 0 < len(cases) < len(all_cases)
+
+    assert len(all_cases) == len(SECURITY_SAMPLES)
+
+    assert all(c.required for c in all_cases)
+
+    heldout_ids = {c.case_id for c in cases}
+
+    train_ids = {s.id for s in train_split()}
+
+    assert heldout_ids == {s.id for s in heldout_split()}
+
+    assert not (heldout_ids & train_ids)
 
 
 def test_security_generator_shapes_match_training_schema():
@@ -200,7 +218,13 @@ def test_security_generator_shapes_match_training_schema():
 
     pairs = gen.dpo_pairs()
 
-    assert len(reviews) == len(SECURITY_SAMPLES) == len(pairs)
+    # The generator trains on the train split only (held-out stays unseen).
+
+    from dataset.security_data import train_split
+
+    assert len(reviews) == len(train_split()) == len(pairs)
+
+    assert len(reviews) < len(SECURITY_SAMPLES)
 
     assert implements
 
@@ -228,9 +252,13 @@ def test_security_generator_shapes_match_training_schema():
 
     stats = gen.stats()
 
-    assert stats["samples"] == len(SECURITY_SAMPLES)
+    assert stats["samples"] == len(train_split())
 
     assert len(stats["cwes"]) >= 8
+
+    # The held-out split is also generator-accessible (for eval-side ablations)
+
+    assert len(SecurityDataGenerator(heldout=True).samples) == len(SECURITY_SAMPLES) - len(train_split())
 
 
 

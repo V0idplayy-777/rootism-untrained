@@ -46,6 +46,7 @@ class ReasoningBudget:
     plan_fraction: float = 0.15
     scratch_fraction: float = 0.35
     answer_fraction: float = 0.50
+    external_scratch: bool = False
 
     def __post_init__(self) -> None:
 
@@ -616,24 +617,63 @@ class LongFormSynthesizer:
         question: str,
         checker: Callable[[str], bool] | None = None,
         samples: int = 3,
+        scratch=None,
     ) -> dict:
         """Scratchpad reasoning with optional execution-checked self-consistency.
 
         Each sample writes `<|scratchpad|>` notes then `ANSWER:`. Candidates are
         ranked by `checker` when supplied, otherwise by majority answer, which
         is the best available signal without an oracle.
+
+        ``scratch`` (a ``agent.scratch.ScratchWorkspace``) moves intermediate
+        work to disk: every sample's scratchpad is appended to a topic, and
+        later samples see a compact *summary of prior attempts* (answers +
+        disagreements) instead of the full transcripts. Deep reasoning then is
+        not bounded by the context window — the model can re-read anything it
+        wrote, and the window only pays for the index.
         """
 
         alloc = self.budget.allocate()
 
         candidates: list[dict] = []
 
-        for _ in range(max(1, samples)):
+        scratch_topic = None
+
+        for sample_index in range(max(1, samples)):
+
+            prior_block = ""
+
+            if scratch is not None and candidates:
+
+                scratch_topic = scratch_topic or _scratch_topic_for(question)
+
+                prior = "\n".join(
+
+                    f"- attempt {i + 1}: ANSWER: {c['answer'][:120]}"
+
+                    for i, c in enumerate(candidates)
+
+                )
+
+                disagreements = ""
+
+                if len({c["answer"][:60] for c in candidates}) > 1:
+
+                    disagreements = (
+                        "\nPrior attempts disagree; find the step where they "
+                        "diverge instead of averaging."
+                    )
+
+                prior_block = (
+                    f"Prior attempts (summaries; full scratch on disk):\n{prior}"
+                    f"{disagreements}\n"
+                )
 
             raw = self.generate_fn(
                 "<|scratchpad|>\n"
                 f"Problem: {question}\n"
-                "Think step by step inside the scratchpad. State assumptions, "
+                + prior_block
+                + "Think step by step inside the scratchpad. State assumptions, "
                 "check units/edge cases, then output a line `ANSWER: <final>`.\n"
                 f"Keep scratch under {alloc['scratch']} tokens.\n",
                 alloc["scratch"] + alloc["answer"],
@@ -642,6 +682,21 @@ class LongFormSynthesizer:
             answer_match = re.search(r"(?im)^\s*ANSWER:\s*(.+)$", raw)
 
             answer = answer_match.group(1).strip() if answer_match else raw.strip().splitlines()[-1][:200]
+
+            if scratch is not None:
+
+                scratch_topic = scratch_topic or _scratch_topic_for(question)
+
+                try:
+
+                    scratch.write(
+                        scratch_topic,
+                        f"attempt {sample_index + 1}: {raw[:4000]}",
+                        mode="append",
+                    )
+
+                except Exception:
+                    pass  # scratch is an optimisation, never a dependency
 
             candidates.append({"raw": raw, "answer": answer})
 
@@ -681,7 +736,7 @@ class LongFormSynthesizer:
 
             strategy = "majority"
 
-        return {
+        result = {
             "answer": winner["answer"],
             "strategy": strategy,
             "samples": candidates,
@@ -689,6 +744,22 @@ class LongFormSynthesizer:
                 max(Counter(c["answer"] for c in candidates).values()) / len(candidates)
             ),
         }
+
+        if scratch is not None and scratch_topic:
+
+            result["scratch_topic"] = scratch_topic
+
+            result["external_scratch"] = True
+
+        return result
+
+
+def _scratch_topic_for(question: str) -> str:
+    """Stable scratch topic name for a question."""
+
+    slug = re.sub(r"[^a-z0-9]+", "-", question.lower()).strip("-")[:40]
+
+    return f"reason-{slug or 'question'}"
 
 
 def split_long_function(code: str, max_lines: int = 60) -> list[str]:

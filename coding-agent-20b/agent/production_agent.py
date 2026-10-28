@@ -13,6 +13,7 @@ Features:
 
 import json
 import logging
+from pathlib import Path
 from typing import Any
 
 try:
@@ -35,9 +36,12 @@ except ImportError:
     git = None
 
 
+from .memory import MemoryStore
 from .parser import parse_tool_call, repair_prompt
+from .planning import AssumptionLedger, MilestoneCheckpointer, PlanGraph
 from .recovery import RecoveryAction, RecoveryPolicy, StallDetector
 from .sandbox import HardenedSandbox
+from .scratch import ScratchWorkspace
 from .session import ContextWindow, SessionState
 from .tools import ToolExecutor
 
@@ -262,8 +266,10 @@ TOOL_SCHEMAS = {
     "update_plan": {
         "name": "update_plan",
         "description": (
-            "Create or revise the ordered plan for this task. Call again when "
-            "evidence invalidates the plan (max ~8 short steps)."
+            "Create or revise the plan for this task. Steps run in dependency "
+            "order: prefix a step with \"[after 1,3]\" to make it wait for "
+            "steps 1 and 3; plain steps chain sequentially. Call again when "
+            "evidence invalidates part of the plan (max ~8 short steps)."
         ),
         "parameters": {
             "type": "object",
@@ -280,6 +286,70 @@ TOOL_SCHEMAS = {
             },
             "required": ["steps"],
         },
+    },
+    "record_assumption": {
+        "name": "record_assumption",
+        "description": (
+            "Record an assumption you are about to rely on (API shape, file "
+            "format, environment, intent). Unverified assumptions are shown "
+            "in every prompt until confirmed or refuted."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"},
+            },
+            "required": ["text"],
+        },
+    },
+    "verify_assumption": {
+        "name": "verify_assumption",
+        "description": (
+            "Mark an assumption confirmed or refuted, with the evidence."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer", "description": "Assumption id (A<N>)"},
+                "status": {"type": "string", "enum": ["confirmed", "refuted"]},
+                "how": {"type": "string", "description": "Evidence that decided it"},
+            },
+            "required": ["id", "status"],
+        },
+    },
+    "scratch_write": {
+        "name": "scratch_write",
+        "description": (
+            "Offload intermediate reasoning/findings to disk (survives "
+            "context compaction). The scratch index, not the content, stays "
+            "in your prompt."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "topic": {"type": "string"},
+                "text": {"type": "string"},
+                "mode": {"type": "string", "enum": ["append", "replace"], "default": "append"},
+            },
+            "required": ["topic", "text"],
+        },
+    },
+    "scratch_read": {
+        "name": "scratch_read",
+        "description": "Reload a scratch topic you wrote earlier.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "topic": {"type": "string"},
+                "max_chars": {"type": "integer", "default": 4000},
+            },
+            "required": ["topic"],
+        },
+    },
+    "scratch_list": {
+        "name": "scratch_list",
+        "description": "List scratch topics (name, entries, size, summary).",
+        "parameters": {"type": "object", "properties": {}},
     },
     "note_fact": {
         "name": "note_fact",
@@ -326,6 +396,10 @@ class ProductionAgent:
         keep_recent_steps: int = 6,
         state_path: str | None = None,
         recovery_policy=None,
+        scratch: ScratchWorkspace | None = None,
+        memory: MemoryStore | None = None,
+        milestones: MilestoneCheckpointer | None = None,
+        enable_milestones: bool = True,
     ):
 
         self.model = model
@@ -348,11 +422,33 @@ class ProductionAgent:
 
         self.state_path = state_path
 
+        self.workspace_path = workspace_path
+
         self.recovery_policy = recovery_policy or RecoveryPolicy()
 
         self.sandbox = sandbox if sandbox is not None else HardenedSandbox()
 
         self.executor = ToolExecutor(workspace_path, self.sandbox)
+
+        # --- long-horizon machinery ------------------------------------
+
+        self.scratch = scratch if scratch is not None else ScratchWorkspace(
+            Path(workspace_path) / ".agent" / "scratch"
+        )
+
+        self.memory = memory if memory is not None else MemoryStore(
+            Path(workspace_path) / ".agent" / "memory.json"
+        )
+
+        self.milestones = milestones if milestones is not None else MilestoneCheckpointer(
+            workspace_path
+        )
+
+        self.enable_milestones = enable_milestones
+
+        self.plan_graph = PlanGraph()
+
+        self.assumptions = AssumptionLedger()
 
     def _build_system_prompt(self, context: str = "") -> str:
         """Build system prompt with tool schemas and (optional) repo evidence."""
@@ -440,7 +536,7 @@ Example:
         return parse_tool_call(text, TOOL_SCHEMAS)
 
     def _handle_control_tool(self, tool: str, args: dict, state: SessionState) -> dict | None:
-        """Plan/notes are state operations, not sandbox operations."""
+        """Plan/notes/assumptions/scratch are state operations, not sandbox."""
 
         if tool == "update_plan":
 
@@ -449,6 +545,8 @@ Example:
             if steps:
 
                 state.plan_as(steps[:12])
+
+                self.plan_graph = PlanGraph.parse(steps[:12])
 
             current = args.get("current")
 
@@ -460,11 +558,20 @@ Example:
 
                     state.todos.update(current - 1, "done", evidence)
 
+                    # A verified step is a milestone: snapshot it so a later
+
+                    # backtrack returns here instead of to zero.
+
+                    self._checkpoint_milestone(state, current - 1, evidence)
+
                 state.todos.update(current, "in_progress")
+
+            ready = [s.id for s in self.plan_graph.ready()]
 
             return {
                 "success": True,
                 "plan": state.todos.render(),
+                "ready_steps": ready,
                 "note": "plan updated; continue with the current step",
             }
 
@@ -478,7 +585,114 @@ Example:
 
             return {"success": True, "facts": state.facts[-5:]}
 
+        if tool == "record_assumption":
+
+            text = str(args.get("text") or "").strip()
+
+            if not text:
+
+                return {"success": False, "error": "assumption text is required"}
+
+            assumption = self.assumptions.add(text, step=state.step)
+
+            return {
+                "success": True,
+                "assumption": assumption.to_dict(),
+                "note": f"recorded as A{assumption.id}; verify or refute it with evidence",
+            }
+
+        if tool == "verify_assumption":
+
+            try:
+
+                assumption = self.assumptions.record(
+                    int(args.get("id")),
+                    str(args.get("status")),
+                    str(args.get("how") or ""),
+                )
+
+            except (ValueError, KeyError, TypeError) as e:
+
+                return {"success": False, "error": str(e)}
+
+            if assumption.status == "refuted":
+
+                return {
+                    "success": True,
+                    "assumption": assumption.to_dict(),
+                    "note": (
+                        "refuted assumption: if any completed step relied on "
+                        "it, re-plan that part (update_plan) before continuing"
+                    ),
+                }
+
+            return {"success": True, "assumption": assumption.to_dict()}
+
+        if tool == "scratch_write":
+
+            try:
+
+                receipt = self.scratch.write(
+                    str(args.get("topic") or "notes"),
+                    str(args.get("text") or ""),
+                    mode=str(args.get("mode") or "append"),
+                )
+
+            except ValueError as e:
+
+                return {"success": False, "error": str(e)}
+
+            return receipt
+
+        if tool == "scratch_read":
+
+            try:
+
+                text = self.scratch.read(
+                    str(args.get("topic") or ""),
+                    max_chars=int(args.get("max_chars") or 4000),
+                )
+
+            except (KeyError, ValueError) as e:
+
+                return {"success": False, "error": str(e)}
+
+            return {"success": True, "topic": args.get("topic"), "content": text}
+
+        if tool == "scratch_list":
+
+            return {"success": True, "topics": self.scratch.list_topics()}
+
         return None
+
+    def _checkpoint_milestone(self, state: SessionState, step_index: int, evidence: str) -> None:
+        """Snapshot verified progress (git commit when possible).
+
+        ``step_index`` is the 1-based todo id just marked done (the step
+        *before* the one now starting), matching TodoList.update().
+        """
+
+        if not self.enable_milestones:
+
+            return
+
+        try:
+
+            todo = state.todos.todos[step_index - 1]
+
+            label = f"{todo.text[:60]} ({evidence[:40]})" if evidence else todo.text[:60]
+
+            self.milestones.checkpoint(
+                label,
+                step=state.step,
+                files_touched=list(state.files_touched),
+                tests_passed=list(state.tests_passed),
+                executor=self.executor,
+            )
+
+        except Exception as e:  # a checkpoint failure must never kill the loop
+
+            logger.warning(f"milestone checkpoint failed: {e}")
 
     def _load_state(self, task: str) -> SessionState:
 
@@ -542,13 +756,41 @@ Example:
 
         state = self._load_state(task)
 
+        self._load_state_extras()
+
         pack = self._context_pack(task)
 
         system_prompt = self._build_system_prompt(pack.text if pack else "")
 
+        # Pinned context extras: cross-session memory, scratch index, and
+
+        # unverified assumptions. Small by construction; they must survive
+
+        # every compaction because they are what "coherent state" means.
+
+        task_block = task
+
+        memory_block = self.memory.render(k=6)
+
+        if memory_block:
+
+            task_block += "\n\n" + memory_block
+
+        scratch_block = self.scratch.render_index(max_chars=500)
+
+        if scratch_block:
+
+            task_block += "\n\n" + scratch_block
+
+        assumption_block = self.assumptions.render()
+
+        if assumption_block:
+
+            task_block += "\n\n" + assumption_block
+
         window = ContextWindow(
             system_prompt,
-            task,
+            task_block,
             state,
             tokenizer=self.tokenizer,
             budget_tokens=self.max_prompt_tokens,
@@ -566,6 +808,14 @@ Example:
         while state.step < self.max_steps:
 
             state.step += 1
+
+            wrap = self.recovery_policy.wrap_up_needed(state)
+
+            if wrap is not None and state.step < state.max_steps:
+
+                recoveries.append(wrap.to_dict())
+
+                window.add_user(RecoveryPolicy.reflect_prompt(state, wrap))
 
             prompt, stats = window.assemble()
 
@@ -594,6 +844,16 @@ Example:
                 if self.state_path:
 
                     state.save(self.state_path)
+
+                self._save_state_extras()
+
+                try:
+
+                    self.memory.learn_from_session(state)
+
+                except Exception as e:
+
+                    logger.warning(f"memory learning failed: {e}")
 
                 if verbose:
 
@@ -740,38 +1000,82 @@ Example:
 
                 if decision.action == RecoveryAction.BACKTRACK:
 
-                    files = arguments.get("path")
+                    # Roll back only files changed since the last verified
+
+                    # milestone; a full stash is the no-milestone fallback.
+
+                    milestone = self.milestones.last_verified()
+
+                    if milestone is not None:
+
+                        files, _m = self.milestones.rollback_files(state.files_touched)
+
+                    else:
+
+                        files = [arguments.get("path")] if arguments.get("path") else None
 
                     revert = self.executor.execute_tool(
                         "revert",
-                        {"files": [files]} if files else {"stash": True},
+                        {"files": files} if files else {"stash": True},
                     )
 
                     step_record["backtrack"] = revert
 
+                    step_record["backtrack_milestone"] = (
+                        milestone.to_dict() if milestone else None
+                    )
+
                     window.add_observation("revert", {}, revert)
 
+                    # A failed edit invalidates its step's downstream subgraph
+
+                    # only — verified sibling work stays verified.
+
+                    current = state.todos.next_pending()
+
+                    if current is not None:
+
+                        affected = self.plan_graph.reset_subtree(current.id)
+
+                        if affected:
+
+                            step_record["replanned_steps"] = sorted(affected)
+
                 window.add_user(RecoveryPolicy.reflect_prompt(state, decision))
 
                 if decision.action == RecoveryAction.ESCALATE:
 
                     break
 
-            elif stall.observe(state, f"{tool_name}:{json.dumps(arguments, sort_keys=True)}"):
+            else:
 
-                decision = self.recovery_policy.decide(state, stalled=True)
+                self.recovery_policy.note_success(tool_name)
 
-                recoveries.append(decision.to_dict())
+                if stall.observe(state, f"{tool_name}:{json.dumps(arguments, sort_keys=True)}"):
 
-                window.add_user(RecoveryPolicy.reflect_prompt(state, decision))
+                    decision = self.recovery_policy.decide(state, stalled=True)
 
-                if decision.action == RecoveryAction.ESCALATE:
+                    recoveries.append(decision.to_dict())
 
-                    break
+                    window.add_user(RecoveryPolicy.reflect_prompt(state, decision))
+
+                    if decision.action == RecoveryAction.ESCALATE:
+
+                        break
 
         if self.state_path:
 
             state.save(self.state_path)
+
+        self._save_state_extras()
+
+        try:
+
+            self.memory.learn_from_session(state)
+
+        except Exception as e:
+
+            logger.warning(f"memory learning failed: {e}")
 
         answer = self._escalation_answer(state)
 
@@ -782,7 +1086,66 @@ Example:
             "state": state.to_dict(),
             "context": context_stats,
             "recoveries": recoveries,
+            "milestones": self.milestones.to_dict(),
         }
+
+    def _extras_path(self) -> Path:
+
+        if self.state_path:
+
+            return Path(str(self.state_path) + ".extras.json")
+
+        return Path(self.workspace_path) / ".agent" / "session.extras.json"
+
+    def _save_state_extras(self) -> None:
+
+        """Persist plan graph, assumptions and milestones next to the state."""
+
+        try:
+
+            data = {
+                "plan": self.plan_graph.to_dict(),
+                "assumptions": self.assumptions.to_dict(),
+                "milestones": self.milestones.to_dict(),
+            }
+
+            path = self._extras_path()
+
+            path.parent.mkdir(parents=True, exist_ok=True)
+
+            tmp = path.with_suffix(".tmp")
+
+            tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+            tmp.replace(path)
+
+        except OSError as e:
+
+            logger.warning(f"could not save session extras: {e}")
+
+    def _load_state_extras(self) -> None:
+
+        path = self._extras_path()
+
+        if not path.is_file():
+
+            return
+
+        try:
+
+            data = json.loads(path.read_text(encoding="utf-8"))
+
+            self.plan_graph = PlanGraph.from_dict(data.get("plan", {}))
+
+            self.assumptions = AssumptionLedger.from_dict(data.get("assumptions", {}))
+
+            self.milestones = MilestoneCheckpointer.from_dict(
+                data.get("milestones", {}), str(self.executor.workspace)
+            )
+
+        except (json.JSONDecodeError, OSError, ValueError) as e:
+
+            logger.warning(f"could not resume session extras: {e}")
 
     def _format_messages(self, messages: list[dict]) -> str:
         """Legacy flat formatter (kept for callers that build prompts manually)."""

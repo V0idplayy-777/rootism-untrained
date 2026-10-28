@@ -44,7 +44,9 @@
           "prs",
           "docs",
           "security",
-          "creative"
+          "creative",
+          "induction",
+          "recovery"
         ]
       }
     },
@@ -62,11 +64,15 @@
         "sources": [
           "instruction-sft",
           "security-sft",
-          "creative-sft"
+          "creative-sft",
+          "instruction-induction",
+          "recovery-sft"
         ],
         "upsample": {
           "security-sft": 3.0,
-          "creative-sft": 2.0
+          "creative-sft": 2.0,
+          "instruction-induction": 1.5,
+          "recovery-sft": 2.0
         },
         "security_examples_per_batch": 8
       }

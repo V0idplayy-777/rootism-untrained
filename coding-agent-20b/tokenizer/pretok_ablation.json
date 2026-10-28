@@ -1,0 +1,35 @@
+{
+  "vocab": 16384,
+  "train_chars": 3006356,
+  "heldout_docs": 400,
+  "units": {
+    "strings": 3714,
+    "comments": 3223,
+    "identifiers": 15162,
+    "numbers": 1854
+  },
+  "code_aware": {
+    "fertility": 0.37589089216629845,
+    "tokens_per_string": 6.474151857835218,
+    "tokens_per_comment": 12.375116351225566,
+    "tokens_per_identifier": 1.4856219496108694,
+    "tokens_per_number": 1.4778856526429343
+  },
+  "gpt2_generic": {
+    "fertility": 0.31291633058359464,
+    "tokens_per_string": 7.235325794291868,
+    "tokens_per_comment": 13.28451753025132,
+    "tokens_per_identifier": 1.5045508508112386,
+    "tokens_per_number": 1.9525350593311759
+  },
+  "fertility_ratio": 1.2012504795299597,
+  "gate": {
+    "strings_win": true,
+    "comments_win": true,
+    "numbers_win": true,
+    "identifiers_win": true,
+    "fertility_within_bound": true,
+    "fertility_tolerance": 1.25
+  },
+  "passed": true
+}

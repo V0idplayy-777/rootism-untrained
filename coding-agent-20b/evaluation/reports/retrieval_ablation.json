@@ -1,0 +1,1940 @@
+{
+  "root": "/home/user/rootism-untrained/coding-agent-20b",
+  "tasks": 60,
+  "budget_tokens": 3000,
+  "flat_recall": 0.9667,
+  "hierarchical_recall": 0.9833,
+  "hierarchical_features": {
+    "queries": 2.0,
+    "call_graph_files": 1.467,
+    "file_summaries": 1.217,
+    "hybrid_fired": 60,
+    "repo_summary_fired": 60
+  },
+  "gate": {
+    "hierarchical_not_worse": true
+  },
+  "rows": [
+    {
+      "task": "fix the AgentState function",
+      "gold": "agent/agent.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 1972,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2998,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 3,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the MemoryEntry function",
+      "gold": "agent/memory.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 922,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2841,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 2,
+          "file_summaries": 3,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the _balance_braces function",
+      "gold": "agent/parser.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2950,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2925,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the PlanStep function",
+      "gold": "agent/planning.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 875,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2823,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 3,
+          "file_summaries": 3,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the ProductionAgent function",
+      "gold": "agent/production_agent.py",
+      "flat": {
+        "recall": false,
+        "in_chunks": false,
+        "in_text": false,
+        "tokens": 1231,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": false,
+        "in_text": true,
+        "tokens": 2602,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 3,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the RecoveryAction function",
+      "gold": "agent/recovery.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2868,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": true
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2553,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 2,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the tokenize_for_index function",
+      "gold": "agent/repo_context.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 1856,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2767,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 2,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the redact_secrets function",
+      "gold": "agent/safety.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2170,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2581,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 2,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the SandboxUnavailable function",
+      "gold": "agent/sandbox.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 1827,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2708,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 2,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the _slug function",
+      "gold": "agent/scratch.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 745,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2543,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 3,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the estimate_tokens function",
+      "gold": "agent/session.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2084,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2724,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the ToolExecutor function",
+      "gold": "agent/tools.py",
+      "flat": {
+        "recall": false,
+        "in_chunks": false,
+        "in_text": false,
+        "tokens": 2179,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": false,
+        "in_chunks": false,
+        "in_text": false,
+        "tokens": 2835,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the _terse function",
+      "gold": "dataset/augmentation.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2559,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2810,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the CodeSample function",
+      "gold": "dataset/code_templates.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2565,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2977,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the JavaScriptCodeGenerator function",
+      "gold": "dataset/generator.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2170,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 3000,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the InstructionSample function",
+      "gold": "dataset/instruction_data.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2990,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": true
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2963,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 2,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the iter_corpus_files function",
+      "gold": "dataset/instruction_induction.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 1618,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2563,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 4,
+          "file_summaries": 2,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the SourceSpec function",
+      "gold": "dataset/mixture.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2919,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2995,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 3,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the PackedSequence function",
+      "gold": "dataset/packing.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 825,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2879,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 4,
+          "file_summaries": 3,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the DatasetConfig function",
+      "gold": "dataset/processor.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 1778,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2628,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the Document function",
+      "gold": "dataset/production_processor.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2550,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": true
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2891,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the SecuritySample function",
+      "gold": "dataset/security_data.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2413,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2955,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 4,
+          "file_summaries": 2,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the EvaluationProblem function",
+      "gold": "evaluation/evaluate.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2021,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2791,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the EvaluationProblem function",
+      "gold": "evaluation/production_evaluate.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2021,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2791,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the make_tasks function",
+      "gold": "evaluation/retrieval_ablation.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2744,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2767,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 3,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the GuardRule function",
+      "gold": "evaluation/security_eval.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2220,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2919,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 3,
+          "file_summaries": 2,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the train_engine function",
+      "gold": "evaluation/tokenizer_ablation.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2781,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": true
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2949,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 2,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the Encoder function",
+      "gold": "evaluation/tokenizer_bench.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 1808,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2235,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the dynamic_int8 function",
+      "gold": "inference/quantize.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 1981,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2636,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 4,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the _Request function",
+      "gold": "inference/server.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2952,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": true
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2961,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the __getattr__ function",
+      "gold": "model/__init__.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2581,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": true
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2894,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the CodingAgentConfig function",
+      "gold": "model/config.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 1024,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2929,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 4,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the _repo_byte_to_char function",
+      "gold": "model/fast_bpe.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 1041,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2910,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 4,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the GenerationConfig function",
+      "gold": "model/generation.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2155,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2978,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the ReasoningBudget function",
+      "gold": "model/longform.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 1393,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2820,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 2,
+          "file_summaries": 2,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the RotaryEmbedding function",
+      "gold": "model/model.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2907,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2837,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 2,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the is_special_token function",
+      "gold": "model/tokenizer.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2142,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": true
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2960,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 2,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the DatasetConfig function",
+      "gold": "scripts/build_real_dataset.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 1778,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2628,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the classify_license_text function",
+      "gold": "scripts/fetch_real_corpus.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2767,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2991,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 3,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the setup_logging function",
+      "gold": "scripts/generate_dataset.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2147,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2544,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the _write_shard function",
+      "gold": "scripts/sample_tokenizer_corpus.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2116,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2639,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 2,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the _spdx_ok function",
+      "gold": "scripts/train_production_tokenizer.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2862,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2665,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the load_code_from_directory function",
+      "gold": "scripts/train_tokenizer.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2840,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": true
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2980,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the verify_model function",
+      "gold": "scripts/verify_model.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 1723,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2845,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 2,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the tiny_model function",
+      "gold": "tests/conftest.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 1981,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2575,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the test_parse_native_fenced_and_repaired_calls function",
+      "gold": "tests/test_agent.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2705,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2993,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 3,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the _workspace function",
+      "gold": "tests/test_agent_long_horizon.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 1389,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2960,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 3,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the _workspace function",
+      "gold": "tests/test_agent_loop.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 1389,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2960,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 3,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the test_domain_pair_count_and_capabilities_covered function",
+      "gold": "tests/test_augmentation_expansion.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2571,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": true
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2716,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the test_checkpoint_integrity_roundtrip function",
+      "gold": "tests/test_checkpoint_quant.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2356,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2899,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 3,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the _repo function",
+      "gold": "tests/test_context_state.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2067,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2957,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 2,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the test_language_license_quality_gates function",
+      "gold": "tests/test_data_eval_training.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2579,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2911,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the index function",
+      "gold": "tests/test_deep_retrieval.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2150,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2631,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the test_byte_alphabets_are_exact_bijections function",
+      "gold": "tests/test_fast_bpe.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2619,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": true
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2962,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the write_shard function",
+      "gold": "tests/test_instruction_induction.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2431,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2894,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 3,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the test_forward_and_loss function",
+      "gold": "tests/test_model.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2358,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": true
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2974,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 3,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the test_plan_graph_parses_explicit_and_implicit_dependencies function",
+      "gold": "tests/test_planning_memory_scratch.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2533,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2976,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 2,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the test_curated_security_samples_are_paired_and_valid_python function",
+      "gold": "tests/test_security_augment_longform.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2835,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": true
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2869,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 3,
+          "file_summaries": 0,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the test_roundtrip_byte_fallback function",
+      "gold": "tests/test_tokenizer.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2325,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2905,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 2,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    },
+    {
+      "task": "fix the _corpus function",
+      "gold": "tests/test_tokenizer_gate.py",
+      "flat": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2173,
+        "features": {
+          "queries": 1,
+          "hybrid": false,
+          "call_graph_files": 0,
+          "file_summaries": 0,
+          "repo_summary": false
+        },
+        "truncated": false
+      },
+      "hierarchical": {
+        "recall": true,
+        "in_chunks": true,
+        "in_text": true,
+        "tokens": 2936,
+        "features": {
+          "queries": 2,
+          "hybrid": true,
+          "call_graph_files": 1,
+          "file_summaries": 1,
+          "repo_summary": true
+        },
+        "truncated": true
+      }
+    }
+  ],
+  "passed": true
+}
