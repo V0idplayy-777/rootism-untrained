@@ -81,7 +81,9 @@ def build_app(model, tokenizer):
     from pydantic import BaseModel
 
     app = FastAPI(title="CodingAgent-20B", version="1.0.0")
-
+"""
+FUCK!! IT'S BROKEN!!
+"""
     def _generate(prompt_ids, kwargs):
         import torch
         from model.generation import GenerationConfig
