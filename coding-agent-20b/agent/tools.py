@@ -380,6 +380,30 @@ class ToolExecutor:
 
         return self._git("show", ref, "--stat")
 
+    def revert(self, files: list[str] | None = None, stash: bool = False) -> dict:
+        """Roll the workspace back to a known-good state (recovery BACKTRACK).
+
+        `files` restores just those paths (`git checkout -- <paths>`); otherwise
+        unverified edits are stashed, including untracked files, so nothing is
+        destroyed. Returns the resulting status for the observation.
+        """
+
+        if stash or not files:
+
+            result = self._git("stash", "push", "--include-untracked", "-m", "agent-backtrack")
+
+        else:
+
+            result = self._git("checkout", "--", *files)
+
+        if "error" in result:
+
+            return result
+
+        result["status"] = self.git_status()
+
+        return result
+
     def execute_tool(self, tool_name: str, arguments: dict) -> dict:
 
         dispatch = {
@@ -398,6 +422,7 @@ class ToolExecutor:
             "git_branch": self.git_branch,
             "git_checkout": self.git_checkout,
             "git_show": self.git_show,
+            "revert": self.revert,
         }
 
         fn = dispatch.get(tool_name)

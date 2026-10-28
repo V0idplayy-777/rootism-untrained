@@ -15,7 +15,7 @@ import os
 import subprocess
 import tempfile
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -817,6 +817,206 @@ class SweBenchHarness:
             _shutil.rmtree(repo_dir, ignore_errors=True)
 
 
+def gold_files_from_patch(patch: str) -> list[str]:
+    """Files touched by a gold patch — for *measurement only*, never prompting."""
+
+    import re as _re
+
+    return sorted(
+        set(_re.findall(r"^\+\+\+ b/(.+)$", patch or "", flags=_re.M))
+    )
+
+
+def build_swebench_prompt(
+    problem: "SweBenchProblem",
+    repo_dir: str,
+    tokenizer=None,
+    budget_tokens: int = 6000,
+    mode: str = "hierarchical",
+    index=None,
+) -> dict[str, Any]:
+    """Construct a repo-aware SWE-bench prompt within a token budget.
+
+    `mode` is the retrieval ablation switch: `none` reproduces the
+    "local change only" baseline, `flat` adds BM25 chunks, `hierarchical` adds
+    the repo map and one-hop import neighbours. The returned dict carries the
+    pack stats so runs can report context cost, not just pass rates.
+    """
+
+    from agent.repo_context import ContextAssembler, RepoIndex
+
+    index = index or RepoIndex.build(repo_dir)
+
+    assembler = ContextAssembler(index, tokenizer)
+
+    pack = assembler.build(
+        problem.problem_statement, budget_tokens=budget_tokens, mode=mode
+    )
+
+    prompt = (
+        f"Repository: {problem.repo} @ {problem.base_commit}\n"
+        f"Issue:\n{problem.problem_statement}\n\n"
+        f"{pack.text}\n"
+        "Return a unified diff that fixes the issue. Modify as few files as "
+        "possible and do not change tests."
+    )
+
+    return {
+        "prompt": prompt,
+        "pack": pack,
+        "index": index,
+        "stats": {
+            "mode": mode,
+            "tokens": pack.tokens,
+            "map_included": pack.map_included,
+            "files_in_context": len({c.path for c in pack.chunks}),
+            "chunks": len(pack.chunks),
+        },
+    }
+
+
+class RetrievalAblation:
+    """Measure retrieval, not vibes.
+
+    For each SWE-bench instance and each context mode, reports:
+
+    - ``gold_file_recall``: fraction of gold-patched files present in context
+      (the ceiling for any local fix),
+    - ``gold_symbol_recall``: fraction of gold-patched *symbols* retrievable,
+    - ``context_tokens``: cost of that context,
+    - ``covered``: instances where at least one gold file was retrieved.
+
+    A retriever that does not beat the `none` mode on recall cannot help; one
+    that only matches `flat` does not justify its token cost.
+    """
+
+    def __init__(self, tokenizer=None, budget_tokens: int = 6000):
+
+        self.tokenizer = tokenizer
+
+        self.budget_tokens = budget_tokens
+
+    def evaluate(
+        self,
+        problems: list["SweBenchProblem"],
+        repo_dirs: dict[str, str],
+        modes: tuple[str, ...] = ("none", "flat", "hierarchical"),
+        max_instances: int | None = None,
+    ) -> dict[str, Any]:
+
+        from agent.repo_context import RepoIndex
+
+        results: dict[str, dict[str, Any]] = {
+            mode: {
+                "instances": 0,
+                "gold_file_recall": 0.0,
+                "gold_symbol_recall": 0.0,
+                "context_tokens": 0,
+                "covered": 0,
+                "per_instance": [],
+            }
+            for mode in modes
+        }
+
+        indexes: dict[str, Any] = {}
+
+        for problem in problems[: max_instances or len(problems)]:
+
+            repo_dir = repo_dirs.get(problem.instance_id)
+
+            if not repo_dir:
+
+                continue
+
+            gold_files = gold_files_from_patch(problem.patch)
+
+            if not gold_files:
+
+                continue
+
+            if repo_dir not in indexes:
+
+                indexes[repo_dir] = RepoIndex.build(repo_dir)
+
+            index = indexes[repo_dir]
+
+            for mode in modes:
+
+                prompt_data = build_swebench_prompt(
+                    problem,
+                    repo_dir,
+                    tokenizer=self.tokenizer,
+                    budget_tokens=self.budget_tokens,
+                    mode=mode,
+                    index=index,
+                )
+
+                retrieved = {c.path for c in prompt_data["pack"].chunks}
+
+                hit_files = [f for f in gold_files if f in retrieved]
+
+                gold_symbols = set()
+
+                for gold in gold_files:
+
+                    for symbol in index.defined_in(gold):
+
+                        gold_symbols.add(symbol.name)
+
+                retrieved_text = prompt_data["pack"].text
+
+                hit_symbols = {s for s in gold_symbols if s in retrieved_text}
+
+                bucket = results[mode]
+
+                bucket["instances"] += 1
+
+                bucket["gold_file_recall"] += len(hit_files) / len(gold_files)
+
+                bucket["gold_symbol_recall"] += (
+                    len(hit_symbols) / len(gold_symbols) if gold_symbols else 0.0
+                )
+
+                bucket["context_tokens"] += prompt_data["stats"]["tokens"]
+
+                bucket["covered"] += 1 if hit_files else 0
+
+                bucket["per_instance"].append(
+                    {
+                        "instance_id": problem.instance_id,
+                        "gold_files": gold_files,
+                        "hit_files": hit_files,
+                        "context_tokens": prompt_data["stats"]["tokens"],
+                    }
+                )
+
+        summary: dict[str, Any] = {}
+
+        for mode, bucket in results.items():
+
+            n = max(bucket["instances"], 1)
+
+            summary[mode] = {
+                "instances": bucket["instances"],
+                "gold_file_recall": bucket["gold_file_recall"] / n,
+                "gold_symbol_recall": bucket["gold_symbol_recall"] / n,
+                "context_tokens": bucket["context_tokens"] / n,
+                "covered": bucket["covered"] / n,
+                "per_instance": bucket["per_instance"],
+            }
+
+        if "hierarchical" in summary and "flat" in summary:
+
+            summary["hierarchical_vs_flat"] = {
+                "file_recall_delta": summary["hierarchical"]["gold_file_recall"]
+                - summary["flat"]["gold_file_recall"],
+                "token_delta": summary["hierarchical"]["context_tokens"]
+                - summary["flat"]["context_tokens"],
+            }
+
+        return summary
+
+
 class ContaminationChecker:
     """n-gram overlap of eval prompts/solutions against a training corpus index.
 
@@ -869,10 +1069,77 @@ class Trajectory:
 
     error: str | None = None
 
+    state: dict | None = None
+
+    recoveries: list[dict] = field(default_factory=list)
+
+    context: dict | None = None
+
+
+def _longest_failure_streak(steps: list[dict]) -> int:
+    """Longest run of consecutive failed/malformed steps."""
+
+    best = current = 0
+
+    for step in steps:
+
+        if step.get("tool") is None:
+
+            current += 1
+
+        else:
+
+            result = step.get("result") or {}
+
+            if isinstance(result, dict) and result.get("error"):
+
+                current += 1
+
+            else:
+
+                current = 0
+
+        best = max(best, current)
+
+    return best
+
+
+def _loop_rate(steps: list[dict], threshold: int = 2) -> float:
+    """Fraction of steps that repeat an identical (tool, arguments) action."""
+
+    seen: dict[str, int] = {}
+
+    repeats = 0
+
+    for step in steps:
+
+        key = json.dumps(
+            [step.get("tool"), step.get("arguments") or {}], sort_keys=True
+        )
+
+        seen[key] = seen.get(key, 0) + 1
+
+        if seen[key] > threshold:
+
+            repeats += 1
+
+    return repeats / max(len(steps), 1)
+
 
 def evaluate_trajectories(trajectories: list[Trajectory]) -> dict[str, Any]:
-    """Agent-trajectory metrics: task success, tool-choice correctness,
-    malformed-call rate and error-recovery rate (succeed after a failed step)."""
+    """Agent-trajectory metrics.
+
+    Measures the things long-horizon tool use actually fails at:
+
+    - success / tool-choice accuracy / malformed-call rate,
+    - recovery rate (eventual success after any failure),
+    - `recovery_after_3`: success after a streak of 3+ consecutive failures
+      (the case where planning, not luck, is required),
+    - `loop_rate`: identical call repeated more than twice,
+    - `plan_completion` and `state_coherence` from the serialised session state
+      (a "done" todo without evidence is not coherent),
+    - `escalations`/`backtracks` from the recovery policy trace.
+    """
 
     if not trajectories:
 
@@ -881,6 +1148,16 @@ def evaluate_trajectories(trajectories: list[Trajectory]) -> dict[str, Any]:
     tool_total = tool_correct = malformed = 0
 
     recovered = recoverable = 0
+
+    hard_recoverable = hard_recovered = 0
+
+    loops = 0.0
+
+    plan_progress: list[float] = []
+
+    coherent = 0
+
+    escalations = backtracks = 0
 
     for tr in trajectories:
 
@@ -918,6 +1195,42 @@ def evaluate_trajectories(trajectories: list[Trajectory]) -> dict[str, Any]:
 
                 recovered += 1
 
+        if _longest_failure_streak(tr.steps) >= 3:
+
+            hard_recoverable += 1
+
+            if tr.success:
+
+                hard_recovered += 1
+
+        loops += _loop_rate(tr.steps)
+
+        for record in tr.recoveries:
+
+            action = record.get("action")
+
+            if action == "escalate":
+
+                escalations += 1
+
+            elif action == "backtrack":
+
+                backtracks += 1
+
+        if tr.state:
+
+            completion = tr.state.get("todos", {}).get("completion")
+
+            if isinstance(completion, (int, float)):
+
+                plan_progress.append(float(completion))
+
+            todos = tr.state.get("todos", {}).get("todos", [])
+
+            if all(t.get("evidence") for t in todos if t.get("status") == "done"):
+
+                coherent += 1
+
     total_calls = tool_total + malformed
 
     return {
@@ -926,6 +1239,13 @@ def evaluate_trajectories(trajectories: list[Trajectory]) -> dict[str, Any]:
         "tool_accuracy": tool_correct / max(tool_total, 1),
         "malformed_rate": malformed / max(total_calls, 1),
         "recovery_rate": recovered / max(recoverable, 1),
+        "recovery_after_3": hard_recovered / max(hard_recoverable, 1),
+        "hard_trajectories": hard_recoverable,
+        "loop_rate": loops / len(trajectories),
+        "plan_completion": sum(plan_progress) / max(len(plan_progress), 1),
+        "state_coherence": coherent / len(trajectories),
+        "escalations": escalations,
+        "backtracks": backtracks,
         "avg_steps": sum(len(t.steps) for t in trajectories) / len(trajectories),
     }
 

@@ -83,10 +83,68 @@ SPECIAL_TOKENS = {
     "<|file_path|>": 61,
     "<|reserved_62|>": 62,
     "<|reserved_63|>": 63,
+    # --- capability tokens (appended; existing IDs are frozen) -------------
+    # Long-horizon agent work: an explicit scratchpad, plan and todo channel
+    # that the agent can write to instead of burning context on prose.
+    "<|scratchpad|>": 64,
+    "<|plan|>": 65,
+    "<|todo|>": 66,
+    # Repository context: retrieved chunks / repo maps are fenced so the model
+    # can distinguish evidence (read-only) from what it must produce.
+    "<|repo_map|>": 67,
+    "<|retrieval|>": 68,
+    "<|file_chunk|>": 69,
+    "<|diff|>": 70,
+    # Review / safety / uncertainty channels.
+    "<|review|>": 71,
+    "<|security|>": 72,
+    "<|uncertain|>": 73,
+    "<|clarify|>": 74,
+    # Observation framing for tool results and recoverable failures.
+    "<|observation|>": 75,
+    "<|tool_error|>": 76,
+    # Fill-in-the-middle padding + hard document boundary.
+    "<|fim_pad|>": 77,
+    "<|endoftext|>": 78,
 }
 
 
 NUM_SPECIAL_TOKENS = len(SPECIAL_TOKENS)
+
+
+# Ids above the hand-written block are reserved padding. A production vocab
+# must be exactly `vocab_size` entries (tensor shape / embedding alignment), so
+# unused capacity is filled with reserved specials rather than silently
+# shrinking the embedding table.
+RESERVED_TOKEN_TEMPLATE = "<|reserved_{id}|>"
+
+
+def is_special_token(token: str) -> bool:
+    """True for control tokens (base block or dynamically reserved padding)."""
+    if token in SPECIAL_TOKENS:
+        return True
+    return bool(
+        re.fullmatch(r"<\|reserved_\d+\|>", token)
+        or re.fullmatch(r"<\|[a-z0-9_]+\|>", token)
+    )
+
+
+def pad_special_tokens(special_tokens: dict[str, int], vocab_size: int) -> dict[str, int]:
+    """Return specials padded so that ids stay contiguous from 0.
+
+    Padding is deterministic (`<|reserved_{id}|>` for each free id), so two
+    tokenizer runs over the same vocab size produce identical id maps.
+    """
+    out = dict(special_tokens)
+    next_id = max(out.values(), default=-1) + 1
+    if next_id != len(out):
+        # keep the dense-from-zero invariant the decoder/validator rely on
+        out = {name: i for i, name in enumerate(sorted(out, key=out.get))}
+        next_id = len(out)
+    while next_id < vocab_size:
+        out[RESERVED_TOKEN_TEMPLATE.format(id=next_id)] = next_id
+        next_id += 1
+    return out
 
 
 class CodePreTokenizer:
@@ -103,6 +161,8 @@ class CodePreTokenizer:
 
     CODE_PATTERN = re.compile(
         r"""
+        (?:^@@ -[^\n]*) |
+        (?:^(?:---|\+\+\+) [^\n]*) |
         (?:'''[\s\S]*?'''|\"\"\"[\s\S]*?\"\"\") |
         (?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*") |
         (?:`(?:[^`\\]|\\.)*`) |
@@ -117,7 +177,7 @@ class CodePreTokenizer:
         (?:\n+) |
         (?:\S)
         """,
-        re.VERBOSE,
+        re.VERBOSE | re.MULTILINE,
     )
 
     def pre_tokenize(self, text: str) -> list[str]:
@@ -334,6 +394,9 @@ class CodeTokenizer:
     - Special tokens for chat/instruction format
     - Fill-in-the-middle support for code completion
     - Efficient batch encoding
+    - Exact vocabulary alignment: `pad_to_vocab_size` fills unused capacity
+      with deterministic reserved tokens so `len(tokenizer)` always equals the
+      model's `vocab_size` (no silent embedding/logit shape mismatch).
     """
 
     def __init__(
@@ -341,11 +404,14 @@ class CodeTokenizer:
         vocab: list[str] | None = None,
         merges: list[tuple[str, str]] | None = None,
         special_tokens: dict[str, int] | None = None,
+        pad_to_vocab_size: int | None = None,
     ):
 
-        self.special_tokens = special_tokens or SPECIAL_TOKENS
+        self.special_tokens = dict(special_tokens or SPECIAL_TOKENS)
 
         self.num_special = len(self.special_tokens)
+
+        self.pad_to_vocab_size = pad_to_vocab_size
 
         if vocab is not None:
 
@@ -355,14 +421,34 @@ class CodeTokenizer:
 
             self._build_default_vocab()
 
+        if pad_to_vocab_size is not None:
+
+            self.pad_to_size(pad_to_vocab_size)
+
         self.pre_tokenizer = CodePreTokenizer()
+
+        self._special_ids = frozenset(self.special_tokens.values())
+
+        self._piece_cache: dict[str, tuple[int, ...]] = {}
+
+    def _register_special(self, name: str, idx: int):
+
+        self.special_tokens[name] = idx
+
+        self.token_to_id[name] = idx
+
+        self.id_to_token[idx] = name
 
     def _build_default_vocab(self):
         """Build a default byte-level vocabulary."""
 
-        self.token_to_id = dict(self.special_tokens)
+        self.token_to_id = {}
 
-        self.id_to_token = {v: k for k, v in self.special_tokens.items()}
+        self.id_to_token = {}
+
+        for name, idx in self.special_tokens.items():
+
+            self._register_special(name, idx)
 
         for i in range(256):
 
@@ -385,11 +471,18 @@ class CodeTokenizer:
 
         Byte-fallback guarantee: all 256 byte-level symbols are always
         present, so ANY unicode string encodes without <unk>.
+
+        Id assignment is deterministic and merge-rank ordered:
+        specials -> 256 byte symbols -> merged pieces in merge order.
         """
 
-        self.token_to_id = dict(self.special_tokens)
+        self.token_to_id = {}
 
-        self.id_to_token = {v: k for k, v in self.special_tokens.items()}
+        self.id_to_token = {}
+
+        for name, idx in self.special_tokens.items():
+
+            self._register_special(name, idx)
 
         for i in range(256):
 
@@ -403,7 +496,21 @@ class CodeTokenizer:
 
                 self.id_to_token[idx] = char
 
-        for token in vocab:
+        # Rank order (not alphabetical) so a tokenizer grown by another N
+        # merges keeps every existing id stable.
+        ordered: list[str] = []
+
+        for left, right in merges:
+
+            merged = left + right
+
+            if merged not in ordered:
+
+                ordered.append(merged)
+
+        ordered.extend(t for t in sorted(vocab) if t not in ordered)
+
+        for token in ordered:
 
             if token not in self.token_to_id:
 
@@ -416,6 +523,42 @@ class CodeTokenizer:
         self.merges = merges
 
         self.merge_ranks = {merge: i for i, merge in enumerate(merges)}
+
+    def pad_to_size(self, size: int) -> "CodeTokenizer":
+        """Pad the vocabulary to exactly `size` with reserved specials.
+
+        Raises if the learned vocab already exceeds `size` (that would mean the
+        trainer produced more merges than the model can embed).
+        """
+
+        current = len(self.token_to_id)
+
+        if current > size:
+
+            raise ValueError(
+                f"vocabulary ({current}) exceeds target size ({size}); "
+                "reduce num_merges or raise vocab_size"
+            )
+
+        idx = current
+
+        while idx < size:
+
+            name = RESERVED_TOKEN_TEMPLATE.format(id=idx)
+
+            if name not in self.token_to_id:
+
+                self._register_special(name, idx)
+
+            idx += 1
+
+        self.num_special = len(self.special_tokens)
+
+        self._special_ids = frozenset(self.special_tokens.values())
+
+        self.pad_to_vocab_size = size
+
+        return self
 
     def _byte_to_char(self, byte_val: int) -> str:
         """Map a byte value to a unique unicode character."""
@@ -460,13 +603,23 @@ class CodeTokenizer:
 
         pre_tokens = self.pre_tokenizer.pre_tokenize(text)
 
+        cache = self._piece_cache
+
         for pre_token in pre_tokens:
 
-            bytes_str = "".join(
-                self._byte_to_char(b) for b in pre_token.encode("utf-8")
-            )
+            bpe_tokens = cache.get(pre_token)
 
-            bpe_tokens = self._apply_bpe(bytes_str)
+            if bpe_tokens is None:
+
+                bytes_str = "".join(
+                    self._byte_to_char(b) for b in pre_token.encode("utf-8")
+                )
+
+                bpe_tokens = tuple(self._apply_bpe(bytes_str))
+
+                if len(cache) < 200_000:
+
+                    cache[pre_token] = bpe_tokens
 
             for token in bpe_tokens:
 
@@ -500,9 +653,11 @@ class CodeTokenizer:
 
         text_parts = []
 
+        special_ids = getattr(self, "_special_ids", frozenset())
+
         for token_id in token_ids:
 
-            if skip_special_tokens and token_id < self.num_special:
+            if skip_special_tokens and token_id in special_ids:
 
                 continue
 
@@ -640,6 +795,8 @@ class CodeTokenizer:
         os.makedirs(directory, exist_ok=True)
 
         vocab_data = {
+            "version": 2,
+            "vocab_size": len(self.token_to_id),
             "token_to_id": self.token_to_id,
             "merges": [(m[0], m[1]) for m in self.merges],
             "special_tokens": self.special_tokens,
@@ -651,7 +808,7 @@ class CodeTokenizer:
 
     @classmethod
     def load(cls, directory: str) -> "CodeTokenizer":
-        """Load tokenizer from directory."""
+        """Load tokenizer from directory (validating size/id-map integrity)."""
 
         with open(os.path.join(directory, "tokenizer.json"), "r") as f:
 
@@ -659,13 +816,43 @@ class CodeTokenizer:
 
         tokenizer = cls(special_tokens=data["special_tokens"])
 
-        tokenizer.token_to_id = data["token_to_id"]
+        tokenizer.token_to_id = {k: int(v) for k, v in data["token_to_id"].items()}
 
         tokenizer.id_to_token = {v: k for k, v in data["token_to_id"].items()}
+
+        if len(tokenizer.id_to_token) != len(tokenizer.token_to_id):
+
+            raise ValueError("tokenizer.json has duplicate token ids")
 
         tokenizer.merges = [tuple(m) for m in data["merges"]]
 
         tokenizer.merge_ranks = {tuple(m): i for i, m in enumerate(data["merges"])}
+
+        tokenizer.special_tokens = {
+            k: int(v) for k, v in data["special_tokens"].items()
+        }
+
+        tokenizer._special_ids = frozenset(tokenizer.special_tokens.values())
+
+        tokenizer.num_special = len(tokenizer.special_tokens)
+
+        declared = data.get("vocab_size")
+
+        if declared is not None and declared != len(tokenizer.token_to_id):
+
+            raise ValueError(
+                f"vocab_size mismatch: file declares {declared}, "
+                f"map has {len(tokenizer.token_to_id)}"
+            )
+
+        # Byte fallback must survive serialisation.
+        for i in range(256):
+
+            char = tokenizer._byte_to_char(i)
+
+            if char not in tokenizer.token_to_id:
+
+                raise ValueError(f"tokenizer.json is missing byte symbol {i}")
 
         return tokenizer
 
@@ -689,6 +876,7 @@ class EfficientBPETrainer:
         vocab_size: int = 128256,
         min_frequency: int = 2,
         special_tokens: dict[str, int] | None = None,
+        pad_to_vocab_size: bool = True,
     ):
 
         self.vocab_size = vocab_size
@@ -696,6 +884,8 @@ class EfficientBPETrainer:
         self.min_frequency = min_frequency
 
         self.special_tokens = special_tokens or SPECIAL_TOKENS
+
+        self.pad_to_vocab_size = pad_to_vocab_size
 
         self.pre_tokenizer = CodePreTokenizer()
 
@@ -875,13 +1065,73 @@ class EfficientBPETrainer:
                 f"Learned {len(merges)} merges; vocab={len(vocab) + len(self.special_tokens):,}"
             )
 
-        return CodeTokenizer(
+        tokenizer = CodeTokenizer(
             vocab=sorted(vocab), merges=merges, special_tokens=self.special_tokens
         )
 
+        if self.pad_to_vocab_size:
+
+            tokenizer.pad_to_size(self.vocab_size)
+
+            if verbose:
+
+                print(
+                    f"Padded vocabulary to {len(tokenizer):,} "
+                    f"(target {self.vocab_size:,})"
+                )
+
+        return tokenizer
+
 
 class TokenizerValidator:
-    """Compression / round-trip / fertility validation for a trained tokenizer."""
+    """Compression / round-trip / fertility validation for a trained tokenizer.
+
+    Beyond aggregate chars/token this measures the things that actually decide
+    whether a code tokenizer is *competitive*:
+
+    - per-language fertility (a vocab that wins on Python prose can lose on
+      TypeScript punctuation),
+    - identifier cost: tokens per identifier character, which controls how
+      expensive symbol-heavy agent context is,
+    - whitespace fidelity: leading indentation and newlines must survive
+      round-trip exactly (Python semantics depend on it),
+    - diff/patch cost: unified diffs are the agent's main output format, so a
+      vocab that fragments `@@ -1,4 +1,6 @@` is disqualified regardless of
+      its prose score.
+    """
+
+    DIFF_SAMPLE = (
+        "--- a/pkg/service.py\n"
+        "+++ b/pkg/service.py\n"
+        "@@ -41,7 +41,9 @@ def handle(request):\n"
+        "-    token = request.headers['X-Token']\n"
+        "+    token = request.headers.get('X-Token', '')\n"
+        "+    if not token:\n"
+        "+        raise ValueError('missing token')\n"
+    )
+
+    # Cheap deterministic classification (no pygments dependency, stable
+    # labels). Only used to group fertility numbers in the report.
+    _LANG_HINTS = (
+        ("typescript", ("interface ", "export const", "=>", ": string", "Promise<")),
+        ("rust", ("fn ", "impl ", "pub struct", "let mut", "-> Result<")),
+        ("go", ("package ", "func ", ":= ", "import (", "go func")),
+        ("sql", ("SELECT ", "FROM ", "JOIN ", "GROUP BY")),
+        ("yaml", ("services:", "version:", "image:", "- name:")),
+        ("diff", ("--- a/", "@@ -", "+++ b/")),
+        ("python", ("def ", "import ", "class ", ":\n", "self.")),
+    )
+
+    @staticmethod
+    def _language_of(sample: str) -> str:
+
+        for lang, needles in TokenizerValidator._LANG_HINTS:
+
+            if any(n in sample for n in needles):
+
+                return lang
+
+        return "other"
 
     @staticmethod
     def validate(tokenizer: "CodeTokenizer", samples: list[str]) -> dict:
@@ -891,6 +1141,8 @@ class TokenizerValidator:
         roundtrip_ok = True
 
         per_sample = []
+
+        per_language: dict[str, list[float]] = defaultdict(list)
 
         for s in samples:
 
@@ -910,6 +1162,10 @@ class TokenizerValidator:
 
             unk += sum(1 for i in ids if i == tokenizer.special_tokens["<unk>"])
 
+            per_language[TokenizerValidator._language_of(s)].append(
+                len(s) / max(len(ids), 1)
+            )
+
             per_sample.append(
                 {
                     "chars": len(s),
@@ -919,18 +1175,118 @@ class TokenizerValidator:
                 }
             )
 
+        identifiers = TokenizerValidator.identifier_cost(tokenizer, samples)
+
+        whitespace = TokenizerValidator.whitespace_fidelity(tokenizer, samples)
+
+        diff = TokenizerValidator.diff_cost(tokenizer)
+
         return {
             "num_samples": len(samples),
             "chars_per_token": total_chars / max(total_tokens, 1),
             "bytes_per_token": total_bytes / max(total_tokens, 1),
             "unk_rate": unk / max(total_tokens, 1),
             "roundtrip_ok": roundtrip_ok,
+            "vocab_size": len(tokenizer),
+            "per_language": {
+                lang: sum(v) / len(v) for lang, v in per_language.items() if v
+            },
+            "identifiers": identifiers,
+            "whitespace": whitespace,
+            "diff": diff,
             "per_sample": per_sample,
         }
 
     @staticmethod
+    def identifier_cost(tokenizer: "CodeTokenizer", samples: list[str]) -> dict:
+        """Tokens per identifier character (lower is better)."""
+
+        ident_re = re.compile(r"[A-Za-z_][A-Za-z0-9_]{3,}")
+
+        chars = tokens = 0
+
+        count = whole = 0
+
+        for s in samples:
+
+            for ident in ident_re.findall(s):
+
+                ids = tokenizer.encode(ident, add_special_tokens=False)
+
+                chars += len(ident)
+
+                tokens += len(ids)
+
+                count += 1
+
+                whole += 1 if len(ids) == 1 else 0
+
+        return {
+            "identifiers": count,
+            "chars_per_token": chars / max(tokens, 1),
+            "whole_identifier_rate": whole / max(count, 1),
+        }
+
+    @staticmethod
+    def whitespace_fidelity(tokenizer: "CodeTokenizer", samples: list[str]) -> dict:
+        """Every sample must round-trip byte-exactly, including indentation."""
+
+        failures = 0
+
+        for s in samples:
+
+            ids = tokenizer.encode(s, add_special_tokens=False)
+
+            if tokenizer.decode(ids, skip_special_tokens=True) != s:
+
+                failures += 1
+
+        tabs = "\tif x:\n\t\tpass\n"
+
+        newlines = "a = 1\n\n\nb = 2\n"
+
+        return {
+            "failures": failures,
+            "tabs_roundtrip": tokenizer.decode(
+                tokenizer.encode(tabs, add_special_tokens=False)
+            )
+            == tabs,
+            "blank_line_roundtrip": tokenizer.decode(
+                tokenizer.encode(newlines, add_special_tokens=False)
+            )
+            == newlines,
+        }
+
+    @staticmethod
+    def diff_cost(tokenizer: "CodeTokenizer") -> dict:
+        """Chars/token on a unified diff (the agent's dominant output format)."""
+
+        sample = TokenizerValidator.DIFF_SAMPLE
+
+        ids = tokenizer.encode(sample, add_special_tokens=False)
+
+        per_line = []
+
+        for line in sample.splitlines(keepends=True):
+
+            per_line.append(
+                len(tokenizer.encode(line, add_special_tokens=False))
+                / max(len(line), 1)
+            )
+
+        return {
+            "chars_per_token": len(sample) / max(len(ids), 1),
+            "tokens": len(ids),
+            "per_line_chars_per_token": per_line,
+        }
+
+    @staticmethod
     def assert_production_ready(
-        report: dict, min_chars_per_token: float = 2.5, max_unk_rate: float = 0.001
+        report: dict,
+        min_chars_per_token: float = 2.5,
+        max_unk_rate: float = 0.001,
+        min_whole_identifier_rate: float = 0.0,
+        min_diff_chars_per_token: float = 0.0,
     ) -> None:
 
         assert report["roundtrip_ok"], "tokenizer round-trip failure"
@@ -942,6 +1298,22 @@ class TokenizerValidator:
         assert (
             report["chars_per_token"] >= min_chars_per_token
         ), f"chars/token {report['chars_per_token']:.2f} < {min_chars_per_token}: merges are not helping"
+
+        if min_whole_identifier_rate:
+
+            rate = report.get("identifiers", {}).get("whole_identifier_rate", 0.0)
+
+            assert (
+                rate >= min_whole_identifier_rate
+            ), f"whole-identifier rate {rate:.2f} < {min_whole_identifier_rate}: symbol-heavy code stays expensive"
+
+        if min_diff_chars_per_token:
+
+            rate = report.get("diff", {}).get("chars_per_token", 0.0)
+
+            assert (
+                rate >= min_diff_chars_per_token
+            ), f"diff chars/token {rate:.2f} < {min_diff_chars_per_token}: patch output is fragmented"
 
 
 class CodeChatTemplate:
