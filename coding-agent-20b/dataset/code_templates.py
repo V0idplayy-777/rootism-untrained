@@ -11,11 +11,21 @@ across many programming languages. It uses:
 
 
 
+
+
+
+
 import random
+
+
 
 import hashlib
 
+
+
 from typing import List, Dict, Optional, Tuple
+
+
 
 from dataclasses import dataclass
 
@@ -23,21 +33,43 @@ from dataclasses import dataclass
 
 
 
+
+
+
+
+
+
 @dataclass
+
+
 
 class CodeSample:
 
+
+
     """A generated code sample with metadata."""
+
+
 
     language: str
 
+
+
     code: str
+
+
 
     description: str
 
+
+
     complexity: str                                                    
 
+
+
     domain: str                                                           
+
+
 
     tags: List[str]
 
@@ -45,161 +77,323 @@ class CodeSample:
 
 
 
+
+
+
+
+
+
                                                               
+
+
 
                                    
 
+
+
                                                               
+
+
+
+
 
 
 
 class NameGenerator:
 
+
+
     """Generate realistic variable, function, and class names."""
+
+
+
+
 
 
 
                                       
 
+
+
     VARIABLE_NAMES = {
+
+
 
         "general": ["result", "value", "data", "item", "element", "temp", "output", "input",
 
+
+
                     "count", "index", "total", "current", "previous", "next_val", "buffer",
+
+
 
                     "cache", "state", "config", "options", "params", "args", "context"],
 
+
+
         "web": ["request", "response", "session", "user", "token", "cookie", "headers",
+
+
 
                 "body", "query", "params", "route", "endpoint", "middleware", "handler"],
 
+
+
         "data": ["dataset", "dataframe", "series", "array", "matrix", "tensor", "batch",
+
+
 
                  "features", "labels", "predictions", "embeddings", "weights", "gradients"],
 
+
+
         "algorithms": ["node", "edge", "graph", "tree", "heap", "stack", "queue",
+
+
 
                       "visited", "distance", "parent", "left", "right", "root", "leaf"],
 
+
+
         "systems": ["buffer", "socket", "connection", "process", "thread", "mutex",
+
+
 
                    "semaphore", "channel", "pipe", "stream", "file_descriptor", "handle"],
 
+
+
     }
+
+
+
+
 
 
 
     FUNCTION_PREFIXES = [
 
+
+
         "get", "set", "create", "delete", "update", "find", "search", "sort",
+
+
 
         "filter", "map", "reduce", "process", "handle", "parse", "format",
 
+
+
         "validate", "check", "compute", "calculate", "generate", "build",
+
+
 
         "initialize", "cleanup", "serialize", "deserialize", "encode", "decode",
 
+
+
         "transform", "merge", "split", "join", "connect", "disconnect",
 
+
+
     ]
+
+
+
+
 
 
 
     FUNCTION_SUFFIXES = [
 
+
+
         "data", "value", "item", "list", "map", "result", "output", "input",
+
+
 
         "config", "state", "record", "entry", "node", "element", "object",
 
+
+
         "user", "session", "token", "request", "response", "buffer",
+
+
 
     ]
 
 
 
+
+
+
+
     CLASS_NAMES = {
+
+
 
         "web": ["Server", "Router", "Controller", "Middleware", "Handler", "Validator",
 
+
+
                 "Authenticator", "RateLimiter", "CacheManager", "SessionStore"],
+
+
 
         "data": ["DataLoader", "Preprocessor", "Pipeline", "Transformer", "Model",
 
+
+
                 "Trainer", "Evaluator", "Metrics", "DataStore", "FeatureExtractor"],
+
+
 
         "algorithms": ["Graph", "Tree", "Heap", "HashTable", "LinkedList", "Stack",
 
+
+
                       "Queue", "Trie", "BloomFilter", "DisjointSet"],
+
+
 
         "systems": ["BufferPool", "ConnectionPool", "ThreadPool", "EventLoop",
 
+
+
                    "MessageQueue", "FileSystem", "MemoryManager", "Scheduler"],
+
+
 
         "general": ["Manager", "Factory", "Builder", "Strategy", "Observer", "Adapter",
 
+
+
                    "Decorator", "Proxy", "Facade", "Command", "Iterator"],
+
+
 
     }
 
 
 
+
+
+
+
     @classmethod
+
+
 
     def variable(cls, domain: str = "general", style: str = "snake_case") -> str:
 
+
+
         names = cls.VARIABLE_NAMES.get(domain, cls.VARIABLE_NAMES["general"])
+
+
 
         name = random.choice(names)
 
+
+
         return cls._apply_style(name, style)
 
 
 
+
+
+
+
     @classmethod
+
+
 
     def function(cls, domain: str = "general", style: str = "snake_case") -> str:
 
+
+
         prefix = random.choice(cls.FUNCTION_PREFIXES)
+
+
 
         suffix = random.choice(cls.FUNCTION_SUFFIXES)
 
+
+
         name = f"{prefix}_{suffix}"
+
+
 
         return cls._apply_style(name, style)
 
 
 
+
+
+
+
     @classmethod
+
+
 
     def class_name(cls, domain: str = "general") -> str:
 
+
+
         names = cls.CLASS_NAMES.get(domain, cls.CLASS_NAMES["general"])
+
+
 
         return random.choice(names)
 
 
 
+
+
+
+
     @classmethod
+
+
 
     def _apply_style(cls, name: str, style: str) -> str:
 
+
+
         if style == "snake_case":
+
+
 
             return name.lower().replace("-", "_")
 
+
+
         elif style == "camelCase":
+
+
 
             parts = name.split("_")
 
+
+
             return parts[0].lower() + "".join(p.capitalize() for p in parts[1:])
+
+
 
         elif style == "PascalCase":
 
+
+
             return "".join(p.capitalize() for p in name.split("_"))
+
+
 
         elif style == "SCREAMING_SNAKE":
 
+
+
             return name.upper().replace("-", "_")
+
+
 
         return name
 
@@ -207,27 +401,55 @@ class NameGenerator:
 
 
 
+
+
+
+
+
+
                                                               
+
+
 
                         
 
+
+
                                                               
+
+
+
+
 
 
 
 class PythonCodeGenerator:
 
+
+
     """Generate Python code samples at various complexity levels."""
+
+
+
+
 
 
 
     def __init__(self):
 
+
+
         self.names = NameGenerator()
 
 
 
+
+
+
+
     def generate(self, complexity: str, domain: str) -> CodeSample:
+
+
 
         """Generate a code sample for the given complexity and domain.
         
@@ -235,47 +457,93 @@ class PythonCodeGenerator:
         is not implemented.
         """
 
+
+
                                        
+
+
 
         generators = {
 
+
+
             ("beginner", "algorithms"): self._beginner_algorithms,
+
+
 
             ("intermediate", "algorithms"): self._intermediate_algorithms,
 
+
+
             ("intermediate", "data"): self._intermediate_data,
+
+
 
             ("intermediate", "web"): self._intermediate_web,
 
+
+
             ("intermediate", "testing"): self._intermediate_testing,
+
+
 
             ("advanced", "algorithms"): self._advanced_algorithms,
 
+
+
             ("advanced", "data"): self._advanced_data,
+
+
 
             ("advanced", "web"): self._advanced_web,
 
+
+
             ("advanced", "systems"): self._advanced_systems,
+
+
 
             ("expert", "algorithms"): self._expert_algorithms,
 
+
+
             ("expert", "systems"): self._expert_systems,
 
+
+
             ("expert", "data"): self._expert_data,
+
+
 
         }
 
 
 
+
+
+
+
         gen_func = generators.get((complexity, domain))
+
+
 
         if gen_func is None:
 
+
+
                                                                   
+
+
 
             all_gens = list(generators.values())
 
+
+
             gen_func = random.choice(all_gens)
+
+
+
+
 
 
 
@@ -283,33 +551,65 @@ class PythonCodeGenerator:
 
 
 
+
+
+
+
     def _beginner_algorithms(self) -> CodeSample:
+
+
 
         variants = [
 
+
+
             self._gen_binary_search,
+
+
 
             self._gen_bubble_sort,
 
+
+
             self._gen_fibonacci,
+
+
 
             self._gen_factorial,
 
+
+
             self._gen_palindrome_check,
+
+
 
             self._gen_list_operations,
 
+
+
             self._gen_string_manipulation,
+
+
 
             self._gen_matrix_operations,
 
+
+
         ]
+
+
 
         return random.choice(variants)()
 
 
 
+
+
+
+
     def _gen_binary_search(self) -> CodeSample:
+
+
 
         code = '''def binary_search(arr: list[int], target: int) -> int:
     """
@@ -348,25 +648,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Binary search implementation with type hints and docstring",
 
+
+
             complexity="beginner",
+
+
 
             domain="algorithms",
 
+
+
             tags=["binary_search", "search", "arrays", "type_hints"],
+
+
 
         )
 
 
 
+
+
+
+
     def _gen_bubble_sort(self) -> CodeSample:
+
+
 
         code = '''def bubble_sort(arr: list[int]) -> list[int]:
     """
@@ -430,25 +754,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Bubble sort with optimization (early termination)",
 
+
+
             complexity="beginner",
+
+
 
             domain="algorithms",
 
+
+
             tags=["bubble_sort", "sorting", "arrays", "optimization"],
+
+
 
         )
 
 
 
+
+
+
+
     def _gen_fibonacci(self) -> CodeSample:
+
+
 
         code = '''from functools import lru_cache
 from typing import Generator
@@ -564,25 +912,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Multiple Fibonacci implementations with different time complexities",
 
+
+
             complexity="beginner",
+
+
 
             domain="algorithms",
 
+
+
             tags=["fibonacci", "recursion", "memoization", "matrix_exponentiation", "generators"],
+
+
 
         )
 
 
 
+
+
+
+
     def _gen_factorial(self) -> CodeSample:
+
+
 
         code = '''import math
 from functools import reduce
@@ -662,25 +1034,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Factorial implementations and trailing zeros counting",
 
+
+
             complexity="beginner",
+
+
 
             domain="algorithms",
 
+
+
             tags=["factorial", "recursion", "math", "number_theory"],
+
+
 
         )
 
 
 
+
+
+
+
     def _gen_palindrome_check(self) -> CodeSample:
+
+
 
         code = '''def is_palindrome(s: str) -> bool:
     """
@@ -799,25 +1195,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Palindrome checking with multiple approaches and longest palindromic substring",
 
+
+
             complexity="beginner",
+
+
 
             domain="algorithms",
 
+
+
             tags=["palindrome", "two_pointers", "strings", "dynamic_programming"],
+
+
 
         )
 
 
 
+
+
+
+
     def _gen_list_operations(self) -> CodeSample:
+
+
 
         code = '''from typing import List, Optional, Any
 from collections import deque
@@ -989,25 +1409,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Linked list implementation with cycle detection and list utilities",
 
+
+
             complexity="beginner",
+
+
 
             domain="algorithms",
 
+
+
             tags=["linked_list", "data_structures", "cycle_detection", "floyd_algorithm"],
+
+
 
         )
 
 
 
+
+
+
+
     def _gen_string_manipulation(self) -> CodeSample:
+
+
 
         code = '''from collections import Counter, defaultdict
 from typing import List, Dict
@@ -1155,25 +1599,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="String manipulation algorithms: anagrams, compression, sliding window",
 
+
+
             complexity="beginner",
+
+
 
             domain="algorithms",
 
+
+
             tags=["strings", "anagrams", "compression", "sliding_window", "cipher"],
+
+
 
         )
 
 
 
+
+
+
+
     def _gen_matrix_operations(self) -> CodeSample:
+
+
 
         code = '''from typing import List, Tuple
 
@@ -1307,21 +1775,43 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Matrix operations: multiplication, transpose, spiral traversal, rotation",
 
+
+
             complexity="beginner",
+
+
 
             domain="algorithms",
 
+
+
             tags=["matrix", "2d_arrays", "spiral", "rotation", "search"],
 
+
+
         )
+
+
+
+
 
 
 
@@ -1329,27 +1819,53 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
     def _intermediate_algorithms(self) -> CodeSample:
+
+
 
         variants = [
 
+
+
             self._gen_merge_sort,
+
+
 
             self._gen_dijkstra,
 
+
+
             self._gen_tree_traversals,
+
+
 
             self._gen_dynamic_programming,
 
+
+
             self._gen_hash_map_design,
 
+
+
         ]
+
+
 
         return random.choice(variants)()
 
 
 
+
+
+
+
     def _gen_merge_sort(self) -> CodeSample:
+
+
 
         code = '''from typing import List, TypeVar, Callable
 import heapq
@@ -1533,25 +2049,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Merge sort with inversion counting and k-way merge using heap",
 
+
+
             complexity="intermediate",
+
+
 
             domain="algorithms",
 
+
+
             tags=["merge_sort", "divide_and_conquer", "inversions", "heap", "k_way_merge"],
+
+
 
         )
 
 
 
+
+
+
+
     def _gen_dijkstra(self) -> CodeSample:
+
+
 
         code = '''import heapq
 from typing import Dict, List, Tuple, Optional, Set
@@ -1761,25 +2301,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Dijkstra's algorithm with path reconstruction and Bellman-Ford comparison",
 
+
+
             complexity="intermediate",
+
+
 
             domain="algorithms",
 
+
+
             tags=["dijkstra", "shortest_path", "graph", "bellman_ford", "priority_queue"],
+
+
 
         )
 
 
 
+
+
+
+
     def _gen_tree_traversals(self) -> CodeSample:
+
+
 
         code = '''from typing import Optional, List, Generator
 from collections import deque
@@ -2011,25 +2575,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Binary tree with all traversal methods and property checks",
 
+
+
             complexity="intermediate",
+
+
 
             domain="algorithms",
 
+
+
             tags=["binary_tree", "traversal", "dfs", "bfs", "bst", "data_structures"],
+
+
 
         )
 
 
 
+
+
+
+
     def _gen_dynamic_programming(self) -> CodeSample:
+
+
 
         code = '''from typing import List, Tuple, Optional
 from functools import lru_cache
@@ -2263,25 +2851,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Dynamic programming: knapsack, LCS, edit distance, coin change, LIS, matrix chain",
 
+
+
             complexity="intermediate",
+
+
 
             domain="algorithms",
 
+
+
             tags=["dynamic_programming", "knapsack", "lcs", "edit_distance", "coin_change", "lis"],
+
+
 
         )
 
 
 
+
+
+
+
     def _gen_hash_map_design(self) -> CodeSample:
+
+
 
         code = '''from typing import Optional, Any, List, Tuple, Iterator
 from dataclasses import dataclass
@@ -2528,25 +3140,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Custom HashMap with chaining and LRU Cache implementation",
 
+
+
             complexity="intermediate",
+
+
 
             domain="algorithms",
 
+
+
             tags=["hash_map", "lru_cache", "data_structures", "chaining", "linked_list"],
+
+
 
         )
 
 
 
+
+
+
+
     def _intermediate_data(self) -> CodeSample:
+
+
 
         code = '''import csv
 import json
@@ -2738,25 +3374,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Custom DataFrame implementation with filtering, grouping, and aggregation",
 
+
+
             complexity="intermediate",
+
+
 
             domain="data",
 
+
+
             tags=["dataframe", "data_manipulation", "csv", "json", "aggregation"],
+
+
 
         )
 
 
 
+
+
+
+
     def _intermediate_web(self) -> CodeSample:
+
+
 
         code = '''"""
 Lightweight Web Framework - A minimal Flask-like framework from scratch.
@@ -3051,25 +3711,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Minimal web framework from scratch with routing, middleware, and REST API",
 
+
+
             complexity="intermediate",
+
+
 
             domain="web",
 
+
+
             tags=["web_framework", "routing", "middleware", "rest_api", "http"],
+
+
 
         )
 
 
 
+
+
+
+
     def _intermediate_testing(self) -> CodeSample:
+
+
 
         code = '''"""
 Comprehensive Testing Patterns and Utilities for Python Projects.
@@ -3314,21 +3998,43 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Comprehensive unit testing with mocking, fixtures, and TDD patterns",
 
+
+
             complexity="intermediate",
+
+
 
             domain="testing",
 
+
+
             tags=["unit_testing", "mocking", "tdd", "fixtures", "test_patterns"],
 
+
+
         )
+
+
+
+
 
 
 
@@ -3336,23 +4042,45 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
     def _advanced_algorithms(self) -> CodeSample:
+
+
 
         variants = [
 
+
+
             self._gen_segment_tree,
+
+
 
             self._gen_red_black_tree,
 
+
+
             self._gen_a_star,
 
+
+
         ]
+
+
 
         return random.choice(variants)()
 
 
 
+
+
+
+
     def _gen_segment_tree(self) -> CodeSample:
+
+
 
         code = '''from typing import List, Callable, Optional, Any
 
@@ -3539,25 +4267,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Segment Tree with lazy propagation and Fenwick Tree for range queries",
 
+
+
             complexity="advanced",
+
+
 
             domain="algorithms",
 
+
+
             tags=["segment_tree", "fenwick_tree", "lazy_propagation", "range_queries"],
+
+
 
         )
 
 
 
+
+
+
+
     def _gen_red_black_tree(self) -> CodeSample:
+
+
 
         code = '''from typing import Optional, List, Any, Iterator
 from enum import Enum
@@ -3899,25 +4651,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Complete Red-Black Tree with insert, delete, rotations, and property verification",
 
+
+
             complexity="advanced",
+
+
 
             domain="algorithms",
 
+
+
             tags=["red_black_tree", "balanced_bst", "data_structures", "rotations"],
+
+
 
         )
 
 
 
+
+
+
+
     def _gen_a_star(self) -> CodeSample:
+
+
 
         code = '''import heapq
 from typing import Dict, List, Tuple, Set, Optional, Callable
@@ -4170,25 +4946,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="A* pathfinding with multiple heuristics and IDA* variant",
 
+
+
             complexity="advanced",
+
+
 
             domain="algorithms",
 
+
+
             tags=["a_star", "pathfinding", "heuristic", "ida_star", "grid_search"],
+
+
 
         )
 
 
 
+
+
+
+
     def _advanced_data(self) -> CodeSample:
+
+
 
         code = '''"""
 Distributed Data Processing Pipeline with MapReduce Pattern.
@@ -4523,25 +5323,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="MapReduce engine with streaming processor and windowed aggregations",
 
+
+
             complexity="advanced",
+
+
 
             domain="data",
 
+
+
             tags=["mapreduce", "distributed", "streaming", "data_pipeline", "parallel"],
+
+
 
         )
 
 
 
+
+
+
+
     def _advanced_web(self) -> CodeSample:
+
+
 
         code = '''"""
 Production-Ready REST API with Authentication, Rate Limiting, and Caching.
@@ -4980,25 +5804,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Production REST API with JWT auth, rate limiting, caching, and validation",
 
+
+
             complexity="advanced",
+
+
 
             domain="web",
 
+
+
             tags=["rest_api", "jwt", "rate_limiting", "caching", "authentication", "validation"],
+
+
 
         )
 
 
 
+
+
+
+
     def _advanced_systems(self) -> CodeSample:
+
+
 
         code = '''"""
 Async Task Queue and Event-Driven Architecture.
@@ -5461,21 +6309,43 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Task queue, event bus, and circuit breaker for distributed systems",
 
+
+
             complexity="advanced",
+
+
 
             domain="systems",
 
+
+
             tags=["task_queue", "event_bus", "circuit_breaker", "pub_sub", "distributed"],
 
+
+
         )
+
+
+
+
 
 
 
@@ -5483,7 +6353,13 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
     def _expert_algorithms(self) -> CodeSample:
+
+
 
         code = '''"""
 Advanced Graph Algorithms: Network Flow, Matching, and Community Detection.
@@ -5918,25 +6794,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Advanced graph algorithms: max flow, Hungarian, topological sort, Louvain",
 
+
+
             complexity="expert",
+
+
 
             domain="algorithms",
 
+
+
             tags=["max_flow", "hungarian", "topological_sort", "community_detection", "graph"],
+
+
 
         )
 
 
 
+
+
+
+
     def _expert_systems(self) -> CodeSample:
+
+
 
         code = '''"""
 Production-Grade Database Connection Pool and ORM.
@@ -6455,25 +7355,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Production connection pool, ORM with query builder, and migration system",
 
+
+
             complexity="expert",
+
+
 
             domain="systems",
 
+
+
             tags=["connection_pool", "orm", "query_builder", "migrations", "database"],
+
+
 
         )
 
 
 
+
+
+
+
     def _expert_data(self) -> CodeSample:
+
+
 
         code = '''"""
 Neural Network from Scratch - Complete Implementation with Autograd.
@@ -7103,19 +8027,39 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
         return CodeSample(
+
+
 
             language="python",
 
+
+
             code=code,
+
+
 
             description="Neural network from scratch with autograd, layers, optimizers, and training loop",
 
+
+
             complexity="expert",
+
+
 
             domain="data",
 
+
+
             tags=["neural_network", "autograd", "deep_learning", "adam", "backpropagation"],
 
+
+
         )
+
+
 
