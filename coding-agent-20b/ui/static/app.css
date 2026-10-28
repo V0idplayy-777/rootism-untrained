@@ -52,7 +52,6 @@ h1, h2 { letter-spacing: -0.01em; }
   min-height: 100vh;
 }
 
-/* ---------------------------------------------------------------- sidebar */
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -132,7 +131,6 @@ button.small { padding: 5px 10px; font-size: 12px; }
 .live-link:hover { text-decoration: underline; }
 footer { margin-top: auto; }
 
-/* ------------------------------------------------------------------- main */
 .main { display: flex; flex-direction: column; min-height: 100vh; }
 .topbar {
   display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
@@ -206,7 +204,6 @@ ul.clean li { margin-bottom: 3px; }
 .badge-ok { color: var(--ok); font-weight: 600; font-size: 12px; }
 .badge-bad { color: var(--bad); font-weight: 600; font-size: 12px; }
 
-/* --------------------------------------------------------------- composer */
 .composer {
   display: flex; gap: 10px; align-items: flex-end;
   padding: 12px 28px 4px; border-top: 1px solid var(--line); background: var(--panel);

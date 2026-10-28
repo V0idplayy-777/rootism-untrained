@@ -91,7 +91,7 @@ class FileEntry:
     summary: str = ""
     symbols: list[str] = field(default_factory=list)
     imports: list[str] = field(default_factory=list)
-    role: str = "source"  # source | test | docs | config | asset
+    role: str = "source"
 
     def to_dict(self) -> dict:
         return {
@@ -184,7 +184,6 @@ class ProjectMap:
     layout: dict = field(default_factory=dict)
     version: int = 1
 
-    # ------------------------------------------------------------------ build
     @classmethod
     def build(cls, root: str | Path) -> "ProjectMap":
         root = Path(root).resolve()
@@ -297,7 +296,6 @@ class ProjectMap:
             "conventions": conventions,
         }
 
-    # ------------------------------------------------------------------- query
     def find_symbol(self, name: str, limit: int = 10) -> list[FileEntry]:
         lowered = name.lower()
         matches = []
@@ -354,7 +352,6 @@ class ProjectMap:
             text = text[: max_chars - 40].rsplit("\n", 1)[0] + "\n  ... truncated"
         return text
 
-    # ------------------------------------------------------------- persistence
     def to_dict(self) -> dict:
         return {
             "version": self.version,

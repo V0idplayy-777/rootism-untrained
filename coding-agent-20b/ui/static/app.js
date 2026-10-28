@@ -1,4 +1,3 @@
-// Chat UI: one streaming endpoint, one place to render events.
 // No framework, no build step - the UI must stay readable and hackable.
 
 const state = {
@@ -27,7 +26,6 @@ function scrollDown() {
   transcript.scrollTop = transcript.scrollHeight;
 }
 
-// ---------------------------------------------------------------- rendering
 function addUser(text) {
   $("#empty")?.remove();
   const node = el(`<div class="msg user"><div class="bubble">${esc(text)}</div></div>`);
@@ -175,7 +173,6 @@ function renderDetails(event) {
   return { fragment, text };
 }
 
-// ------------------------------------------------------------------ network
 async function stream(url, body, onEvent) {
   const response = await fetch(url, {
     method: "POST",
@@ -303,7 +300,6 @@ async function startPreview() {
   }
 }
 
-// -------------------------------------------------------------------- chrome
 function setBusy(busy) {
   state.busy = busy;
   const send = $("#send");
@@ -400,7 +396,6 @@ async function loadHistory() {
   }
 }
 
-// ------------------------------------------------------------------- events
 document.querySelectorAll(".mode").forEach((button) => {
   button.onclick = () => setMode(button.dataset.mode);
 });

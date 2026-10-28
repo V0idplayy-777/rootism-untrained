@@ -55,7 +55,7 @@ class Snapshot:
     id: str
     label: str
     created_at: float
-    files: dict[str, str] = field(default_factory=dict)  # rel path -> blob sha
+    files: dict[str, str] = field(default_factory=dict)
     total_bytes: int = 0
 
     def to_dict(self) -> dict:
@@ -81,7 +81,6 @@ class WorkspaceCheckpoints:
         self.blobs = self.store / "blobs"
         self.max_snapshots = max_snapshots
 
-    # ------------------------------------------------------------------ create
     def create(self, label: str = "") -> Snapshot:
         self.blobs.mkdir(parents=True, exist_ok=True)
         files: dict[str, str] = {}
@@ -115,7 +114,6 @@ class WorkspaceCheckpoints:
         self.prune()
         return snapshot
 
-    # -------------------------------------------------------------------- read
     def list(self) -> list[Snapshot]:
         if not self.store.exists():
             return []
@@ -148,7 +146,6 @@ class WorkspaceCheckpoints:
             raise KeyError(f"ambiguous checkpoint prefix {snapshot_id!r}: {[s.id for s in matches]}")
         return matches[0]
 
-    # -------------------------------------------------------------------- diff
     def diff(self, snapshot_id: str | None = None) -> dict:
         snapshot = self.get(snapshot_id) if snapshot_id else self.latest()
         if snapshot is None:
@@ -167,7 +164,6 @@ class WorkspaceCheckpoints:
             "changed": len(added) + len(removed) + len(modified),
         }
 
-    # ----------------------------------------------------------------- restore
     def restore(self, snapshot_id: str | None = None, delete_extra: bool = True) -> dict:
         """Rewrite the workspace to a snapshot. Returns what changed."""
 
@@ -206,7 +202,6 @@ class WorkspaceCheckpoints:
             "was": {key: before[key] for key in ("added", "removed", "modified")},
         }
 
-    # ------------------------------------------------------------------ upkeep
     def prune(self, keep: int | None = None) -> int:
         keep = keep if keep is not None else self.max_snapshots
         snapshots = self.list()
@@ -233,7 +228,6 @@ class WorkspaceCheckpoints:
                 except OSError:
                     continue
 
-    # ------------------------------------------------------------------ helpers
     def _walk(self):
         for path in sorted(self.root.rglob("*")):
             if not path.is_file():

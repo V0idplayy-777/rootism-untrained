@@ -52,7 +52,7 @@ def free_port() -> int:
 @dataclass
 class PreviewState:
     running: bool = False
-    kind: str = "none"  # static | process | none
+    kind: str = "none"
     port: int | None = None
     pid: int | None = None
     detail: str = ""
@@ -96,7 +96,6 @@ class PreviewManager:
         self._process: subprocess.Popen | None = None
         self._log_path = self.root / ".agent" / "preview.log"
 
-    # ------------------------------------------------------------------ start
     def start(self) -> PreviewState:
         from deploy.detect import detect_project
 
@@ -173,7 +172,6 @@ class PreviewManager:
         except OSError:
             return []
 
-    # ------------------------------------------------------------------- stop
     def stop(self) -> PreviewState:
         if self._process is not None and self._process.poll() is None:
             try:
@@ -195,7 +193,6 @@ class PreviewManager:
             self.state = PreviewState(detail="stopped", logs=self.state.logs)
         return self.state
 
-    # ----------------------------------------------------------------- serving
     def status(self) -> dict:
         if self._process is not None and self._process.poll() is not None:
             self.state.running = False

@@ -21,7 +21,6 @@ from dataset.project_data import ProjectDatasetGenerator, write_project_dataset
 from dataset.repair_traces import RepairTraceGenerator, generate_repair_rows
 
 
-# ------------------------------------------------------------- project dataset
 def test_project_samples_are_multi_file_and_runnable():
     generator = ProjectDatasetGenerator(
         requests=[("fastapi-react", "an app where people sign up and save tasks"), ("cli-tool", "a tool to rename files")]
@@ -71,7 +70,6 @@ def test_tests_fix_evidence_and_shard_files(tmp_path):
     assert json.loads((tmp_path / "out" / "manifest.json").read_text())["templates"] == ["cli-tool"]
 
 
-# ------------------------------------------------------------- repair traces
 def test_curated_repair_pairs_produce_grounded_rows():
     result = generate_repair_rows()
     assert result["sft"], "expected curated repair rows"
@@ -136,7 +134,6 @@ def test_repair_source_is_wired_into_the_mixture():
     assert "repair-trace-sft" in json.dumps(pipeline)
 
 
-# ------------------------------------------------------------------ agent tools
 def test_tool_schemas_cover_the_shipping_tools():
     schemas = tool_schemas()
     for name in ("deploy", "scaffold_project", "project_map", "search_project", "checkpoint"):

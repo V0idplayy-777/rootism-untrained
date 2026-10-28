@@ -31,7 +31,6 @@ _SECRET_KEY = re.compile(
     re.IGNORECASE,
 )
 
-#: Environment variables each provider looks at, in priority order.
 PROVIDER_ENV: dict[str, tuple[str, ...]] = {
     "local": (),
     "archive": (),
@@ -42,7 +41,6 @@ PROVIDER_ENV: dict[str, tuple[str, ...]] = {
     "coolify": ("COOLIFY_TOKEN", "DEPLOY_TOKEN"),
 }
 
-#: Extra (non-token) settings per provider, read from env or config.
 PROVIDER_SETTINGS: dict[str, tuple[str, ...]] = {
     "vercel": ("VERCEL_TEAM_ID", "VERCEL_SCOPE"),
     "render": ("RENDER_OWNER_ID", "RENDER_REGION"),
@@ -70,7 +68,6 @@ def redact(text: str, secrets: Mapping[str, str] | None = None) -> str:
     for value in (secrets or {}).values():
         if value and len(str(value)) >= 4:
             out = out.replace(str(value), "***")
-    # Generic bearer / token shapes.
     out = re.sub(r"(?i)(bearer\s+)[A-Za-z0-9._\-]{8,}", r"\1***", out)
     out = re.sub(r"(?i)((?:token|secret|password|api[_-]?key)\s*[=:]\s*)\S{6,}", r"\1***", out)
     return out
@@ -92,7 +89,6 @@ class DeployConfig:
     settings: dict[str, str] = field(default_factory=dict)
     source: str = "defaults"
 
-    # ------------------------------------------------------------------ load
     @classmethod
     def load(cls, root: str | Path) -> "DeployConfig":
         """Read ``agentdeploy.toml`` (or ``.json``) if present."""
@@ -140,7 +136,6 @@ class DeployConfig:
         cfg.source = source
         return cfg
 
-    # --------------------------------------------------------------- discover
     @classmethod
     def discover(
         cls,
@@ -169,7 +164,6 @@ class DeployConfig:
         if cfg.name == "app":
             cfg.name = _slug(root.name or "app")
 
-        # Environment overrides for non-secret settings.
         for key in ("region", "health_path", "static_dir", "repo_url"):
             env_key = f"AGENT_DEPLOY_{key.upper()}"
             if env.get(env_key):
@@ -177,15 +171,12 @@ class DeployConfig:
         if env.get("AGENT_DEPLOY_PROVIDER"):
             cfg.provider = env["AGENT_DEPLOY_PROVIDER"]
 
-        # Non-secret env values a project needs at runtime (e.g. APP_ENV) may be
-        # listed in the config; provider settings can come from the environment.
         for provider, keys in PROVIDER_SETTINGS.items():
             for key in keys:
                 if env.get(key) and key not in cfg.settings:
                     cfg.settings[key] = env[key]
         return cfg
 
-    # ------------------------------------------------------------------ save
     def to_mapping(self) -> dict[str, Any]:
         data: dict[str, Any] = {
             "name": self.name,
@@ -222,7 +213,6 @@ class DeployConfig:
         data["source"] = self.source
         return data
 
-    # --------------------------------------------------------------- helpers
     def provider_token(self, provider: str | None = None, environ: Mapping[str, str] | None = None) -> str | None:
         env = os.environ if environ is None else environ
         for key in PROVIDER_ENV.get(provider or self.provider, ()):

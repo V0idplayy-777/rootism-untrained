@@ -106,7 +106,7 @@ class ProjectProfile:
 
     root: str
     name: str
-    kind: str = "unknown"  # static | python-web | node-web | nextjs | worker | cli | unknown
+    kind: str = "unknown"
     language: str = "unknown"
     framework: str = "unknown"
     entrypoint: str | None = None
@@ -450,7 +450,6 @@ def detect_project(root: str | Path) -> ProjectProfile:
     scripts = package.get("scripts") or {}
     py_deps = _python_dependencies(root, files)
 
-    # ------------------------------------------------------------- node first
     if package:
         profile.language = "node"
         profile.package_manager = _node_package_manager(root, package)
@@ -514,7 +513,6 @@ def detect_project(root: str | Path) -> ProjectProfile:
             profile.runtime_version = _node_version(root, package)
         profile.test_cmd = _node_test(profile.package_manager, scripts)
 
-    # ----------------------------------------------------------- python second
     elif py_deps or any(f.endswith(".py") for f in files):
         profile.language = "python"
         profile.runtime_version = _python_version(root, py_deps)
@@ -576,7 +574,6 @@ def detect_project(root: str | Path) -> ProjectProfile:
             profile.port = _default_port(profile.framework, _read(root / entry) if entry else "")
         profile.test_cmd = "python -m pytest -q"
 
-    # ------------------------------------------------------------- static/html
     elif any(f.endswith(".html") for f in files):
         profile.language = "html"
         profile.framework = "static"
@@ -607,7 +604,6 @@ def detect_project(root: str | Path) -> ProjectProfile:
     return profile
 
 
-# --------------------------------------------------------------------- helpers
 def _slug(text: str) -> str:
     slug = re.sub(r"[^a-zA-Z0-9]+", "-", text.strip().lower()).strip("-")
     return (slug or "app")[:40]

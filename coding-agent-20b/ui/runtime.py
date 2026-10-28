@@ -109,7 +109,6 @@ class AgentRuntime:
         self.session_file = Path(session_file) if session_file else self.root / SESSION_FILE
         self.history: list[Turn] = self._load_history()
 
-    # ------------------------------------------------------------------- info
     def info(self) -> RuntimeInfo:
         import sys
 
@@ -135,7 +134,6 @@ class AgentRuntime:
         except Exception:  # noqa: BLE001 - an odd workspace must not break the UI
             return None
 
-    # ---------------------------------------------------------------- history
     def _load_history(self) -> list[Turn]:
         if not self.session_file.exists():
             return []
@@ -158,7 +156,6 @@ class AgentRuntime:
         self.history = []
         self._save_history()
 
-    # ------------------------------------------------------------------- turn
     def run(self, message: str, *, mode: str = "simple", require_approval: bool = False) -> Iterator[dict]:
         """Yield events for one user message (SSE-friendly)."""
 
@@ -172,7 +169,6 @@ class AgentRuntime:
             return
         yield from self._run_local(message, mode, require_approval)
 
-    # ----------------------------------------------------------- model backend
     def _run_model(self, message: str, mode: str) -> Iterator[dict]:
         yield _event("status", "Model connected - planning with tools.", {"mode": "model"})
         try:
@@ -217,7 +213,6 @@ class AgentRuntime:
         self.remember("assistant", answer)
         yield _event("done", answer, {"ok": bool(result.get("success")), "steps": len(result.get("steps") or [])})
 
-    # ----------------------------------------------------------- local backend
     def _run_local(self, message: str, mode: str, require_approval: bool) -> Iterator[dict]:
         yield _event(
             "status",
@@ -301,7 +296,6 @@ class AgentRuntime:
             {"ok": True, "steps": 3},
         )
 
-    # -------------------------------------------------------------- shared bits
     def _verify_and_review(self, mode: str, generated_tests: bool) -> Iterator[dict]:
         if generated_tests:
             gen = write_generated_tests(self.root)

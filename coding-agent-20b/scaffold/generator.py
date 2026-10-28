@@ -82,8 +82,6 @@ class ScaffoldResult:
         }
 
 
-#: Entries that never count as "existing user content": tool metadata plus files
-#: the generator merges instead of overwriting (``.gitignore``).
 MERGE_SAFE_NAMES = frozenset(
     {".agent", ".git", ".gitignore", ".DS_Store", ".venv", "venv", "node_modules"}
 )
@@ -95,7 +93,6 @@ class ScaffoldGenerator:
         self.force = force
         self.dry_run = dry_run
 
-    # --------------------------------------------------------------- creation
     def create(
         self,
         template_id: str,
@@ -210,7 +207,6 @@ class ScaffoldGenerator:
         result.options["intent"] = intent.to_dict()
         return result
 
-    # ------------------------------------------------------------------ parts
     def _merge_gitignore(self, wanted: str | None) -> None:
         if not wanted:
             return

@@ -144,8 +144,6 @@ def detect_test_command(root: str | Path, profile=None) -> list[str] | None:
     if has_python_tests:
         return ["python", "-m", "pytest", "-q"]
     if (root / "pyproject.toml").exists() or (root / "requirements.txt").exists():
-        # A Python project with no tests yet: pytest with an explicit "no tests"
-        # exit code 5 is still honest signal, not an error.
         return ["python", "-m", "pytest", "-q"]
     return None
 
@@ -185,14 +183,10 @@ def run_tests(
     import os
     import sys
 
-    # Run with the interpreter the agent is running under, not whatever
-    # "python" happens to be on PATH (venvs, pyenv, CI images).
     if argv and argv[0] in {"python", "python3"}:
         argv = [sys.executable, *argv[1:]]
 
     merged = dict(os.environ)
-    # Never reuse bytecode: an edit within the same second can otherwise be
-    # masked by a stale .pyc and the "fix" looks like it did nothing.
     merged.update({"PYTHONUNBUFFERED": "1", "CI": "1", "PYTHONDONTWRITEBYTECODE": "1"})
     merged.update(env or {})
     started = time.monotonic()
@@ -222,7 +216,6 @@ def run_tests(
         stderr = (exc.stderr or b"").decode("utf-8", "replace") if isinstance(exc.stderr, bytes) else (exc.stderr or "")
         code, timed_out = 124, True
 
-    # pytest exits 5 when no tests were collected.
     ok = code == 0 or (code == 5 and "no tests ran" in (stdout + stderr))
     run = TestRun(
         command=command_str,
@@ -263,8 +256,6 @@ def parse_output(run: TestRun) -> TestRun:
                 break
 
     if run.exit_code != 0 and not run.failed:
-        # Unknown runner: keep the tail as one synthetic failure so downstream
-        # prompts still get signal.
         tail = text.strip().splitlines()[-15:]
         if tail:
             run.failures.append({"test": "test command", "message": "\n".join(tail)[-600:]})

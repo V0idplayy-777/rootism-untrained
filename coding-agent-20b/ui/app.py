@@ -118,7 +118,6 @@ def create_app(workspace: str | Path = ".", model_url: str | None = None) -> Fas
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    # ------------------------------------------------------------------ static
     @app.get("/")
     def index() -> FileResponse:
         return FileResponse(STATIC_DIR / "index.html")
@@ -135,7 +134,6 @@ def create_app(workspace: str | Path = ".", model_url: str | None = None) -> Fas
         target = STATIC_DIR / "favicon.svg"
         return FileResponse(target, media_type="image/svg+xml") if target.exists() else Response(status_code=204)
 
-    # -------------------------------------------------------------------- info
     @app.get("/api/healthz")
     def healthz() -> dict:
         return {"ok": True, "workspace": str(root)}
@@ -176,7 +174,6 @@ def create_app(workspace: str | Path = ".", model_url: str | None = None) -> Fas
         runtime.reset()
         return {"ok": True}
 
-    # -------------------------------------------------------------------- chat
     @app.post("/api/chat")
     def chat(payload: ChatRequest) -> StreamingResponse:
         events = runtime.run(payload.message, mode=payload.mode, require_approval=payload.require_approval)
@@ -195,7 +192,6 @@ def create_app(workspace: str | Path = ".", model_url: str | None = None) -> Fas
         runtime._pending = None
         return {"ok": True, "detail": "plan rejected; nothing was written"}
 
-    # ---------------------------------------------------------------- projects
     @app.post("/api/projects")
     def create_project(payload: ProjectRequest) -> dict:
         generator = ScaffoldGenerator(root, force=True, dry_run=payload.dry_run)
@@ -205,7 +201,6 @@ def create_app(workspace: str | Path = ".", model_url: str | None = None) -> Fas
             result = generator.create(payload.template, payload.name or root.name)
         return result.to_dict()
 
-    # ------------------------------------------------------------ quality loop
     @app.post("/api/review")
     def review() -> dict:
         review_result = CodeCritic().review(root)
@@ -219,7 +214,6 @@ def create_app(workspace: str | Path = ".", model_url: str | None = None) -> Fas
             payload["human"] = humanize(run.failure_signal()).to_dict()
         return payload
 
-    # ------------------------------------------------------------------ deploy
     @app.post("/api/deploy")
     def deploy(payload: DeployRequest) -> dict:
         engine = DeployEngine(
@@ -266,7 +260,6 @@ def create_app(workspace: str | Path = ".", model_url: str | None = None) -> Fas
         )
         return Response(content=payload, media_type=mime, status_code=status)
 
-    # ------------------------------------------------------------------- files
     @app.get("/api/files")
     def files() -> dict:
         return {"files": list_workspace_files(root)}
@@ -275,7 +268,6 @@ def create_app(workspace: str | Path = ".", model_url: str | None = None) -> Fas
     def file(path: str) -> dict:
         return read_workspace_file(root, path)
 
-    # ------------------------------------------------------------------- plans
     @app.get("/api/plans")
     def plans() -> dict:
         from agent.plan_approval import PlanStore

@@ -159,7 +159,6 @@ class CodeCritic:
         self.threshold = threshold
         self.max_findings_per_rule = max_findings_per_rule
 
-    # ------------------------------------------------------------------ entry
     def review(
         self,
         root: str | Path,
@@ -204,7 +203,6 @@ class CodeCritic:
             out.append(str(rel))
         return sorted(out)
 
-    # ----------------------------------------------------------------- python
     def _review_python(self, rel: str, text: str) -> list[Finding]:
         findings: list[Finding] = []
         lines = text.splitlines()
@@ -354,13 +352,10 @@ class CodeCritic:
             for node in ast.walk(tree)
             if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
         }
-        # Names referenced from strings/annotations are hard to see; be conservative.
         findings = []
         for name, line in imported.items():
             if name in used or name == "annotations":
                 continue
-            # Conservative: any other textual reference counts as a use (registries,
-            # type strings, __all__ lists), so we only flag clearly dead imports.
             if len(re.findall(rf"\b{re.escape(name)}\b", text)) > 1:
                 continue
             findings.append(
@@ -368,7 +363,6 @@ class CodeCritic:
             )
         return findings
 
-    # --------------------------------------------------------------------- js
     def _review_js(self, rel: str, text: str) -> list[Finding]:
         findings: list[Finding] = []
         for index, line in enumerate(text.splitlines(), 1):
@@ -397,7 +391,6 @@ class CodeCritic:
                 findings.append(self._f("any-type", "nit", rel, index, "explicit `any` disables type checking here", "use a precise type or `unknown` + narrowing", "maintainability"))
         return findings
 
-    # ---------------------------------------------------------------- project
     def _project_rules(self, root: Path, files: list[str]) -> list[Finding]:
         findings: list[Finding] = []
         names = set(files)
@@ -475,7 +468,6 @@ class CodeCritic:
             )
         return findings
 
-    # ---------------------------------------------------------------- helpers
     def _f(self, rule, severity, path, line, message, fix, category) -> Finding:
         return Finding(rule=rule, severity=severity, path=path, line=line, message=message, fix=fix, category=category)
 
@@ -532,7 +524,6 @@ class CriticLoop:
         }
 
 
-# ------------------------------------------------------------------ utilities
 def _call_name(func: ast.AST) -> str:
     if isinstance(func, ast.Name):
         return func.id

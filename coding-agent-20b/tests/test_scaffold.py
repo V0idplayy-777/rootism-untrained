@@ -52,7 +52,6 @@ def run_pytest(root: Path) -> subprocess.CompletedProcess:
     )
 
 
-# -------------------------------------------------------------------- catalogue
 def test_catalogue_has_five_plus_templates_with_plain_english():
     templates = catalog()
     assert len(templates) >= 5
@@ -86,7 +85,6 @@ def test_module_names_are_safe():
     assert titleize("my-cool_app") == "My Cool App"
 
 
-# ---------------------------------------------------------------------- intent
 def test_intent_web_app_with_users_and_database():
     intent = parse_intent("build me a web app where users sign up and save tasks")
     assert intent.wants_web and intent.wants_auth and intent.wants_db
@@ -125,7 +123,6 @@ def test_plan_for_is_dry_and_complete():
     assert plan["steps"] and plan["reasons"]
 
 
-# ------------------------------------------------------------------- generator
 def test_generator_refuses_non_empty_directory(tmp_path):
     (tmp_path / "keep.txt").write_text("x")
     result = ScaffoldGenerator(tmp_path).create("cli-tool", "thing")
@@ -182,7 +179,6 @@ def test_create_from_request_records_intent(tmp_path):
     assert result.reasons
 
 
-# ------------------------------------------------- generated projects actually run
 @pytest.mark.skipif(not HAS_FASTAPI, reason="fastapi/httpx not installed")
 @pytest.mark.parametrize("use_auth", [False, True])
 def test_generated_fastapi_project_passes_its_tests(tmp_path, use_auth):
@@ -251,7 +247,6 @@ def test_generated_nextjs_tests_pass_without_npm_install(tmp_path):
     assert completed.returncode == 0, (completed.stdout + completed.stderr)[-3000:]
 
 
-# ------------------------------------------------------------------- auth addon
 def test_generated_auth_rejects_tampering(tmp_path):
     files = get_template("fastapi-react").render(options_for(get_template("fastapi-react"), "Auth App", use_auth=True))
     root = write_project(tmp_path / "auth", files)
@@ -285,7 +280,6 @@ def test_production_requires_auth_secret(tmp_path, monkeypatch):
         module.create_token("user-1")
 
 
-# --------------------------------------------------------------------- backends
 def test_mask_url_hides_password():
     assert mask_url("postgresql://user:secret@db.example.com:5432/app") == "postgresql://user:***@db.example.com:5432/app"
     assert mask_url("") == ""

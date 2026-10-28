@@ -15,7 +15,7 @@ class DeployStep:
     key: str
     title: str
     detail: str = ""
-    kind: str = "step"  # preflight | build | push | release | health | report
+    kind: str = "step"
 
     def to_dict(self) -> dict:
         return {"key": self.key, "title": self.title, "detail": self.detail, "kind": self.kind}
@@ -24,7 +24,7 @@ class DeployStep:
 @dataclass
 class StepOutcome:
     step: DeployStep
-    status: str  # ok | failed | skipped
+    status: str
     detail: str = ""
     elapsed: float = 0.0
 

@@ -66,7 +66,6 @@ def select_provider(ctx: DeployContext, requested: str | None = None) -> tuple[D
             f"{name} is not usable here ({availability.reason})"
             + (f"; fix: {availability.fix}" if availability.fix else "")
         )
-        # Fall through to auto-selection rather than failing outright.
 
     kind = ctx.profile.kind
     if kind == "static":

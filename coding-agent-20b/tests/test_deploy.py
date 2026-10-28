@@ -20,7 +20,6 @@ from deploy.providers.vercel import collect_inline_files
 from quality.errors import humanize
 
 
-# --------------------------------------------------------------------- fixtures
 def fastapi_project(root: Path) -> Path:
     (root / "app").mkdir(parents=True)
     (root / "app" / "main.py").write_text(
@@ -44,7 +43,6 @@ def node_project(root: Path) -> Path:
     return root
 
 
-# -------------------------------------------------------------------- detection
 def test_detect_fastapi(tmp_path):
     profile = detect_project(fastapi_project(tmp_path))
     assert profile.kind == "python-web"
@@ -81,7 +79,6 @@ def test_detect_unknown_is_honest(tmp_path):
     assert any("Could not identify" in note for note in profile.notes)
 
 
-# -------------------------------------------------------------------- artifacts
 def test_dockerfile_for_python_has_expected_hardening(tmp_path):
     profile = detect_project(fastapi_project(tmp_path))
     dockerfile = generate_dockerfile(profile)
@@ -119,7 +116,6 @@ def test_artifacts_never_clobber(tmp_path):
     assert "Dockerfile" in artifacts["skipped"]
 
 
-# ----------------------------------------------------------------- config/secrets
 def test_config_roundtrip_never_stores_secrets(tmp_path):
     config = DeployConfig(name="demo", env={"APP_ENV": "prod", "API_TOKEN": "super-secret-value"})
     config.save(tmp_path)
@@ -147,7 +143,6 @@ def test_toml_writer_roundtrips(tmp_path):
     assert loads(dump_toml(payload)) == payload
 
 
-# --------------------------------------------------------------------- health
 def test_check_http_success_and_failure():
     ok = check_http("http://x/health", client=FakeHttpClient({("GET", "http://x/health"): HttpResponse(200, "ok")}))
     assert ok.ok and ok.status == 200
@@ -177,7 +172,6 @@ def test_wait_for_http_reports_timeout():
     assert "not healthy" in result.detail
 
 
-# ------------------------------------------------------------------ providers
 def test_provider_availability_without_tools(tmp_path, monkeypatch):
     monkeypatch.setattr("shutil.which", lambda name: None)
     profile = detect_project(static_project(tmp_path))
@@ -271,11 +265,10 @@ def test_github_pages_requires_static_and_remote(tmp_path):
     assert "static" in availability.reason
 
 
-# --------------------------------------------------------------------- landing
 def test_landing_page_contains_link_and_no_external_assets():
     page = generate_landing_page("Demo", "A demo", url="https://demo.example", provider="vercel", health={"ok": True, "detail": "healthy"})
     assert "https://demo.example" in page
-    assert "http://" not in page.replace("https://demo.example", "")  # no CDN/fetch
+    assert "http://" not in page.replace("https://demo.example", "")
     assert "<script" not in page
 
 
@@ -308,7 +301,6 @@ def test_publish_metadata_writes_all_three(tmp_path):
     assert "docker compose" in guide and "Eject" in guide
 
 
-# ---------------------------------------------------------------------- engine
 def test_engine_dry_run_plan(tmp_path):
     fastapi_project(tmp_path)
     result = DeployEngine(tmp_path, dry_run=True).deploy()
@@ -362,7 +354,6 @@ def test_engine_redacts_secrets_from_logs(tmp_path, monkeypatch):
     assert "supersecret-token" not in payload
 
 
-# ------------------------------------------------------------------ humanizing
 def test_humanize_known_failures():
     assert "Docker" in humanize("Cannot connect to the Docker daemon").title
     assert "port" in humanize("Error: EADDRINUSE: address already in use").title.lower()

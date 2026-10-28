@@ -110,7 +110,6 @@ class DeployEngine:
         self.logs: list[str] = []
         self._secrets: dict[str, str] = {}
 
-    # ------------------------------------------------------------------ setup
     def profile(self) -> ProjectProfile:
         if self._profile is None:
             self._profile = detect_project(self.root)
@@ -147,7 +146,6 @@ class DeployEngine:
         self.logs.append(line)
         self.emit(line)
 
-    # ------------------------------------------------------------------- plan
     def plan(self) -> tuple[DeployPlan, DeployContext, list[str]]:
         ctx = self.context()
         provider, warnings = select_provider(ctx, self.requested_provider)
@@ -191,7 +189,6 @@ class DeployEngine:
             )
         return plan, ctx, warnings
 
-    # ---------------------------------------------------------------- execute
     def run(self) -> DeployResult:
         started = time.monotonic()
         plan, ctx, warnings = self.plan()
@@ -356,7 +353,6 @@ class DeployEngine:
             "outcomes": outcomes,
         }
 
-    # ----------------------------------------------------------------- finish
     def _finish(
         self, result: DeployResult, provider_name: str, *, publish_metadata: bool | None = None
     ) -> None:
@@ -406,7 +402,6 @@ class DeployEngine:
                 "no public URL was created; the artifact is ready to upload - see HOSTING.md"
             )
 
-    # ------------------------------------------------------------ convenience
     def deploy(self) -> DeployResult:
         return self.run()
 

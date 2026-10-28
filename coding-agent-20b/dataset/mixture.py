@@ -31,8 +31,6 @@ DEFAULT_MIXTURE: list[SourceSpec] = [
     SourceSpec("creative-sft", 0.03, 2.0, "creative"),
     SourceSpec("instruction-induction", 0.03, 1.5, "instruction"),
     SourceSpec("recovery-sft", 0.02, 2.0, "instruction"),
-    # Multi-file project generation and fail->fix->green traces: the parts of
-    # coding-agent behaviour that single-file SFT data does not teach.
     SourceSpec("project-scaffold-sft", 0.015, 1.5, "instruction"),
     SourceSpec("repair-trace-sft", 0.015, 2.0, "instruction"),
 ]

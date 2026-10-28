@@ -20,7 +20,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-#: Framework names the user may name explicitly; these beat heuristics.
 FRAMEWORKS: dict[str, str] = {
     "next.js": "nextjs-fullstack",
     "nextjs": "nextjs-fullstack",
@@ -31,7 +30,6 @@ FRAMEWORKS: dict[str, str] = {
     "express": "nextjs-fullstack",
 }
 
-#: Signals grouped by the decision they influence.
 SIGNALS: dict[str, tuple[str, ...]] = {
     "web": ("web app", "website", "web app", "webapp", "app", "dashboard", "saas", "site", "portal", "frontend", "front-end", "ui"),
     "api": ("api", "rest", "endpoint", "backend", "back-end", "service", "microservice", "json"),
@@ -164,7 +162,6 @@ def _hits(text: str, words: tuple[str, ...]) -> list[str]:
     return found
 
 
-#: Words too generic to prove the user wants a terminal tool on their own.
 WEAK_CLI_SIGNALS = frozenset({"tool", "utility", "script", "parser"})
 
 
@@ -184,8 +181,6 @@ def parse_intent(prose: str) -> ProjectIntent:
     intent.wants_auth = bool(hits["auth"])
     intent.wants_db = bool(hits["db"]) or bool(hits["data_app"])
 
-    # "a tool to track tickets" is a small web app, not a terminal utility: a
-    # generic "tool"/"script" only counts as CLI when nothing bigger is implied.
     data_app = bool(hits["data_app"])
     cli_only_generic = set(hits["cli"]) <= WEAK_CLI_SIGNALS
     intent.wants_cli = bool(hits["cli"]) and not intent.wants_bot and not (
@@ -201,7 +196,6 @@ def parse_intent(prose: str) -> ProjectIntent:
     intent.prefers_python = bool(hits["python"])
     intent.prefers_node = bool(hits["node"]) and not intent.prefers_python
 
-    # "web app with users and a database" is enough to be confident.
     strong = sum(
         [
             intent.wants_web,

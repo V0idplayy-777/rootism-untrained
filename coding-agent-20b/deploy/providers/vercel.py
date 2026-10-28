@@ -107,7 +107,6 @@ class VercelProvider(DeployProvider):
             return self._deploy_cli(ctx)
         return self._deploy_api(ctx)
 
-    # ------------------------------------------------------------------- CLI
     def _deploy_cli(self, ctx: DeployContext) -> ProviderResult:
         code, output = self.run(
             ["vercel", "deploy", "--prod", "--yes", "--token", self._token(ctx)],
@@ -141,7 +140,6 @@ class VercelProvider(DeployProvider):
             meta={"health": health.to_dict()},
         )
 
-    # ------------------------------------------------------------------- API
     def _deploy_api(self, ctx: DeployContext) -> ProviderResult:
         files, skipped = collect_inline_files(Path(ctx.root))
         if not files:
@@ -183,7 +181,6 @@ class VercelProvider(DeployProvider):
         if url and not url.startswith("http"):
             url = f"https://{url}"
 
-        # Poll until the deployment leaves the BUILDING state (best effort).
         for _ in range(30):
             if not deployment_id:
                 break

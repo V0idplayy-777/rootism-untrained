@@ -15,13 +15,13 @@ from typing import Callable
 
 @dataclass
 class ProjectOptions:
-    name: str  # slug, e.g. "weather-dashboard"
-    display_name: str  # human title, e.g. "Weather Dashboard"
-    module: str  # python module / npm package name
+    name: str
+    display_name: str
+    module: str
     description: str = ""
     port: int = 8000
     use_auth: bool = False
-    database: str = "sqlite"  # sqlite | postgres | none
+    database: str = "sqlite"
     author: str = "you"
     year: str = "2026"
     license: str = "MIT"
@@ -52,9 +52,9 @@ class TemplateSpec:
     id: str
     name: str
     tagline: str
-    description: str  # plain English, for non-engineers
+    description: str
     stack: str
-    kind: str  # python-web | node-web | nextjs | cli | worker | static
+    kind: str
     tags: list[str] = field(default_factory=list)
     supports_auth: bool = False
     supports_database: bool = False
@@ -64,7 +64,7 @@ class TemplateSpec:
     good_for: list[str] = field(default_factory=list)
     run_command: str = ""
     test_command: str = ""
-    preview: str = "web"  # web | cli | worker
+    preview: str = "web"
 
     def render(self, options: ProjectOptions) -> dict[str, str]:
         if self.build is None:

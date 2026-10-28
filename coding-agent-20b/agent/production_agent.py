@@ -366,7 +366,7 @@ TOOL_SCHEMAS = {
 }
 
 
-try:  # project tools (deploy/scaffold/map/search/checkpoint) live in their own module
+try:
 
     from .deploy_tool import tool_schemas as _project_tool_schemas
 

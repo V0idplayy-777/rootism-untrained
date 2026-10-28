@@ -42,7 +42,7 @@ class BackendResult:
     ok: bool
     provider: str = "sqlite"
     engine: str = "sqlite"
-    url: str = ""  # secret: never print this
+    url: str = ""
     env_var: str = "DATABASE_URL"
     created: bool = False
     detail: str = ""
@@ -374,7 +374,6 @@ class BackendProvisioner:
                 encoding="utf-8",
             )
 
-    # ------------------------------------------------------------------ files
     def _ensure_gitignore(self) -> None:
         path = self.root / ".gitignore"
         text = path.read_text(encoding="utf-8") if path.exists() else ""

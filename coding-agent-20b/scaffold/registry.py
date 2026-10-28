@@ -17,7 +17,6 @@ TEMPLATES: dict[str, TemplateSpec] = {
     )
 }
 
-#: Order shown in the UI / CLI (most broadly useful first).
 TEMPLATE_ORDER = ["fastapi-react", "nextjs-fullstack", "flask-htmx", "cli-tool", "discord-bot", "static-site"]
 
 ALIASES = {

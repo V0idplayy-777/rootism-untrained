@@ -20,7 +20,6 @@ import sys
 from pathlib import Path
 
 
-# --------------------------------------------------------------------- helpers
 def _print_json(payload) -> None:
     print(json.dumps(payload, indent=2, default=str))
 
@@ -49,7 +48,6 @@ def _human(command: str, result) -> int:
     return 1
 
 
-# -------------------------------------------------------------------- commands
 def cmd_init(args) -> int:
     from scaffold import ScaffoldGenerator, catalog, get_template
 
@@ -404,7 +402,6 @@ def cmd_doctor(args) -> int:
     return 0
 
 
-# ------------------------------------------------------------------------ main
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="agent",

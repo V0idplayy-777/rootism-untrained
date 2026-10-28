@@ -74,7 +74,6 @@ def clean_project(root: Path) -> Path:
     return root
 
 
-# ------------------------------------------------------------------ the critic
 def test_clean_project_scores_well(tmp_path):
     review = CodeCritic().review(clean_project(tmp_path))
     assert review.score >= 80, review.render()
@@ -181,7 +180,6 @@ def test_review_serialises_for_ui(tmp_path):
     assert isinstance(data["findings"], list)
 
 
-# --------------------------------------------------------------- running tests
 def test_detect_test_command_prefers_explicit_config(tmp_path):
     write(tmp_path, "pyproject.toml", "[tool.pytest.ini_options]\ntestpaths = ['tests']\n")
     command = detect_test_command(tmp_path)
@@ -235,7 +233,6 @@ def test_parse_output_handles_no_tests_exit_code(tmp_path):
     assert isinstance(parse_output(run).failures, list)
 
 
-# ------------------------------------------------------------------- the loop
 def test_verification_loop_stops_when_green(tmp_path):
     clean_project(tmp_path)
     loop = VerificationLoop(tmp_path, command=[sys.executable, "-m", "pytest", "-q"])
@@ -303,7 +300,6 @@ def test_verification_loop_stops_when_fix_changes_nothing(tmp_path):
     assert loop.to_trace()["green"] is False
 
 
-# ---------------------------------------------------------------- test writing
 def test_generate_tests_are_valid_and_pass(tmp_path):
     clean_project(tmp_path)
     outcome = write_generated_tests(tmp_path)
@@ -358,7 +354,6 @@ def test_write_generated_tests_does_not_overwrite(tmp_path):
     assert target.read_text() == "# mine\n"
 
 
-# ------------------------------------------------------------------ humanizer
 def test_humanize_translates_common_failures():
     cases = {
         "ModuleNotFoundError: No module named 'fastapi'": "fastapi",

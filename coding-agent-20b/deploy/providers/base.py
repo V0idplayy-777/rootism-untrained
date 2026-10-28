@@ -101,7 +101,6 @@ class DeployProvider(ABC):
     def deploy(self, ctx: DeployContext) -> ProviderResult:
         ...
 
-    # ------------------------------------------------------------------ utils
     def supports(self, profile: ProjectProfile) -> bool:
         return profile.kind in self.supports_kinds
 

@@ -181,7 +181,6 @@ class SemanticIndex:
         self._external: list[list[float]] = []
         self.updated_at = 0.0
 
-    # ------------------------------------------------------------------ build
     @classmethod
     def build(cls, documents: list[Document], embed_fn=None, dim: int = 1024) -> "SemanticIndex":
         index = cls(documents=documents, embedder=HashingEmbedder(dim=dim), embed_fn=embed_fn)
@@ -238,7 +237,6 @@ class SemanticIndex:
         self.updated_at = time.time()
         return self
 
-    # ----------------------------------------------------------------- search
     def search(self, query: str, k: int = 8) -> list[SearchHit]:
         if not self.documents:
             return []
@@ -301,7 +299,6 @@ class SemanticIndex:
         else:
             self._external.append(list(self.embed_fn(document.text)))
 
-    # ------------------------------------------------------------- persistence
     def to_dict(self) -> dict:
         return {
             "version": 1,

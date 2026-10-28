@@ -93,7 +93,6 @@ class FlyProvider(DeployProvider):
             timeout=300,
             env=env,
         )
-        # "app already exists" is fine; anything else fatal stops here.
         if code != 0 and "already exists" not in output.lower() and "taken" not in output.lower():
             return ProviderResult(
                 ok=False,

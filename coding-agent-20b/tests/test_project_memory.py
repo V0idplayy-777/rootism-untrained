@@ -73,7 +73,6 @@ def seed(root: Path) -> Path:
     return root
 
 
-# ------------------------------------------------------------------ checkpoints
 def test_checkpoint_restores_modified_files(tmp_path):
     seed(tmp_path)
     store = WorkspaceCheckpoints(tmp_path)
@@ -129,7 +128,6 @@ def test_checkpoint_round_trips_snapshot_json(tmp_path):
     assert "app/main.py" in raw["files"]
 
 
-# ---------------------------------------------------------------- project map
 def test_project_map_summarises_and_indexes_symbols(tmp_path):
     seed(tmp_path)
     project = ProjectMap.build(tmp_path)
@@ -186,7 +184,6 @@ def test_project_map_ignores_noise_and_flags_monorepo(tmp_path):
     assert project.stats()["files"] >= 2
 
 
-# --------------------------------------------------------------- retrieval
 def test_hashing_embedder_is_deterministic_and_normalised():
     embedder = HashingEmbedder(dim=512)
     first = embedder.embed("refund an invoice")
@@ -234,7 +231,6 @@ def test_semantic_index_handles_empty_workspace(tmp_path):
     assert index.stats()["documents"] == 0
 
 
-# ---------------------------------------------------------------- plan approval
 def test_plan_draft_for_empty_workspace_uses_starter(tmp_path):
     plan = PlanDrafter(tmp_path).draft("a web app where people sign up and save tasks")
     assert plan.items

@@ -35,7 +35,6 @@ def event_types(events: list[dict]) -> list[str]:
     return [event["type"] for event in events]
 
 
-# --------------------------------------------------------------------- runtime
 def test_runtime_local_flow_scaffolds_tests_and_plans_a_deploy(tmp_path):
     runtime = AgentRuntime(tmp_path)
     info = runtime.info()
@@ -130,7 +129,6 @@ def test_workspace_file_helpers_block_traversal(tmp_path):
     assert "ok.txt" in [row["path"] for row in list_workspace_files(tmp_path)]
 
 
-# ------------------------------------------------------------------------- API
 def make_client(root: Path):
     pytest.importorskip("fastapi")
     pytest.importorskip("httpx")
