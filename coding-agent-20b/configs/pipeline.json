@@ -1,10 +1,150 @@
 {
   "stages": [
-    {"name": "pretrain", "kind": "pretrain", "learning_rate": 0.0003, "min_lr": 0.00003, "warmup_steps": 2000, "total_steps": 100000, "seq_length": 8192, "weight_decay": 0.1, "data": {"mixture": "dataset/mixture.DEFAULT_MIXTURE", "packing": "attention-aware", "seq_curriculum": [[0, 2048], [2000, 4096], [6000, 8192]]}},
-    {"name": "midtrain", "kind": "midtrain", "learning_rate": 0.00015, "min_lr": 0.000015, "warmup_steps": 500, "total_steps": 20000, "seq_length": 8192, "weight_decay": 0.1, "data": {"upsample": ["tests", "issues", "prs", "docs"]}},
-    {"name": "sft", "kind": "sft", "learning_rate": 0.00002, "min_lr": 0.000002, "warmup_steps": 200, "total_steps": 6000, "seq_length": 8192, "weight_decay": 0.1, "data": {"mask_prompt_loss": true}},
-    {"name": "dpo", "kind": "dpo", "learning_rate": 5e-07, "min_lr": 5e-08, "warmup_steps": 50, "total_steps": 1500, "seq_length": 4096, "weight_decay": 0.0, "extra": {"beta": 0.1, "reference_model": "sft"}}
+    {
+      "name": "pretrain",
+      "kind": "pretrain",
+      "learning_rate": 0.0003,
+      "min_lr": 3e-05,
+      "warmup_steps": 2000,
+      "total_steps": 100000,
+      "seq_length": 8192,
+      "weight_decay": 0.1,
+      "data": {
+        "mixture": "dataset/mixture.DEFAULT_MIXTURE",
+        "packing": "attention-aware",
+        "seq_curriculum": [
+          [
+            0,
+            2048
+          ],
+          [
+            2000,
+            4096
+          ],
+          [
+            6000,
+            8192
+          ]
+        ]
+      }
+    },
+    {
+      "name": "midtrain",
+      "kind": "midtrain",
+      "learning_rate": 0.00015,
+      "min_lr": 1.5e-05,
+      "warmup_steps": 500,
+      "total_steps": 20000,
+      "seq_length": 8192,
+      "weight_decay": 0.1,
+      "data": {
+        "upsample": [
+          "tests",
+          "issues",
+          "prs",
+          "docs",
+          "security",
+          "creative"
+        ]
+      }
+    },
+    {
+      "name": "sft",
+      "kind": "sft",
+      "learning_rate": 2e-05,
+      "min_lr": 2e-06,
+      "warmup_steps": 200,
+      "total_steps": 6000,
+      "seq_length": 8192,
+      "weight_decay": 0.1,
+      "data": {
+        "mask_prompt_loss": true,
+        "sources": [
+          "instruction-sft",
+          "security-sft",
+          "creative-sft"
+        ],
+        "upsample": {
+          "security-sft": 3.0,
+          "creative-sft": 2.0
+        },
+        "security_examples_per_batch": 8
+      }
+    },
+    {
+      "name": "dpo",
+      "kind": "dpo",
+      "learning_rate": 5e-07,
+      "min_lr": 5e-08,
+      "warmup_steps": 50,
+      "total_steps": 1500,
+      "seq_length": 4096,
+      "weight_decay": 0.0,
+      "extra": {
+        "beta": 0.1,
+        "reference_model": "sft"
+      }
+    }
   ],
-  "checkpointing": {"atomic": true, "sha256_manifest": true, "keep_last": 5},
-  "recovery": {"on_spike": ["reduce_lr", "skip_batch", "rollback"], "max_lr_reductions": 3}
+  "checkpointing": {
+    "atomic": true,
+    "sha256_manifest": true,
+    "keep_last": 5
+  },
+  "recovery": {
+    "on_spike": [
+      "reduce_lr",
+      "skip_batch",
+      "rollback"
+    ],
+    "max_lr_reductions": 3
+  },
+  "tokenizer": {
+    "script": "scripts/train_production_tokenizer.py",
+    "corpus_script": "scripts/sample_tokenizer_corpus.py",
+    "vocab_size": 128256,
+    "min_chars_per_token": 2.5,
+    "benchmark_gate": true,
+    "alignment": "padded to vocab_size with reserved specials"
+  },
+  "evaluation": {
+    "tokenizer_gate": {
+      "min_relative": 1.0,
+      "report": "tokenizer/benchmark.json"
+    },
+    "retrieval_ablation": {
+      "modes": [
+        "none",
+        "flat",
+        "hierarchical"
+      ],
+      "budget_tokens": 6000,
+      "report": [
+        "gold_file_recall",
+        "gold_symbol_recall",
+        "context_tokens"
+      ]
+    },
+    "security": {
+      "suite": "evaluation/security_eval.py",
+      "max_vuln_rate": 0.1,
+      "max_critical": 0
+    },
+    "trajectories": {
+      "max_steps": 40,
+      "metrics": [
+        "success_rate",
+        "recovery_rate",
+        "recovery_after_3",
+        "loop_rate",
+        "plan_completion",
+        "state_coherence"
+      ],
+      "context_budget_tokens": 7600
+    },
+    "longform": {
+      "max_unit_tokens": 512,
+      "self_consistency_samples": 3
+    }
+  }
 }

@@ -1,12 +1,52 @@
 # CodingAgent-20B
 
 20B coding-agent stack: model, production tokenizer, data pipeline, hardened
-agent tools/sandbox, evaluation, staged training and serving.
+agent tools/sandbox, retrieval + long-session state, security data/eval,
+evaluation, staged training and serving.
 
 - Model card: `MODEL_CARD.md` · Eval protocol: `docs/EVAL_PROTOCOL.md` · Repro: `docs/REPRODUCIBILITY.md`
+- Capability gaps and how each is addressed/measured: `docs/CAPABILITY_GAPS.md`
 - Install: `pip install -r requirements.txt` (dev: `requirements-dev.txt`)
 - Test: `python -m pytest tests/ -q` (CPU, tiny config — no GPU needed)
-- Tokenizer: `python scripts/train_production_tokenizer.py --data_dir <corpus> --output_dir tokenizer`
-- Train: `training/train_production.py` + `configs/pipeline.json` (pretrain → mid-train → SFT → DPO)
+- Tokenizer (real corpus + competitive gate):
+  1. `python scripts/sample_tokenizer_corpus.py --dataset bigcode/the-stack-smol --output_dir data/tokenizer_corpus`
+  2. `python scripts/train_production_tokenizer.py --data_dir data/tokenizer_corpus --output_dir tokenizer --vocab_size 128256 --benchmark_gate`
+  3. `python scripts/evaluate_tokenizer.py --tokenizer tokenizer --json tokenizer/benchmark.json`
+- Train: `training/train_production.py` + `configs/pipeline.json` (pretrain → mid-train → SFT → DPO; security and cross-domain SFT sources are upsampled)
 - Serve: `python -m inference.server --checkpoint <ckpt> --port 8000` (OpenAI-compatible)
 - Docker: `docker compose up serve` (train/eval/serve targets in `Dockerfile`)
+
+## Working with repositories bigger than the context window
+
+```python
+from agent.repo_context import RepoIndex, ContextAssembler
+from agent.production_agent import ProductionAgent
+
+index = RepoIndex.build("./repo")
+agent = ProductionAgent(model, tokenizer, workspace_path="./repo",
+                        context_assembler=ContextAssembler(index, tokenizer),
+                        max_steps=40, state_path=".agent/session.json")
+result = agent.run("Fix the failing expiry test in tests/test_auth.py")
+```
+
+`ProductionAgent` keeps a resumable `SessionState` (plan, todos with evidence,
+pinned facts, failures), compacts observations to a hard token budget, and
+escalates recovery (`retry → repair → change → switch → reflect → backtrack →
+escalate`) instead of repeating a failing call. Pass `generate_fn=` to drive it
+from any serving stack, or omit it to use `model.generate`.
+
+## Security and long-form work
+
+```python
+from evaluation.security_eval import SecurityBenchmark
+from model.longform import LongFormSynthesizer, ReasoningBudget
+
+SecurityBenchmark().assert_threshold(
+    SecurityBenchmark().evaluate([{"case_id": "pw-hash", "code": generated}])
+)
+
+synth = LongFormSynthesizer(lambda prompt, n: model.complete(prompt, n),
+                            budget=ReasoningBudget(context_window=8192))
+result = synth.synthesise("config loader with validation and tests")
+print(result.ok, result.errors)   # compile-checked, with a per-unit trace
+```
