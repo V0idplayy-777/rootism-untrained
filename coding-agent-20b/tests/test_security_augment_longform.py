@@ -30,9 +30,7 @@ from model.longform import (
 )
 
 
-# ---------------------------------------------------------------------------
 # Security data + evaluation
-# ---------------------------------------------------------------------------
 
 
 def test_curated_security_samples_are_paired_and_valid_python():
@@ -58,8 +56,6 @@ def test_curated_security_samples_are_paired_and_valid_python():
         assert sample.category in REQUIRED_PATTERNS, sample.category
 
 
-# SSRF needs data-flow analysis (a generic `requests.get(url)` helper is
-# indistinguishable from a safe one); it is scored by the required-pattern check
 # in SecurityBenchmark instead of by the static scanner.
 STATIC_UNDETECTABLE = {"ssrf"}
 
@@ -87,8 +83,6 @@ def test_scanner_catches_vulnerable_and_passes_safe_samples():
                 severities=("critical", "high", "medium"),
             ), sample.id
 
-    # End-to-end scoring still catches every curated vulnerability, because the
-    # required safe pattern is also checked.
     bench = SecurityBenchmark()
 
     for sample in SECURITY_SAMPLES:
@@ -151,7 +145,6 @@ def test_security_benchmark_scores_both_directions():
 
         bench.assert_threshold(bad_report)
 
-    # JSON-serialisable for archiving with a checkpoint hash.
     import json
 
     json.dumps(bad_report.to_dict())
@@ -175,7 +168,6 @@ def test_scanner_ast_checks_and_required_pattern_absence():
 
     bench = SecurityBenchmark()
 
-    # Functionally correct but not constant-time: required pattern missing.
     missing = bench.evaluate(
         [
             {
@@ -241,9 +233,6 @@ def test_security_generator_shapes_match_training_schema():
     assert len(stats["cwes"]) >= 8
 
 
-# ---------------------------------------------------------------------------
-# Distribution shift: phrasing + cross-domain
-# ---------------------------------------------------------------------------
 
 
 def test_phrasing_variants_are_deterministic_and_preserve_technical_content():
@@ -289,7 +278,6 @@ def test_cross_domain_tasks_are_compilable_and_have_acceptance_criteria():
 
         assert "Plan:" in row["output"]
 
-    # Deterministic for a fixed seed.
     assert [r["family"] for r in rows] == [
         r["family"] for r in ConceptCombiner(seed=3).combine(4)
     ]
@@ -333,7 +321,6 @@ def test_augment_rows_expands_and_keeps_schema():
 
     assert any(r["category"] == "clarification" for r in out)
 
-    # Originals are preserved untouched.
     assert rows[0]["category"] == "code_gen"
 
     for row in out:
@@ -345,9 +332,6 @@ def test_augment_rows_expands_and_keeps_schema():
     assert [r["level"] for r in ladder] == ["spec", "design", "implement"]
 
 
-# ---------------------------------------------------------------------------
-# Long-form synthesis and scratch space
-# ---------------------------------------------------------------------------
 
 
 def test_reasoning_budget_scales_with_window():
@@ -468,7 +452,6 @@ def test_longform_synthesis_fills_units_and_validates():
 
     assert [t["step"] for t in result.trace][:3] == ["plan", "skeleton", "fill"]
 
-    # Per-unit generation, not one giant completion.
     body_calls = [c for c in gen.calls if c]
 
     assert body_calls

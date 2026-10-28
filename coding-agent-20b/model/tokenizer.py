@@ -83,14 +83,10 @@ SPECIAL_TOKENS = {
     "<|file_path|>": 61,
     "<|reserved_62|>": 62,
     "<|reserved_63|>": 63,
-    # --- capability tokens (appended; existing IDs are frozen) -------------
     # Long-horizon agent work: an explicit scratchpad, plan and todo channel
-    # that the agent can write to instead of burning context on prose.
     "<|scratchpad|>": 64,
     "<|plan|>": 65,
     "<|todo|>": 66,
-    # Repository context: retrieved chunks / repo maps are fenced so the model
-    # can distinguish evidence (read-only) from what it must produce.
     "<|repo_map|>": 67,
     "<|retrieval|>": 68,
     "<|file_chunk|>": 69,
@@ -100,10 +96,8 @@ SPECIAL_TOKENS = {
     "<|security|>": 72,
     "<|uncertain|>": 73,
     "<|clarify|>": 74,
-    # Observation framing for tool results and recoverable failures.
     "<|observation|>": 75,
     "<|tool_error|>": 76,
-    # Fill-in-the-middle padding + hard document boundary.
     "<|fim_pad|>": 77,
     "<|endoftext|>": 78,
 }
@@ -112,10 +106,6 @@ SPECIAL_TOKENS = {
 NUM_SPECIAL_TOKENS = len(SPECIAL_TOKENS)
 
 
-# Ids above the hand-written block are reserved padding. A production vocab
-# must be exactly `vocab_size` entries (tensor shape / embedding alignment), so
-# unused capacity is filled with reserved specials rather than silently
-# shrinking the embedding table.
 RESERVED_TOKEN_TEMPLATE = "<|reserved_{id}|>"
 
 
@@ -138,7 +128,6 @@ def pad_special_tokens(special_tokens: dict[str, int], vocab_size: int) -> dict[
     out = dict(special_tokens)
     next_id = max(out.values(), default=-1) + 1
     if next_id != len(out):
-        # keep the dense-from-zero invariant the decoder/validator rely on
         out = {name: i for i, name in enumerate(sorted(out, key=out.get))}
         next_id = len(out)
     while next_id < vocab_size:
@@ -496,8 +485,6 @@ class CodeTokenizer:
 
                 self.id_to_token[idx] = char
 
-        # Rank order (not alphabetical) so a tokenizer grown by another N
-        # merges keeps every existing id stable.
         ordered: list[str] = []
 
         for left, right in merges:
@@ -845,7 +832,6 @@ class CodeTokenizer:
                 f"map has {len(tokenizer.token_to_id)}"
             )
 
-        # Byte fallback must survive serialisation.
         for i in range(256):
 
             char = tokenizer._byte_to_char(i)
@@ -1110,8 +1096,6 @@ class TokenizerValidator:
         "+        raise ValueError('missing token')\n"
     )
 
-    # Cheap deterministic classification (no pygments dependency, stable
-    # labels). Only used to group fertility numbers in the report.
     _LANG_HINTS = (
         ("typescript", ("interface ", "export const", "=>", ": string", "Promise<")),
         ("rust", ("fn ", "impl ", "pub struct", "let mut", "-> Result<")),

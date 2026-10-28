@@ -44,16 +44,13 @@ def estimate_tokens(text: str, tokenizer=None) -> int:
     return max(1, int(len(text) / 3.5))
 
 
-# ---------------------------------------------------------------------------
-# Planning
-# ---------------------------------------------------------------------------
 
 
 @dataclass
 class Todo:
     id: int
     text: str
-    status: str = "pending"  # pending | in_progress | done | blocked
+    status: str = "pending"
     evidence: str = ""
 
     def to_dict(self) -> dict:
@@ -182,9 +179,6 @@ class TodoList:
         }
 
 
-# ---------------------------------------------------------------------------
-# Failures
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -247,9 +241,6 @@ def failure_signature(tool: str | None, arguments: dict | None, error: str) -> s
     return f"{tool or 'parse'}|{args_key}|{summary}"
 
 
-# ---------------------------------------------------------------------------
-# State
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -286,7 +277,6 @@ class SessionState:
 
             self.todos = TodoList(self.plan)
 
-    # -- mutation ----------------------------------------------------------
     def plan_as(self, items: list[str]) -> None:
 
         self.plan = list(items)
@@ -354,7 +344,6 @@ class SessionState:
 
                 self.tests_failed.append(name)
 
-        # A failure that now passes is no longer a failure.
         self.tests_failed = [t for t in self.tests_failed if t not in self.tests_passed]
 
     def note_file(self, path: str) -> None:
@@ -363,7 +352,6 @@ class SessionState:
 
             self.files_touched.append(path)
 
-    # -- inspection --------------------------------------------------------
     def consecutive_failures(self, window: int = 5) -> int:
 
         count = 0
@@ -398,7 +386,6 @@ class SessionState:
             + 0.5 * len(self.facts)
         )
 
-    # -- rendering ---------------------------------------------------------
     def render(self, max_facts: int = 12, max_failures: int = 3) -> str:
         """Compact state digest injected into every prompt."""
 
@@ -516,9 +503,6 @@ class SessionState:
         return state
 
 
-# ---------------------------------------------------------------------------
-# Observation compaction
-# ---------------------------------------------------------------------------
 
 
 class ObservationCompactor:
@@ -705,9 +689,6 @@ class ObservationCompactor:
         return sanitize_observation(text, max_chars=self.max_chars)
 
 
-# ---------------------------------------------------------------------------
-# Context window
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -769,7 +750,6 @@ class ContextWindow:
 
         self.compactor = ObservationCompactor()
 
-    # -- recording ---------------------------------------------------------
     def add_user(self, content: str) -> StepRecord:
 
         record = StepRecord(self.state.step, "user", content)
@@ -822,7 +802,6 @@ class ContextWindow:
 
         return record
 
-    # -- assembly ----------------------------------------------------------
     def _count(self, text: str) -> int:
 
         return estimate_tokens(text, self.tokenizer)
@@ -885,7 +864,6 @@ class ContextWindow:
 
         summarized = [self._digest_step(r) for r in older]
 
-        # Older steps are capped at a quarter of the budget.
         allowed = int(budget * 0.25)
 
         kept: list[str] = []

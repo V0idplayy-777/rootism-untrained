@@ -33,12 +33,10 @@ def test_vocab_is_padded_to_exact_size_and_ids_are_contiguous():
 
     assert sorted(tok.id_to_token) == list(range(1000))
 
-    # Padding is reserved specials, not silently missing ids.
     reserved = [t for t in tok.token_to_id if t.startswith("<|reserved_")]
 
     assert reserved
 
-    # Round-trip and byte fallback survive padding.
     text = "def f(x: int) -> int:\n\treturn x + 1  # ✓\n"
 
     ids = tok.encode(text, add_special_tokens=False)
@@ -62,7 +60,6 @@ def test_capability_special_tokens_exist_and_are_stable():
 
         assert name in SPECIAL_TOKENS
 
-    # Existing ids must not shift (checkpoints depend on them).
     assert SPECIAL_TOKENS["<|tool_call|>"] == 48
 
     assert SPECIAL_TOKENS["<|tool_result|>"] == 49
@@ -125,7 +122,6 @@ def test_validator_reports_fertility_identifiers_and_diff():
 
     assert report["diff"]["chars_per_token"] > 1.0
 
-    # Report must survive JSON (it is written beside the vocab).
     json.dumps({k: v for k, v in report.items() if k != "per_sample"})
 
 
@@ -189,7 +185,6 @@ def test_trainer_script_streams_jsonl_shards_with_manifest(tmp_path, monkeypatch
 
     assert len(pairs) == 60
 
-    # Duplicate content is dropped by the content-hash dedupe.
     shard.write_text("\n".join(lines + lines[:10]))
 
     pairs = list(module.iter_corpus(str(tmp_path), per_language_cap=100))

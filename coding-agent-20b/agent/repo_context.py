@@ -233,8 +233,6 @@ def _py_chunks(path: str, text: str, max_lines: int = 120) -> list[Chunk]:
 
             continue
 
-        # Large class/function: keep the head (signature + docstring + setup)
-        # and add method-level chunks, so retrieval can land on the right part.
         head = "\n".join(lines[start - 1 : start - 1 + max_lines])
 
         chunks.append(Chunk(path, start, start + max_lines - 1, kind, head, "python", node.name))
@@ -404,10 +402,6 @@ def extract_imports(path: str, text: str, language: str) -> set[str]:
 
                 if node.module:
 
-                    # Relative imports (`.auth`) are recorded by module name and
-                    # matched by suffix in `related_files`; a same-named module
-                    # elsewhere is an accepted false-positive of one-hop
-                    # expansion (the assembler caps how many neighbours it adds).
                     imports.add(node.module)
 
         return imports
@@ -457,7 +451,6 @@ class RepoIndex:
 
         self._built = False
 
-    # -- construction -------------------------------------------------------
     @classmethod
     def build(cls, root: str, **kwargs) -> "RepoIndex":
 
@@ -582,7 +575,6 @@ class RepoIndex:
 
         return self
 
-    # -- querying -----------------------------------------------------------
     def _bm25(self, query: str, k: int) -> list[tuple[float, int]]:
         """Okapi BM25 (k1=1.5, b=0.75) over chunk token counts."""
 
@@ -722,7 +714,6 @@ class RepoIndex:
 
         return out
 
-    # -- rendering ----------------------------------------------------------
     def file_outline(self, path: str) -> str:
         """One-line-per-symbol outline for a file."""
 
@@ -937,7 +928,6 @@ class ContextAssembler:
 
                 map_included = True
 
-        # Highest-score chunks first; dedupe overlapping ranges per file.
         seen_ranges: dict[str, list[tuple[int, int]]] = defaultdict(list)
 
         for chunk in hits:
@@ -971,7 +961,6 @@ class ContextAssembler:
 
             spent += chunk_cost
 
-        # Graph expansion: pull in directly related files' outlines (cheap).
         if mode == "hierarchical" and used_chunks:
 
             related: list[str] = []

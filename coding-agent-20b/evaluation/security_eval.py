@@ -25,9 +25,6 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-# ---------------------------------------------------------------------------
-# Rules
-# ---------------------------------------------------------------------------
 
 SEVERITY_WEIGHT = {"critical": 3.0, "high": 2.0, "medium": 1.0, "low": 0.5}
 
@@ -146,8 +143,6 @@ class Finding:
         }
 
 
-# Safe patterns each task family must *positively* contain. Absence is a
-# finding: "did not use md5" is not the same as "used Argon2".
 REQUIRED_PATTERNS: dict[str, tuple[str, ...]] = {
     "password_storage": (r"argon2|bcrypt|scrypt|pbkdf2",),
     "secret_comparison": (r"compare_digest|constant_time",),
@@ -165,7 +160,6 @@ REQUIRED_PATTERNS: dict[str, tuple[str, ...]] = {
 }
 
 
-# Some sample ids need a more specific "good pattern" than their category.
 REQUIRED_OVERRIDES: dict[str, tuple[str, ...]] = {
     "command-injection": (r"shell\s*=\s*False|subprocess\.(?:call|run)\(\s*\[|\bshlex\b",),
     "eval-injection": (r"ast\.parse|ast\.Literal|literal_eval|ast\.NodeVisitor",),
@@ -204,7 +198,6 @@ class SecurityScanner:
             for rule in self.guard_rules
         ]
 
-    # -- AST checks (python only, when parseable) --------------------------
     @staticmethod
     def _ast_findings(code: str) -> list[Finding]:
         try:
@@ -278,7 +271,6 @@ class SecurityScanner:
 
             if isinstance(node, ast.Compare):
 
-                # Timing-unsafe comparison against a secret-looking name.
                 for side in [node.left, *node.comparators]:
 
                     if isinstance(side, ast.Name) and re.search(
@@ -316,7 +308,6 @@ class SecurityScanner:
 
                 line = code.count("\n", 0, match.start()) + 1
 
-                # Insecure-random is only a finding when it touches a secret.
                 if rule.id == "insecure-random-secret":
 
                     window = code[max(0, match.start() - 120) : match.start() + 120]

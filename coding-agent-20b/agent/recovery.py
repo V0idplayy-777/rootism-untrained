@@ -171,7 +171,6 @@ class RecoveryPolicy:
 
             if repeats >= 2 or attempt > self.max_retries:
 
-                # Same failure more than once: change the approach, not the odds.
                 if tool and tool in TOOL_FALLBACKS:
 
                     used = self._switches.get(tool, 0)
@@ -262,7 +261,6 @@ class RecoveryPolicy:
 
         return RecoveryDecision(RecoveryAction.PROCEED, "no intervention needed")
 
-    # -- helpers used by the agent loop -----------------------------------
     @staticmethod
     def reflect_prompt(state: SessionState, decision: RecoveryDecision) -> str:
         """Prompt injected for REPAIR/CHANGE/REFLECT/BACKTRACK."""

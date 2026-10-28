@@ -30,9 +30,6 @@ import random
 import re
 from dataclasses import dataclass, field
 
-# ---------------------------------------------------------------------------
-# Phrasing
-# ---------------------------------------------------------------------------
 
 _FORMAL_TO_CASUAL = {
     "Please implement": "can you write",
@@ -179,9 +176,6 @@ class PhrasingAugmenter:
         return out
 
 
-# ---------------------------------------------------------------------------
-# Distant concept combinations
-# ---------------------------------------------------------------------------
 
 DOMAIN_CAPABILITIES = {
     "compilers": "lexing, parsing, AST transformation, type checking, IR lowering",
@@ -385,9 +379,6 @@ class ConceptCombiner:
         return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
-# Abstraction ladder + ambiguity
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -499,9 +490,6 @@ class AmbiguityGenerator:
         ]
 
 
-# ---------------------------------------------------------------------------
-# Batch assembly
-# ---------------------------------------------------------------------------
 
 
 def augment_rows(

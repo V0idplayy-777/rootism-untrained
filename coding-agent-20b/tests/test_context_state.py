@@ -87,12 +87,10 @@ def test_repo_index_chunks_symbols_and_bm25(tmp_path):
 
     assert hits[0].kind in {"function", "module"}
 
-    # Symbol lookup resolves methods and top-level functions.
     assert index.symbol_lookup("rotate_token")
 
     assert index.symbol_lookup("charge_customer")
 
-    # One-hop graph expansion finds the importer and the imported module.
     related = index.related_files("pkg/billing.py")
 
     assert "pkg/auth.py" in related
@@ -101,7 +99,6 @@ def test_repo_index_chunks_symbols_and_bm25(tmp_path):
 
     assert "rotate_token" in outline and "SessionStore" in outline
 
-    # Identifier-aware tokenisation splits camelCase and snake_case.
     assert "user" in tokenize_for_index("getUserById")
     assert "parse" in tokenize_for_index("parse_tool_call")
 
@@ -149,7 +146,6 @@ def test_context_assembler_ablation_modes(tmp_path):
 
     assert hier.tokens <= hier_tokens_budget(hier)
 
-    # Budget is hard: asking for almost nothing must not overflow.
     tiny = assembler.build("fix token rotation", budget_tokens=40)
 
     assert tiny.tokens <= 40
@@ -172,7 +168,7 @@ def test_session_state_persists_plan_facts_and_tests(tmp_path):
 
     state.note_fact("expiry check must be <=, not <")
 
-    state.note_fact("expiry check must be <=, not <")  # deduped
+    state.note_fact("expiry check must be <=, not <")
 
     state.record_failure("run_tests", {"test_path": "tests"}, "AssertionError: expired")
 
@@ -286,10 +282,8 @@ def test_context_window_compacts_older_steps_within_budget():
 
     assert "Earlier steps (compacted)" in text
 
-    # Pinned state survives compaction.
     assert "<|plan|>" in text
 
-    # Most recent observation is still verbatim enough to act on.
     assert "pkg/m11.py" in text
 
 

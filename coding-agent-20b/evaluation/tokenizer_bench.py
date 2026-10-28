@@ -31,11 +31,6 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-# ---------------------------------------------------------------------------
-# Sample corpus: short, recognisable, per-format. Kept small so the gate runs
-# in CI in well under a second, and extended at runtime from real repositories
-# when `extra_documents`/`corpus_dir` is supplied.
-# ---------------------------------------------------------------------------
 
 SAMPLE_CORPUS: dict[str, list[str]] = {
     "python": [
@@ -80,16 +75,8 @@ SAMPLE_CORPUS: dict[str, list[str]] = {
     ],
 }
 
-# Corpora that decide the gate. Prose is reported but never required: a code
-# tokenizer that trades prose compression for code/patch compression is a win.
 GATE_CORPORA = ("python", "typescript", "rust", "go", "diff", "identifiers")
 
-# Absolute fertility floors (chars/token). These are a *floor*, not a target:
-# they sit above byte fallback (~1.0) and above what a tokenizer trained on a
-# narrow corpus reaches (~1.6-1.9), so they prove the vocabulary is trained
-# without pretending to measure quality. The quality bar is beating a real
-# baseline (bytes, or tiktoken when installed) on every gated corpus; a full
-# production run should be calibrated on held-out real code.
 FERTILITY_FLOORS = {
     "python": 1.7,
     "typescript": 1.6,
@@ -99,9 +86,6 @@ FERTILITY_FLOORS = {
     "identifiers": 1.5,
 }
 
-# Baselines that represent a real competing vocabulary. Word/punctuation
-# splitting is reported for context but is not a fixed-vocabulary tokenizer, so
-# it is not used to decide the gate.
 REAL_BASELINE_PREFIXES = ("tiktoken:", "hf:", "bytes")
 
 _TOKEN_RE = re.compile(
@@ -318,7 +302,6 @@ class TokenizerBenchmark:
             if not name.startswith(REAL_BASELINE_PREFIXES)
         }
 
-        # Compare against the strongest *real* installed baseline per corpus.
         deltas: dict[str, dict[str, float]] = {}
 
         wins = 0

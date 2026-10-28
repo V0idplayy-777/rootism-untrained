@@ -104,7 +104,6 @@ def test_failing_tool_triggers_recovery_and_escalates_honestly(tmp_path):
 
     assert "escalate" in actions
 
-    # The step budget is respected and every failure is captured in state.
     assert result["state"]["step"] <= 8
 
     assert result["state"]["failures"]
@@ -125,7 +124,6 @@ def test_malformed_call_is_repaired_and_counted(tmp_path):
 
     assert result["success"]
 
-    # The parser repaired the trailing comma / single quotes; the call ran.
     assert result["steps"][0]["tool"] == "read_file"
 
     assert "add" in result["steps"][0]["result"]["content"]
@@ -157,7 +155,6 @@ def test_session_state_is_resumable(tmp_path):
 
     assert saved["facts"] == ["keep the API stable"]
 
-    # Resume: the same task loads the saved plan/facts instead of starting over.
     resumed_calls = []
 
     def generate(prompt):

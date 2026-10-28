@@ -354,7 +354,6 @@ class ProductionAgent:
 
         self.executor = ToolExecutor(workspace_path, self.sandbox)
 
-    # -- prompt ------------------------------------------------------------
     def _build_system_prompt(self, context: str = "") -> str:
         """Build system prompt with tool schemas and (optional) repo evidence."""
 
@@ -401,13 +400,12 @@ Example:
                 mode="hierarchical",
             )
 
-        except Exception as e:  # retrieval must never break the loop
+        except Exception as e:
 
             logger.warning(f"retrieval failed: {e}")
 
             return None
 
-    # -- generation --------------------------------------------------------
     def _generate(self, prompt: str) -> str:
         """One model turn -> text. `generate_fn` is injectable for tests."""
 
@@ -441,7 +439,6 @@ Example:
 
         return parse_tool_call(text, TOOL_SCHEMAS)
 
-    # -- control tools -----------------------------------------------------
     def _handle_control_tool(self, tool: str, args: dict, state: SessionState) -> dict | None:
         """Plan/notes are state operations, not sandbox operations."""
 
@@ -483,7 +480,6 @@ Example:
 
         return None
 
-    # -- session -----------------------------------------------------------
     def _load_state(self, task: str) -> SessionState:
 
         if self.state_path:
@@ -651,7 +647,6 @@ Example:
 
             if tool_call is None:
 
-                # Prose without an action: keep it, and nudge if we are spinning.
                 window.add_assistant(response)
 
                 steps.append(

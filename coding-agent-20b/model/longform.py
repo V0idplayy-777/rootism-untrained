@@ -29,9 +29,6 @@ from typing import Callable
 GenerateFn = Callable[[str, int], str]
 
 
-# ---------------------------------------------------------------------------
-# Budgets
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -102,9 +99,6 @@ class ReasoningBudget:
         )
 
 
-# ---------------------------------------------------------------------------
-# Validation helpers
-# ---------------------------------------------------------------------------
 
 
 def python_syntax_errors(code: str) -> list[str]:
@@ -223,9 +217,6 @@ def missing_definitions(code: str) -> list[str]:
     return sorted(name for name in called if name not in defined)
 
 
-# ---------------------------------------------------------------------------
-# Planning
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -341,9 +332,6 @@ def parse_plan(text: str, fallback_instruction: str = "") -> SynthesisPlan:
     )
 
 
-# ---------------------------------------------------------------------------
-# Long-form synthesis
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -402,7 +390,6 @@ class LongFormSynthesizer:
 
         self.neighbour_context = neighbour_context
 
-    # -- prompts -----------------------------------------------------------
     def _plan_prompt(self, instruction: str, constraints: str) -> str:
 
         alloc = self.budget.allocate()
@@ -458,7 +445,6 @@ class LongFormSynthesizer:
             + "\n<|endoftext|>\nReturn the complete corrected Python file only.\n"
         )
 
-    # -- steps -------------------------------------------------------------
     @staticmethod
     def _strip_fences(text: str) -> str:
 
@@ -543,7 +529,6 @@ class LongFormSynthesizer:
 
             first, last = children[0].lineno, getattr(children[-1], "end_lineno", children[-1].lineno)
 
-            # Only replace stub bodies (single `...`/pass/docstring+pass).
             stub = all(
                 isinstance(stmt, ast.Expr)
                 and (
@@ -611,7 +596,6 @@ class LongFormSynthesizer:
 
             trace.append({"step": "repair", "attempt": repairs, "errors": errors})
 
-        # Undefined names are reported but not fatal (heuristic).
         undefined = missing_definitions(code)
 
         if undefined and not errors:
@@ -627,7 +611,6 @@ class LongFormSynthesizer:
             trace=trace,
         )
 
-    # -- deep reasoning ----------------------------------------------------
     def reason(
         self,
         question: str,

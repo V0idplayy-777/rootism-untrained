@@ -27,10 +27,7 @@ DEFAULT_MIXTURE: list[SourceSpec] = [
     SourceSpec("docs-and-comments", 0.06, 1.5, "docs"),
     SourceSpec("instruction-sft", 0.09, 1.0, "instruction"),
     # Security-critical code is rare in public corpora but must not be rare in
-    # the gradient: upsample the curated safe/vulnerable pairs (CWE coverage).
     SourceSpec("security-sft", 0.03, 3.0, "security"),
-    # Distribution shift: unusual phrasing, cross-domain synthesis, tasks where
-    # the correct action is a clarifying question.
     SourceSpec("creative-sft", 0.04, 2.0, "creative"),
 ]
 
