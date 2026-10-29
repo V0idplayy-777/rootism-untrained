@@ -14,7 +14,8 @@ Both share:
 - Vocabulary size: 128256 (power-of-2 aligned, 79 frozen control tokens)
 - Context length: 8192 native, 32768 via YaRN x4, 65536 via YaRN x8
 - RoPE theta=500_000, sliding window 4096, RMSNorm, SwiGLU (SiLU), GQA
-- Same tokenizer, data pipeline, training stages, agent harness
+- Same tokenizer, data-building components and agent harness; 3B uses a
+  budget-aware pretraining path
 
 Why these numbers?
 ------------------
@@ -34,12 +35,13 @@ Chosen 3B point (primary):
 
 Trade-offs vs 20B:
 
-- Same head_dim, same RoPE, same sliding window, same vocab -> checkpoints
-  and tokenizer are drop-in compatible (only layer count/width differ).
+- Same head_dim, RoPE, sliding window and vocab allow a shared tokenizer and
+  model code; the different layer count/width make model weights incompatible.
 - YaRN 32k/64k scaling identical logic, just applied to 3B base.
-- Training recipe identical (WSD 3e-4, AdamW 0.9/0.95, bf16 ZeRO-3) with
-  smaller global batch (1024 vs 2048) and shorter pretrain (100B vs 300B
-  tokens) -- see configs/training_config_3b.json.
+- The 3B pretrainer uses cosine decay with warmup (peak 3e-4, AdamW
+  0.9/0.95, bf16 ZeRO-3), a smaller global batch (1024 vs 2048), and a
+  shorter pretrain target (18B vs 300B tokens) -- see
+  configs/training_config_3b.json.
 
 Parameter breakdown (vocab 128256, tight 23-layer):
 
