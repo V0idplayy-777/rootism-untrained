@@ -124,6 +124,16 @@ def create_dataloader(
 def train(args: argparse.Namespace):
     """Main training function."""
 
+    config_dict = load_config(args.config)
+    if config_dict.get("model_size") == "3B":
+        if getattr(args, "use_wandb", False):
+            raise ValueError("The 3B pretrainer does not support --use_wandb; use its console logs")
+        from training.train_3b import train_3b
+
+        return train_3b(args, config_dict)
+    if getattr(args, "resume", False) or getattr(args, "max_steps", None) is not None:
+        raise ValueError("--resume and --max_steps are supported here only for the 3B recipe")
+
     if HAS_DEEPSPEED:
 
         deepspeed.init_distributed()
@@ -464,6 +474,12 @@ def main():
     parser.add_argument("--project_name", type=str, default="coding-agent-20b")
 
     parser.add_argument("--use_wandb", action="store_true", help="Use WandB")
+
+    parser.add_argument("--local_rank", "--local-rank", type=int, default=-1)
+
+    parser.add_argument("--max_steps", type=int, default=None, help="3B only: stop after at most this many global steps")
+
+    parser.add_argument("--resume", action="store_true", help="3B only: resume the latest checkpoint")
 
     if HAS_DEEPSPEED:
 

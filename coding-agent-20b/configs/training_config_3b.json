@@ -1,9 +1,9 @@
 {
   "model_name": "CodingAgent-3B",
   "model_size": "3B",
-  "notes": "EXACT same architecture family as CodingAgent-20B, scaled to ~3B. Width halved (6144->3072, 16384->8192, 48/8->24/4), depth 60->23, head_dim 128, RoPE 500k, sliding window 4096, vocab 128256 preserved. See model/config_3b.py for breakdown. Training recipe identical but with smaller batch/steps for 3B efficiency.",
+  "notes": "EXACT same architecture family as CodingAgent-20B, scaled to ~3B. Width halved (6144->3072, 16384->8192, 48/8->24/4), depth 60->23, head_dim 128, RoPE 500k, sliding window 4096, vocab 128256 preserved. See model/config_3b.py for breakdown. The 3B pretrainer uses its own 18B-token budget and global batch; shared data mixture settings are unchanged.",
   "training": {
-    "total_tokens": 100000000000,
+    "total_tokens": 18000000000,
     "learning_rate": 0.0003,
     "min_learning_rate": 3e-05,
     "warmup_tokens": 1000000000,

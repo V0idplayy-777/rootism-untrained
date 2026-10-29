@@ -496,6 +496,19 @@ class CheckpointManager:
 def train(args: argparse.Namespace):
     """Main training function."""
 
+    # The 3B recipe uses its own budget-aware path; leave the legacy paths for
+    # the other model sizes untouched.
+    with open(args.config) as f:
+        recipe = json.load(f)
+    recipe_size = recipe.get("model_size", "20B")
+    model_size = args.model_size or recipe_size
+    if recipe_size == "3B" or model_size == "3B":
+        if recipe_size != "3B" or model_size != "3B":
+            raise ValueError("The 3B model and training configuration must be used together")
+        from training.train_3b import train_3b
+
+        return train_3b(args, recipe)
+
     if DEEPSPEED_AVAILABLE:
 
         deepspeed.init_distributed()
@@ -837,7 +850,7 @@ def parse_args():
     parser.add_argument(
         "--model_size",
         type=str,
-        choices=["1B", "7B", "20B"],
+        choices=["1B", "3B", "7B", "20B"],
         default=None,
         help="Override model size",
     )
@@ -846,7 +859,7 @@ def parse_args():
         "--max_steps",
         type=int,
         default=None,
-        help="Maximum training steps (overrides config)",
+        help="Maximum training steps (3B cannot exceed the configured token budget)",
     )
 
     parser.add_argument(
@@ -858,7 +871,7 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--local_rank", type=int, default=-1, help="Local rank for distributed training"
+        "--local_rank", "--local-rank", type=int, default=-1, help="Local rank for distributed training"
     )
 
     if DEEPSPEED_AVAILABLE:

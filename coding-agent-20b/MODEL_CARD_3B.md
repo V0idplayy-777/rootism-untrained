@@ -2,14 +2,14 @@
 
 ## Summary
 Decoder-only transformer (23 layers, hidden 3072, GQA 24Q/4KV, SwiGLU, RMSNorm,
-RoPE theta=500k) with a 128,256-token byte-level BPE vocabulary, trained for
+RoPE theta=500k) with a 128,256-token byte-level BPE vocabulary, designed for
 code generation and multi-step tool-using agent work. Context: 8k native,
 32k via YaRN RoPE scaling (`get_3b_32k_config`), 64k YaRN ×8 as headroom
 (`get_3b_64k_config`, extrapolation — see `docs/CAPABILITY_GAPS.md`).
 
 **This is the EXACT same architecture family as CodingAgent-20B, scaled to ~3B.**
-Only width/depth change; all code, tokenizer, data pipeline, agent harness,
-and training pipeline are shared.
+The underlying model code, tokenizer, data components and agent harness are
+shared; 3B pretraining has its own budget-aware execution path.
 
 | Dimension | 20B | 3B (primary) | Scaling | 3B deep variant |
 | --- | --- | --- | --- | --- |
@@ -38,19 +38,33 @@ Same 79 hand-written control tokens (ids frozen; `|tool_call|`=48,
 diff/review/clarify and tool errors. Vocab padded to exactly `vocab_size`.
 
 ## Training
-Stages (see `configs/pipeline.json` + `configs/training_config_3b.json`,
-`training/schedules.py`): continuous pretrain (WSD LR 3e-4, AdamW 0.9/0.95,
-wd 0.1, bf16, ZeRO-3) → mid-train anneal on tests/issues/PRs/docs (plus
-security and distribution-shift sources) → SFT (prompt loss masked) → DPO
-(beta 0.1).
+The 3B recipe (`configs/training_config_3b.json`) is handled by
+`training/train_3b.py` through either existing training entry point. It uses
+DeepSpeed ZeRO-3, BF16, AdamW (0.9/0.95, weight decay 0.1), and cosine decay
+with warmup from a peak learning rate of 3e-4. It needs CUDA GPUs, DeepSpeed,
+and pre-tokenized `train_manifest.json` and `val_manifest.json` shards. For
+multi-node runs, the dataset and checkpoint directory must be shared by all ranks.
 
-For 3B, pretrain tokens 100B vs 300B for 20B, global batch 1024 vs 2048,
-`checkpoints-3b/` and `logs/tensorboard-3b`, `wandb_project: coding-agent-3b`.
-All other data/mixture settings identical.
+The **pretraining cap is 18B input tokens** (20B's separate recipe remains at
+300B). With global batch 1024 and 8192 tokens per sequence, this is 2,145 full
+optimizer steps, or 17,993,564,160 input tokens. The remainder is not processed,
+so the cap is never exceeded. Automatic accumulation uses the total number of
+ranks: for eight GPUs and micro-batch 4, it is 32 micro-batches per optimizer
+step. `--max_steps` can shorten a run but cannot raise the token cap. The 3B
+path logs to the console; the production entry point's W&B monitoring is not
+implemented for it.
 
-Data: permissive-license code (SPDX gate in `dataset/production_processor.py`,
-reused by the tokenizer corpus sampler), MinHash-LSH dedup, attention-aware
-packing (`dataset/packing.py`), mixture in `dataset/mixture.py`:
+This entry point performs **pretraining only**. The shared `configs/pipeline.json`
+has an independent schedule and is not executed by it; mid-train, SFT and DPO
+are separate work. The trainer consumes pre-mixed token shards and does not
+apply the source upsampling factors itself. Prepare the shards with the desired
+mixture before launch; model quality still needs evaluation after training.
+
+The intended data preparation uses permissive-license code (SPDX gate in
+`dataset/production_processor.py`), deduplication, and the mixture in
+`dataset/mixture.py`. Apply those checks before sharding: the 3B trainer reads
+flat token IDs and does not enforce licenses or use document-boundary attention
+masks from `dataset/packing.py`. The configured source weights are:
 `the-stack-code 0.50 · issues 0.06 · prs 0.08 · tests 0.08 · docs 0.06 ·
 instruction 0.08 · security 0.03 (×3) · creative 0.03 (×2) · instruction-induction
 0.03 · recovery 0.02 · project-scaffold 0.015 (×1.5) · repair-trace 0.015 (×2)`
@@ -62,9 +76,13 @@ instruction 0.08 · security 0.03 (×3) · creative 0.03 (×2) · instruction-in
   cross-domain task families with acceptance criteria, spec/design/implement
   ladders, and clarification tasks for underspecified requests.
 
-Checkpoints are atomic + SHA-256 verified (`training/checkpoint.py`); recovery
-policy in `training/monitor.py`. 3B uses `ds_config_zero3.json` with
-`offload_param: false` (fits on fewer GPUs).
+The 3B pretrainer saves sharded DeepSpeed checkpoints in `checkpoints-3b/`
+(all ranks participate). Checkpoints record the global token count, data
+position, batch topology and training-manifest hash; `--resume` requires those
+to match. The recipe keeps the most recent five checkpoints and disables
+parameter offload while retaining optimizer offload. These sharded checkpoints
+are not the atomic, SHA-256-verified single-file format used by
+`training/checkpoint.py`; consolidate them before inference.
 
 ## Evaluation
 Protocol: `docs/EVAL_PROTOCOL.md`. Benchmarks: HumanEval, MBPP, LiveCodeBench,
@@ -128,9 +146,33 @@ python -c "from model.config_3b import get_3b_config; get_3b_config().print_summ
 python -c "from model.config_3b import get_3b_26l_config; get_3b_26l_config().print_summary()"
 # 3.33B
 
-# train (same pipeline, smaller batch/tokens)
-python training/train_production.py --config configs/training_config_3b.json
-# serve (OpenAI-compatible, same server handles both)
-python -m inference.server --checkpoint checkpoints-3b/latest --port 8000
-# model/model_3b.py is a drop-in alias: from model.model_3b import CodingAgentModel
+# From the coding-agent-20b directory, pretrain with 8 BF16-capable GPUs
+# (prepare the mixed, tokenized data/processed shards first).
+deepspeed --num_gpus=8 training/train.py --config configs/training_config_3b.json
+
+# Resume the same run, on the same number of ranks and training shards
+deepspeed --num_gpus=8 training/train.py --config configs/training_config_3b.json --resume
+
+# Optional one-step smoke run in a separate checkpoint directory
+deepspeed --num_gpus=8 training/train_production.py \
+  --config configs/training_config_3b.json --data_dir data/processed \
+  --output_dir checkpoints-3b/smoke --max_steps 1
+```
+
+To serve a finished checkpoint, first consolidate its DeepSpeed shards to a
+single FP32 state dict and wrap it with the 3B architecture config. This can
+require substantial CPU RAM and disk space:
+
+```bash
+python - <<'PY'
+from deepspeed.utils.zero_to_fp32 import get_fp32_state_dict_from_zero_checkpoint
+from model.config_3b import get_3b_config
+from training.checkpoint import save_checkpoint_atomic
+
+weights = get_fp32_state_dict_from_zero_checkpoint("checkpoints-3b")
+save_checkpoint_atomic({"config": get_3b_config().to_dict(), "model_state_dict": weights},
+                       "checkpoints-3b/export", step=0)
+PY
+python -m inference.server --checkpoint checkpoints-3b/export/checkpoint_00000000.pt \
+  --tokenizer tokenizer --port 8000
 ```
