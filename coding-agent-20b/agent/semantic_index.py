@@ -198,7 +198,6 @@ class SemanticIndex:
         use_embeddings: bool | None = None,
     ) -> "SemanticIndex":
         root = Path(root)
-        # Row 7: try real local embeddings (sentence-transformers) while keeping hybrid+call-graph
         if embed_fn is None and (use_embeddings is None or use_embeddings):
             try:
                 from .embeddings import get_embed_fn
@@ -350,11 +349,9 @@ class SemanticIndex:
     def incremental_update(self, changed_files: list[str], root: str | Path) -> list[str]:
         """Refresh only changed files; keep index accurate after every write/patch (row 4)."""
         root = Path(root)
-        # remove old docs for changed files
         changed_set = set(changed_files)
         before = len(self.documents)
         self.documents = [d for d in self.documents if d.path not in changed_set]
-        # add new docs for those files
         added = 0
         for rel in changed_files:
             path = root / rel

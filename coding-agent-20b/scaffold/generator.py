@@ -113,9 +113,7 @@ class ScaffoldGenerator:
             return ScaffoldResult(ok=False, error=str(exc), root=str(self.root))
 
         project_name = slugify(name or self.root.name or "app")
-        # normalize extra_options that may contain new keys
         extra = dict(extra_options or {})
-        # always pop new keys so they never leak into ProjectOptions
         if "auth_provider" in extra:
             _popped_auth = extra.pop("auth_provider")
             auth_provider = auth_provider or _popped_auth
@@ -123,7 +121,6 @@ class ScaffoldGenerator:
             _popped_jobs = extra.pop("add_jobs")
             if add_jobs is None:
                 add_jobs = _popped_jobs
-        # legacy: extra may contain use_auth/database overrides already handled
         options = ProjectOptions(
             name=project_name,
             display_name=titleize(name or self.root.name or "app"),
@@ -137,7 +134,6 @@ class ScaffoldGenerator:
         )
         if options.database == "postgres" and not spec.supports_database:
             options.database = "none"
-        # remember provider for later file injection
         chosen_auth_provider = (auth_provider or "").strip().lower() or None
 
         result = ScaffoldResult(
@@ -171,7 +167,6 @@ class ScaffoldGenerator:
             result.error = f"template {spec.id} failed to render: {type(exc).__name__}: {exc}"
             return result
 
-        # Inject auth provider files if requested (row 2)
         if chosen_auth_provider:
             try:
                 from .auth_providers import auth_provider_files, get_auth_provider
@@ -191,7 +186,6 @@ class ScaffoldGenerator:
                 result.error = f"auth provider {chosen_auth_provider} failed: {exc}"
                 return result
 
-        # Inject background-job example for every starter (row 2: every starter produces a working job)
         should_add_jobs = add_jobs if add_jobs is not None else True
         if should_add_jobs:
             try:
@@ -331,11 +325,8 @@ class ScaffoldGenerator:
         try:
             critic = CodeCritic()
             review = critic.review(self.root)
-            # If critic fails with fixable issues, attempt deterministic fixes
             if not review.ok:
-                # Record findings for visibility
                 result.warnings.append(f"critic score {review.score}/100: {review.summary()}")
-                # Auto-fix trivial issues: missing README, unpinned deps, env not ignored
                 fixed = self._auto_fix_critic_findings(review)
                 if fixed:
                     result.warnings.append(f"auto-fixed {len(fixed)} critic findings")
@@ -381,8 +372,6 @@ class ScaffoldGenerator:
             result.options["verify"] = {"ok": run.ok, "exit_code": run.exit_code, "passed": run.passed, "failed": run.failed}
             if not run.ok:
                 result.warnings.append(f"generated tests failed: {run.failure_signal()[:200]}")
-                # Do not mark scaffold as failed for now; ship gate will block deploy
-                # but we record the failure for visibility
             else:
                 result.warnings.append(f"generated tests passed: {len(run.passed)} passed")
         except Exception as exc:  # noqa: BLE001

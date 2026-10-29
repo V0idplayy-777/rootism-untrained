@@ -66,7 +66,6 @@ class ToolExecutor:
                     self.repo = None
 
     def _enforce_subdir(self, p: Path) -> None:
-        # Row 7: work only inside this subdirectory/package constraints
         try:
             onboarding_path = self.workspace / ".agent" / "onboarding.json"
             if onboarding_path.exists():
@@ -74,7 +73,6 @@ class ToolExecutor:
                 data = json.loads(onboarding_path.read_text(encoding="utf-8"))
                 for c in data.get("constraints", []):
                     if "Work only inside" in c:
-                        # extract subdir from markdown `subdir`
                         import re
                         m = re.search(r"`([^`]+)`", c)
                         if m:
@@ -432,29 +430,22 @@ class ToolExecutor:
         """Incrementally refresh project map + semantic index after writes (row 4)."""
         try:
             from .project_map import ProjectMap
-            # Only refresh if map exists (don't spam build on every write in empty ws)
             map_path = self.workspace / ".agent" / "project_map.json"
             if map_path.exists():
                 try:
                     pm = ProjectMap.load(self.workspace) if hasattr(ProjectMap, "load") else ProjectMap.build(self.workspace)
-                    # if load has refresh, use it
                     if hasattr(pm, "refresh"):
                         changed = pm.refresh()
-                        # save if changed
                         if changed:
                             pm.save()
                     else:
-                        # fallback: rebuild
                         ProjectMap.build(self.workspace).save()
                 except Exception:
                     pass
-            # semantic index incremental: add single doc if small change
             try:
                 from .semantic_index import SemanticIndex
                 index_path = self.workspace / ".agent" / "semantic_index.json.gz"
                 if index_path.exists() and paths:
-                    # naive: rebuild is cheap for <800 files; do it in background is okay
-                    # but we do incremental add for single file writes to stay accurate
                     pass
             except Exception:
                 pass
@@ -493,7 +484,6 @@ class ToolExecutor:
         try:
 
             result = fn(**arguments)
-            # Row 4: incremental map/index update after every write/patch
             if result.get("success") and tool_name in {"write_file", "apply_patch", "edit_function"}:
                 paths = []
                 if tool_name == "write_file":

@@ -260,7 +260,6 @@ async function deploy() {
       addAgent(`Deployed. Live at ${data.url}`);
       state.previewUrl = data.url;
     }
-    // Plain-language for non-engineers (row 8)
     if (data.plain || data.plain_success) {
       addAgent(data.plain || data.plain_success);
     }
@@ -273,7 +272,6 @@ async function deploy() {
       const node = el(`<details class="event ok"><summary>deploy log</summary><pre>${esc(data.rendered)}</pre></details>`);
       $("#transcript").append(node);
     }
-    // Update status card
     const sc = $("#status-card");
     if (sc) sc.textContent = data.ok ? `✓ Live: ${data.url || "artifact ready"} • status/index.html updated` : `✗ ${data.human?.plain || data.error || "deploy failed"}`;
   } catch (error) {

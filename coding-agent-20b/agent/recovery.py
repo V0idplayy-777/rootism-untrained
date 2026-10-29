@@ -515,7 +515,6 @@ class RecoveryMetrics:
             return
         self.history.append({"step": self.total_steps, "action": str(decision.action), "reason": decision.reason})
         if decision.action in (RecoveryAction.RETRY, RecoveryAction.CHANGE):
-            # loop proxy: repeated same signature
             self.loops += 1
         if decision.action == RecoveryAction.ESCALATE:
             self.escalations += 1

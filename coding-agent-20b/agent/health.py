@@ -63,18 +63,15 @@ def _parse_imports(py_text: str) -> list[str]:
 
 def _find_broken_imports(root: Path) -> list[HealthFinding]:
     findings: list[HealthFinding] = []
-    # collect local modules
     local_modules = set()
     for p in root.rglob("*.py"):
         if any(part in {".git", ".agent", "node_modules", ".venv", "venv"} for part in p.parent.parts):
             continue
-        # top-level package names
         rel = p.relative_to(root)
         if len(rel.parts) == 1:
             local_modules.add(rel.stem)
         elif len(rel.parts) > 1:
             local_modules.add(rel.parts[0])
-    # check each py file
     for p in root.rglob("*.py"):
         if any(part in {".git", ".agent", "node_modules", ".venv", "venv", "__pycache__"} for part in p.parts):
             continue
@@ -84,15 +81,10 @@ def _find_broken_imports(root: Path) -> list[HealthFinding]:
             continue
         imports = _parse_imports(text)
         for imp in imports:
-            # stdlib-ish allowlist (not exhaustive; we flag only obvious missing local)
             if imp in {"os", "sys", "json", "pathlib", "re", "time", "math", "typing", "dataclasses", "collections", "datetime", "itertools", "functools", "ast", "hashlib", "logging", "argparse", "unittest", "pytest", "fastapi", "uvicorn", "pydantic", "httpx", "supabase", "jose", "sqlalchemy", "psycopg", "asyncio", "tempfile", "subprocess", "shutil", "html", "http", "urllib"}:
                 continue
-            # if import looks like local but no file exists
             if imp not in local_modules and "." not in imp:
-                # only flag if there's a strong hint it's project's own (e.g., same as root name)
-                # skip generic third-party to avoid false positives
                 pass
-        # also check syntax
         try:
             ast.parse(text)
         except SyntaxError as exc:
@@ -110,11 +102,9 @@ def _find_missing_tests(root: Path) -> list[HealthFinding]:
         rel = p.relative_to(root)
         if "test" in rel.parts or rel.name.startswith("test_"):
             test_files.add(rel.name)
-            # also add module under test if naming convention: test_foo -> foo
             if rel.name.startswith("test_"):
                 test_files.add(rel.name[5:])
         else:
-            # source file with public defs?
             try:
                 text = p.read_text(encoding="utf-8")
                 tree = ast.parse(text)
@@ -128,7 +118,6 @@ def _find_missing_tests(root: Path) -> list[HealthFinding]:
     else:
         for src in source_files:
             stem = src.stem
-            # expect test_{stem} or stem in test files
             expected = f"test_{stem}.py"
             if expected not in test_files and stem not in {Path(t).stem for t in test_files}:
                 findings.append(HealthFinding("missing-test", "medium", str(src.relative_to(root)), f"no test for {stem}", f"add tests/test_{stem}.py"))
@@ -137,7 +126,6 @@ def _find_missing_tests(root: Path) -> list[HealthFinding]:
 
 def _find_circular_deps(root: Path) -> list[HealthFinding]:
     findings: list[HealthFinding] = []
-    # Build import graph: module -> imports (local only)
     graph: dict[str, set[str]] = {}
     module_map: dict[str, Path] = {}
     for p in root.rglob("*.py"):
@@ -153,26 +141,20 @@ def _find_circular_deps(root: Path) -> list[HealthFinding]:
             mod = mod[:-9]
         module_map[mod] = p
         graph[mod] = set(_parse_imports(text))
-    # map short import to full module
     short_to_full = {mod.split(".")[-1]: mod for mod in graph}
-    # check for 2-cycle a->b->a
     for mod, deps in graph.items():
         for dep in deps:
             full_dep = short_to_full.get(dep)
             if not full_dep or full_dep not in graph:
                 continue
             if mod in graph.get(full_dep, set()) or any(mod.split(".")[-1] == d for d in graph.get(full_dep, [])):
-                # confirm dep's short name maps back
                 dep_short = full_dep.split(".")[-1]
                 if mod.split(".")[-1] in graph.get(full_dep, {}) or dep_short in graph.get(mod, {}):
                     pass
-                # simple heuristic: mutual import
                 if dep in graph[mod] and mod.split(".")[-1] in graph.get(full_dep, {}):
-                    # avoid dup
                     already = any(f.path == mod and full_dep in f.message for f in findings)
                     if not already:
                         findings.append(HealthFinding("circular-import", "high", mod, f"circular import: {mod} <-> {full_dep}", "extract shared code to a third module"))
-    # dedupe
     seen = set()
     uniq = []
     for f in findings:
@@ -189,7 +171,6 @@ def project_health(root: str | Path) -> HealthReport:
     findings.extend(_find_broken_imports(root))
     findings.extend(_find_missing_tests(root))
     findings.extend(_find_circular_deps(root))
-    # score: start 100, deduct per severity
     score = 100
     for f in findings:
         if f.severity == "critical":

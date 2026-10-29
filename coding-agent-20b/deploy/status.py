@@ -133,7 +133,6 @@ def write_status_page(
         generate_status_page(name, description, url=url, provider=provider, image=image, health=health),
         encoding="utf-8",
     )
-    # also write a JSON status for API consumers
     json_path = root / "status" / "status.json"
     json_path.write_text(
         json.dumps(

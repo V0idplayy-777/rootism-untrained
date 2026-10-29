@@ -200,7 +200,6 @@ class DeployEngine:
         if not self.require_green or self.force:
             return True, "", {}
         details: dict = {}
-        # Run verify
         try:
             from quality.verify import run_tests
 
@@ -221,7 +220,6 @@ class DeployEngine:
                 if getattr(self, "requested_provider", None) == "archive" or self.config().provider == "archive":
                     details["review_skipped"] = "archive provider: review gate is advisory only"
                 else:
-                    # Don't block for trivial env-not-ignored alone (common in ad-hoc projects)
                     only_env = all(f.rule == "env-not-ignored" for f in getattr(review, "findings", []))
                     if only_env:
                         details["review_skipped"] = "only env-not-ignored"
@@ -442,7 +440,6 @@ class DeployEngine:
                 result.meta["hosting"] = published.get("hosting")
                 if result.landing:
                     result.notes.append(f"landing page: {result.landing}")
-                # Auto-generate public status page / dashboard (row 1)
                 try:
                     from .status import write_status_page
 

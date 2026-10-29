@@ -834,7 +834,6 @@ Example:
 
 
 
-        # Row 7: systematic onboarding before editing (auto-generate if missing)
         try:
             from agent.onboarding import ensure_onboarding
             rep = ensure_onboarding(self.workspace_path, force=False)

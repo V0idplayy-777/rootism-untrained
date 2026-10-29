@@ -26,9 +26,7 @@ def _try_sentence_transformers(model_name: str = "all-MiniLM-L6-v2") -> Callable
     except ImportError:
         return None
     try:
-        # Don't download in test; only use if model already cached or offline
         model = SentenceTransformer(model_name, device="cpu")
-        # test encode
         vec = model.encode(["hello world"], normalize_embeddings=True)
         if vec is None or len(vec) == 0:
             return None
@@ -58,7 +56,6 @@ def _try_huggingface_transformers(model_name: str = "sentence-transformers/all-M
             inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
             with torch.no_grad():
                 outputs = model(**inputs)
-                # mean pooling
                 mask = inputs["attention_mask"].unsqueeze(-1)
                 summed = (outputs.last_hidden_state * mask).sum(dim=1)
                 counts = mask.sum(dim=1).clamp(min=1)
@@ -73,18 +70,15 @@ def _try_huggingface_transformers(model_name: str = "sentence-transformers/all-M
 
 def get_embed_fn(preferred: str | None = None, dim: int = 384) -> Callable[[str], list[float]] | None:
     """Return a local embed function if available, else None (caller falls back to hashing)."""
-    # Respect env override
     import os
 
     if os.environ.get("AGENT_EMBEDDINGS") == "hashing":
         return None
     if preferred == "hashing":
         return None
-    # Try sentence-transformers first (most common)
     fn = _try_sentence_transformers()
     if fn is not None:
         return fn
-    # Try transformers
     fn = _try_huggingface_transformers()
     if fn is not None:
         return fn

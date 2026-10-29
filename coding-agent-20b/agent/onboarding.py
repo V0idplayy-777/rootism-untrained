@@ -25,7 +25,7 @@ IMPORTANT_EXTS = {".py", ".js", ".ts", ".tsx", ".jsx", ".go", ".rs", ".java", ".
 @dataclass
 class EntryPoint:
     path: str
-    kind: str  # cli, web, api, worker, test, config
+    kind: str
     why: str
 
     def to_dict(self) -> dict:
@@ -78,7 +78,6 @@ class OnboardingReport:
         target = Path(root) / ".agent" / "onboarding.json"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(json.dumps(self.to_dict(), indent=2) + "\n", encoding="utf-8")
-        # also write markdown for prompt injection
         md = Path(root) / ".agent" / "onboarding.md"
         md.write_text(self.render() + "\n", encoding="utf-8")
         return target
@@ -86,13 +85,11 @@ class OnboardingReport:
 
 def _detect_entry_points(root: Path) -> list[EntryPoint]:
     entries: list[EntryPoint] = []
-    # explicit hints
     for hint in ENTRY_HINTS:
         p = root / hint
         if p.exists():
             kind = "web" if hint in ("app.py", "main.py", "server.py", "index.js") else "config"
             if hint == "package.json":
-                # check scripts
                 try:
                     data = json.loads(p.read_text(encoding="utf-8"))
                     scripts = data.get("scripts", {})
@@ -103,7 +100,6 @@ def _detect_entry_points(root: Path) -> list[EntryPoint]:
                 except Exception:
                     pass
             entries.append(EntryPoint(str(p.relative_to(root)), kind, f"detected {hint}"))
-    # scan for common patterns
     for path in sorted(root.rglob("*")):
         if not path.is_file():
             continue
@@ -111,16 +107,12 @@ def _detect_entry_points(root: Path) -> list[EntryPoint]:
         if any(part in IGNORE_DIRS for part in rel.parts[:-1]):
             continue
         name = path.name
-        # flask/fastapi entry
         if name == "main.py" and "app" in str(rel) or name == "wsgi.py":
             entries.append(EntryPoint(str(rel), "web", "possible web entry"))
-        # cli entry
         if name == "cli.py" or (name.endswith(".py") and "cli" in name.lower()):
             entries.append(EntryPoint(str(rel), "cli", "cli module"))
-        # worker
         if "worker" in name.lower() or "jobs" in name.lower():
             entries.append(EntryPoint(str(rel), "worker", "background job/worker"))
-    # dedupe by path
     seen = set()
     uniq = []
     for e in entries:
@@ -173,7 +165,6 @@ def _summarize_repo(root: Path, entry_points: list[EntryPoint], arch: dict) -> s
         parts.append(f"Entry points: {', '.join(e.path for e in entry_points[:5])}.")
     if not parts:
         parts.append("Empty or unknown structure.")
-    # try to read README for intent
     readme = root / "README.md"
     if readme.exists():
         try:

@@ -307,7 +307,6 @@ class PlanDrafter:
 def draft_plan(root: str | Path, goal: str, generate_fn: Callable[[str], str] | None = None) -> ProjectPlan:
     return PlanDrafter(root, generate_fn).draft(goal)
 
-# Row 5: smarter plan approval - only high-blast-radius steps need human approval
 HIGH_RISK_KEYWORDS = {"deploy", "delete", "remove", "production", "database", "migrate", "drop", "secrets", "credentials", "overwrite"}
 HIGH_RISK_FILE_PATTERNS = {".env", "production", "migrate", "alembic", "Dockerfile"}
 

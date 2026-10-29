@@ -196,9 +196,7 @@ if (args.includes("--once")) {
 FLASK_JOBS_CONTENT = PY_JOBS.replace("from .store import get_connection", "from store import get_connection").replace("python -m {module}.jobs", "python jobs.py")
 
 def flask_jobs() -> dict[str, str]:
-    # Flask stores at top-level store.py and app.py, so jobs is at root
     content = PY_JOBS.format(module="app", display_name="Flask App").replace("from .store import get_connection", "from store import get_connection")
-    # Actually use generic but correct import for flask
     content = content.replace("from .store", "from store")
     return {
         "jobs.py": content,

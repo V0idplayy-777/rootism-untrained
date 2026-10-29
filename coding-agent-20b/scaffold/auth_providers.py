@@ -287,7 +287,6 @@ def auth_provider_files(provider_id: str, module: str = "app") -> dict[str, str]
     provider = get_auth_provider(provider_id)
     out = {}
     for path, content in provider["files"].items():
-        # replace generic app/ prefix with module if needed
         if path.startswith("app/") and module != "app":
             path = path.replace("app/", f"{module}/", 1)
         out[path] = content

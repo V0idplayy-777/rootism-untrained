@@ -65,19 +65,15 @@ def cmd_init(args) -> int:
 
     root = Path(args.path or args.workspace or ".").resolve()
     name = args.name or root.name
-    # new: auth-provider and jobs flags
     auth_provider = getattr(args, "auth_provider", None)
     extra = {}
     if auth_provider:
         extra["auth_provider"] = auth_provider
-    # jobs defaults to True (every starter gets jobs); allow --no-jobs
     add_jobs = not getattr(args, "no_jobs", False)
     extra["add_jobs"] = add_jobs
     if args.request:
         generator = ScaffoldGenerator(root, force=args.force, dry_run=args.dry_run)
-        # inject auth provider via create_from_request override
         if auth_provider:
-            # create_from_request doesn't yet support auth_provider; monkey via extra_options
             from scaffold.intent import intent_from_request
             from scaffold.registry import template_ids
             intent, choice = intent_from_request(args.request, template_ids())
@@ -94,13 +90,9 @@ def cmd_init(args) -> int:
             result.options["intent"] = intent.to_dict()
         else:
             result = generator.create_from_request(args.request, name=name)
-            # inject jobs/auth after if needed
             if add_jobs or auth_provider:
-                # re-apply via second create with force if files missing; simpler: just note
                 pass
-        # ensure jobs/auth are applied even for request path
         if (auth_provider or add_jobs) and result.ok and not result.dry_run:
-            # if generator didn't already handle, manually add
             if auth_provider and "auth_provider" not in result.options:
                 from scaffold.auth_providers import auth_provider_files, get_auth_provider
                 try:
@@ -152,9 +144,7 @@ def cmd_ship(args) -> int:
     from quality import CodeCritic, run_tests
     from deploy import DeployEngine
 
-    # Determine workspace/root
     raw_ws = getattr(args, "workspace", ".")
-    # if path given as positional second arg, treat as target dir
     target_path = getattr(args, "path", None)
     if target_path:
         root = Path(target_path).resolve()
@@ -169,14 +159,12 @@ def cmd_ship(args) -> int:
 
     _say(f"→ Ship: {request[:100]}")
     _say(f"  workspace: {root}")
-    # 1. Scaffold (zero decisions for common case)
     generator = ScaffoldGenerator(root, force=True, dry_run=False)
     auth_provider = getattr(args, "auth_provider", None)
     extra = {"add_jobs": True}
     if auth_provider:
         extra["auth_provider"] = auth_provider
     result = generator.create_from_request(request, name=name)
-    # if auth_provider requested, ensure files added
     if auth_provider and result.ok:
         try:
             from scaffold.auth_providers import auth_provider_files, get_auth_provider
@@ -197,7 +185,6 @@ def cmd_ship(args) -> int:
         return 1
     _say(f"✓ Scaffolded {result.template_id} ({len(result.files)} files)")
 
-    # 2. Run tests (green gate)
     _say("→ Verifying tests...")
     verify = run_tests(root, timeout=getattr(args, "timeout", 300) or 300)
     _say(verify.render())
@@ -220,7 +207,6 @@ def cmd_ship(args) -> int:
             _print_json({"ok": False, "stage": "review", "review": review.to_dict(), "verify": verify.to_dict()})
         return 1
 
-    # 4. Deploy
     _say("→ Deploying...")
     provider = getattr(args, "provider", None) or "auto"
     engine = DeployEngine(
@@ -277,7 +263,6 @@ def cmd_eject(args) -> int:
     agent_files = [".agent", "landing", "status", "agentdeploy.toml", "DEPLOY.md", "HOSTING.md"]
     existing = [f for f in agent_files if (root / f).exists()]
     _say(f"Found {len(existing)} agent-owned paths: {', '.join(existing) or 'none'}")
-    # prove contract: no app file imports agent.*
     violations = []
     for path in root.rglob("*.py"):
         if any(part in {".git", ".agent", "__pycache__", "node_modules", ".venv"} for part in path.parts):
@@ -285,7 +270,6 @@ def cmd_eject(args) -> int:
         try:
             text = path.read_text(encoding="utf-8")
             if "import agent" in text or "from agent" in text or "from scaffold" in text:
-                # allow docs examples; check if it's actual app code not test/docs
                 if path.relative_to(root).parts[0] not in {"docs", "tests"}:
                     violations.append(str(path.relative_to(root)))
         except Exception:
@@ -297,7 +281,6 @@ def cmd_eject(args) -> int:
             _print_json({"ok": False, "violations": violations})
         return 1
 
-    # test without agent files by moving them aside temporarily
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         moved = []
@@ -314,7 +297,6 @@ def cmd_eject(args) -> int:
             except Exception as exc:
                 _say(f"Could not move {rel}: {exc}")
         try:
-            # Try to run tests without agent files
             from quality.verify import run_tests
             run = run_tests(root, timeout=60)
             if not run.ok:
@@ -374,7 +356,6 @@ def cmd_db(args) -> int:
         name = getattr(args, "name", "migration") or "migration"
         description = getattr(args, "description", "")
         module = root.name.replace("-", "_")
-        # try to infer module from scaffold.json
         try:
             import json as _json
             data = _json.loads((root / ".agent" / "scaffold.json").read_text())
@@ -398,7 +379,6 @@ def cmd_db(args) -> int:
     elif action == "switch":
         from scaffold.backends import BackendProvisioner
         provider = getattr(args, "provider", None) or "postgres"
-        # map postgres -> existing or neon
         if provider == "postgres":
             provider = "existing" if (root / ".env").exists() and "DATABASE_URL" in (root / ".env").read_text() else "neon"
         prov = BackendProvisioner(root)
@@ -409,9 +389,7 @@ def cmd_db(args) -> int:
             _say(result.render())
         return 0 if result.ok else 1
     elif action == "upgrade":
-        # run migrations
         import subprocess
-        # find migrate module
         module = root.name.replace("-", "_")
         try:
             import json as _json
@@ -453,7 +431,6 @@ def cmd_status(args) -> int:
             data["last_deploy"] = json.loads(last.read_text())
         except Exception:
             pass
-    # also check landing
     landing = root / "landing" / "index.html"
     data["landing_exists"] = landing.exists()
     data["status_exists"] = status_json.exists()
@@ -927,7 +904,6 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.add_argument("--workspace", default=".")
     doctor.set_defaults(func=cmd_doctor)
 
-    # Row 1: ship - zero-decision idea -> live app
     ship = subparsers.add_parser("ship", help='one-command idea → live app: agent ship "a task app with login"')
     ship.add_argument("request", nargs="?", help="describe the app in plain English")
     ship.add_argument("path", nargs="?", help="target directory (default: workspace)")

@@ -225,7 +225,6 @@ def create_app(workspace: str | Path = ".", model_url: str | None = None) -> Fas
         result = engine.deploy()
         data = result.to_dict()
         data["rendered"] = result.render()
-        # Plain-language for non-engineers (row 8)
         if not result.ok and getattr(result, "human_error", None):
             data["human"] = result.human_error
         elif result.ok and result.url:
@@ -247,13 +246,11 @@ def create_app(workspace: str | Path = ".", model_url: str | None = None) -> Fas
         request = (payload.request or "").strip()
         if not request:
             return JSONResponse(status_code=400, content={"ok": False, "error": "describe your app first"})
-        # 1 scaffold
         gen = ScaffoldGenerator(root, force=True, dry_run=False)
         scaffold_result = gen.create_from_request(request, name=root.name)
         if not scaffold_result.ok:
             human = humanize(scaffold_result.error)
             return {"ok": False, "stage": "scaffold", "error": human.title, "human": human.to_dict(), "scaffold": scaffold_result.to_dict()}
-        # 2 verify
         verify_result = run_tests(root, timeout=120)
         if not verify_result.ok and not payload.force:
             human = humanize(verify_result.failure_signal())
@@ -262,7 +259,6 @@ def create_app(workspace: str | Path = ".", model_url: str | None = None) -> Fas
         review_result = CodeCritic(threshold=80).review(root)
         if not review_result.ok and not payload.force:
             return {"ok": False, "stage": "review", "error": f"Review needs work (score {review_result.score})", "human": {"title": "Review needs work", "plain": review_result.summary(), "next_steps": ["Fix the noted findings, then Ship it again"]}, "review": review_result.to_dict()}
-        # 4 deploy
         engine = DeployEngine(root, provider=payload.provider or None, dry_run=payload.dry_run, force=payload.force, description=request)
         deploy_result = engine.deploy()
         data = deploy_result.to_dict()
