@@ -249,6 +249,17 @@ TOOL_SCHEMAS = {
             "properties": {"ref": {"type": "string", "default": "HEAD"}},
         },
     },
+    
+    "project_health": {
+        "name": "project_health",
+        "description": "Check project health: broken imports, missing tests, circular dependencies",
+        "parameters": {"type": "object", "properties": {"path": {"type": "string", "default": "."}}},
+    },
+    "onboarding": {
+        "name": "onboarding",
+        "description": "Produce architecture summary + entry-point map before editing (required on new repos)",
+        "parameters": {"type": "object", "properties": {"subdir": {"type": "string"}, "force": {"type": "boolean", "default": False}}},
+    },
     "revert": {
         "name": "revert",
         "description": (
@@ -459,6 +470,26 @@ class ProductionAgent:
         self.plan_graph = PlanGraph()
 
         self.assumptions = AssumptionLedger()
+
+
+    def _progress_metrics(self, state) -> str:
+        """Explicit progress metrics the agent can see (row 5)."""
+        try:
+            total = len(state.todos.todos)
+            done = sum(1 for t in state.todos.todos if t.status == "done")
+            pending = total - done
+            tests_pass = len(getattr(state, "tests_passed", []) or [])
+            tests_fail = len(getattr(state, "tests_failed", []) or [])
+            unverified = len([a for a in self.assumptions.assumptions if a.status == "unverified"]) if hasattr(self, "assumptions") else 0
+            return (
+                f"Progress: {done}/{total} todos done ({pending} pending) | "
+                f"tests: {tests_pass} passed, {tests_fail} failed | "
+                f"unverified assumptions: {unverified} | "
+                f"milestones: {len(self.milestones.milestones) if hasattr(self.milestones, 'milestones') else 0} | "
+                f"files touched: {len(getattr(state, 'files_touched', []) or [])}"
+            )
+        except Exception:
+            return "Progress: unknown"
 
     def _build_system_prompt(self, context: str = "") -> str:
         """Build system prompt with tool schemas and (optional) repo evidence."""
@@ -803,7 +834,17 @@ Example:
 
 
 
-        task_block = task
+        # Row 7: systematic onboarding before editing (auto-generate if missing)
+        try:
+            from agent.onboarding import ensure_onboarding
+            rep = ensure_onboarding(self.workspace_path, force=False)
+            task_block = task + "\n\nOnboarding (auto): " + rep.render(max_chars=2000)
+        except Exception:
+            task_block = task
+
+        progress_block = self._progress_metrics(state) if 'state' in locals() else ""
+        if progress_block:
+            task_block += "\n\n" + progress_block
 
         memory_block = self.memory.render(k=6)
 

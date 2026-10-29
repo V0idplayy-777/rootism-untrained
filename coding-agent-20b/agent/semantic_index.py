@@ -194,8 +194,18 @@ class SemanticIndex:
         patterns: tuple[str, ...] = (".py", ".js", ".ts", ".tsx", ".go", ".rs", ".md"),
         max_files: int = 800,
         chunk_lines: int = 40,
+        embed_fn: Callable[[str], list[float]] | None = None,
+        use_embeddings: bool | None = None,
     ) -> "SemanticIndex":
         root = Path(root)
+        # Row 7: try real local embeddings (sentence-transformers) while keeping hybrid+call-graph
+        if embed_fn is None and (use_embeddings is None or use_embeddings):
+            try:
+                from .embeddings import get_embed_fn
+
+                embed_fn = get_embed_fn()
+            except Exception:
+                embed_fn = None
         docs: list[Document] = []
         for path in sorted(root.rglob("*")):
             if len(docs) >= max_files:
@@ -224,7 +234,7 @@ class SemanticIndex:
                             end_line=min(start + chunk_lines, len(lines)),
                         )
                     )
-        return cls.build(docs)
+        return cls.build(docs, embed_fn=embed_fn)
 
     def reindex(self) -> "SemanticIndex":
         import time
@@ -337,6 +347,37 @@ class SemanticIndex:
                 pass
         return cls.from_directory(root)
 
+    def incremental_update(self, changed_files: list[str], root: str | Path) -> list[str]:
+        """Refresh only changed files; keep index accurate after every write/patch (row 4)."""
+        root = Path(root)
+        # remove old docs for changed files
+        changed_set = set(changed_files)
+        before = len(self.documents)
+        self.documents = [d for d in self.documents if d.path not in changed_set]
+        # add new docs for those files
+        added = 0
+        for rel in changed_files:
+            path = root / rel
+            if not path.is_file():
+                continue
+            if path.suffix not in (".py", ".js", ".ts", ".tsx", ".go", ".rs", ".md"):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            lines = text.splitlines()
+            for start in range(0, len(lines), 40):
+                block = "\n".join(lines[start : start + 40])
+                if block.strip():
+                    doc = Document(id=f"{rel}:{start+1}", text=block, path=str(rel), start_line=start+1, end_line=min(start+40, len(lines)))
+                    self.documents.append(doc)
+                    added += 1
+        if added or len(self.documents) != before:
+            self.reindex()
+            return changed_files
+        return []
+
     def stats(self) -> dict:
         return {
             "documents": len(self.documents),
@@ -354,8 +395,8 @@ def _cosine_dense(a: list[float], b: list[float]) -> float:
     return dot / norm if norm else 0.0
 
 
-def build_index(root: str | Path, save: bool = True) -> SemanticIndex:
-    index = SemanticIndex.from_directory(root)
+def build_index(root: str | Path, save: bool = True, embed_fn: Callable[[str], list[float]] | None = None) -> SemanticIndex:
+    index = SemanticIndex.from_directory(root, embed_fn=embed_fn)
     if save:
         index.save(Path(root) / ".agent" / "semantic_index.json.gz")
     return index

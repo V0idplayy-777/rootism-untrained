@@ -225,6 +225,58 @@ def create_app(workspace: str | Path = ".", model_url: str | None = None) -> Fas
         result = engine.deploy()
         data = result.to_dict()
         data["rendered"] = result.render()
+        # Plain-language for non-engineers (row 8)
+        if not result.ok and getattr(result, "human_error", None):
+            data["human"] = result.human_error
+        elif result.ok and result.url:
+            data["plain_success"] = f"Your app is live at {result.url}. Open it, test it, and tell me what to change next."
+        return data
+
+    class ShipRequest(BaseModel):
+        request: str = Field(default="", max_length=2000)
+        provider: str | None = None
+        dry_run: bool = False
+        force: bool = False
+
+    @app.post("/api/ship")
+    def ship(payload: ShipRequest):
+        """One-click Ship it for non-engineers (row 1+8): scaffold → verify → review → deploy."""
+        from scaffold import ScaffoldGenerator
+        from quality import CodeCritic, run_tests
+
+        request = (payload.request or "").strip()
+        if not request:
+            return JSONResponse(status_code=400, content={"ok": False, "error": "describe your app first"})
+        # 1 scaffold
+        gen = ScaffoldGenerator(root, force=True, dry_run=False)
+        scaffold_result = gen.create_from_request(request, name=root.name)
+        if not scaffold_result.ok:
+            human = humanize(scaffold_result.error)
+            return {"ok": False, "stage": "scaffold", "error": human.title, "human": human.to_dict(), "scaffold": scaffold_result.to_dict()}
+        # 2 verify
+        verify_result = run_tests(root, timeout=120)
+        if not verify_result.ok and not payload.force:
+            human = humanize(verify_result.failure_signal())
+            return {"ok": False, "stage": "verify", "error": human.title, "human": human.to_dict(), "verify": verify_result.to_dict(), "scaffold": scaffold_result.to_dict()}
+        # 3 review
+        review_result = CodeCritic(threshold=80).review(root)
+        if not review_result.ok and not payload.force:
+            return {"ok": False, "stage": "review", "error": f"Review needs work (score {review_result.score})", "human": {"title": "Review needs work", "plain": review_result.summary(), "next_steps": ["Fix the noted findings, then Ship it again"]}, "review": review_result.to_dict()}
+        # 4 deploy
+        engine = DeployEngine(root, provider=payload.provider or None, dry_run=payload.dry_run, force=payload.force, description=request)
+        deploy_result = engine.deploy()
+        data = deploy_result.to_dict()
+        data["rendered"] = deploy_result.render()
+        data["scaffold"] = scaffold_result.to_dict()
+        data["verify"] = verify_result.to_dict()
+        data["review"] = review_result.to_dict()
+        if not deploy_result.ok:
+            data["human"] = getattr(deploy_result, "human_error", {"title": "Deploy failed", "plain": deploy_result.error, "next_steps": ["Check DEPLOY.md", "Try `agent deploy --dry-run`"]})
+            data["plain"] = f"We couldn't ship it: {data['human'].get('plain','')} Here's what to do: {', '.join(data['human'].get('next_steps',[]))}"
+        else:
+            url = deploy_result.url or "status/index.html"
+            data["plain"] = f"Your app is live at {url}. {data.get('notes', [''])[-1] if data.get('notes') else ''} Tell me what to change next."
+            data["plain_success"] = data["plain"]
         return data
 
     # ----------------------------------------------------------------- preview

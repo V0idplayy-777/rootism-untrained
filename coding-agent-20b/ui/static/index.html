@@ -36,10 +36,16 @@
 
         <section class="card actions">
           <h2>Ship it</h2>
-          <button type="button" id="preview-btn" class="ghost">Live preview</button>
-          <button type="button" id="deploy-btn" class="primary">Deploy</button>
+          <p class="muted small" style="margin-bottom:8px">One click: build → test → live URL. No decisions needed.</p>
+          <button type="button" id="ship-btn" class="primary" style="width:100%;padding:12px;font-weight:700">🚀 Ship it</button>
+          <p class="muted small" id="ship-hint">We check tests & review first; hidden details stay hidden until you ask.</p>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button type="button" id="preview-btn" class="ghost" style="flex:1">Live preview</button>
+            <button type="button" id="deploy-btn" class="ghost" style="flex:1">Deploy</button>
+          </div>
           <p class="muted small" id="deploy-hint">Dry run first — nothing is created until you confirm.</p>
           <a id="live-link" class="live-link" hidden target="_blank" rel="noopener"></a>
+          <div id="status-card" class="muted small" style="margin-top:8px"></div>
         </section>
 
         <footer class="muted small" id="footer"></footer>
@@ -78,12 +84,12 @@
           <textarea
             id="input"
             rows="2"
-            placeholder="e.g. Build a web app where users sign up and save tasks, then deploy it."
+            placeholder="Describe your app in one sentence — e.g. a task app with login"
             aria-label="Message"
           ></textarea>
           <button type="submit" id="send" class="primary">Send</button>
         </form>
-        <p class="muted small composer-note">Enter to send · Shift+Enter for a new line</p>
+        <p class="muted small composer-note">Enter to send · Shift+Enter for a new line · Or just hit <strong>Ship it</strong> above</p>
       </main>
 
       <section class="preview-panel" id="preview-panel" hidden aria-label="Live preview">

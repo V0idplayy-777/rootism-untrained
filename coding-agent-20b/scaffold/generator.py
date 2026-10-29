@@ -102,6 +102,10 @@ class ScaffoldGenerator:
         use_auth: bool | None = None,
         database: str | None = None,
         extra_options: dict | None = None,
+        auth_provider: str | None = None,
+        add_jobs: bool | None = None,
+        verify_after: bool = False,
+        run_critic: bool = False,
     ) -> ScaffoldResult:
         try:
             spec = get_template(template_id)
@@ -109,6 +113,17 @@ class ScaffoldGenerator:
             return ScaffoldResult(ok=False, error=str(exc), root=str(self.root))
 
         project_name = slugify(name or self.root.name or "app")
+        # normalize extra_options that may contain new keys
+        extra = dict(extra_options or {})
+        # always pop new keys so they never leak into ProjectOptions
+        if "auth_provider" in extra:
+            _popped_auth = extra.pop("auth_provider")
+            auth_provider = auth_provider or _popped_auth
+        if "add_jobs" in extra:
+            _popped_jobs = extra.pop("add_jobs")
+            if add_jobs is None:
+                add_jobs = _popped_jobs
+        # legacy: extra may contain use_auth/database overrides already handled
         options = ProjectOptions(
             name=project_name,
             display_name=titleize(name or self.root.name or "app"),
@@ -116,12 +131,14 @@ class ScaffoldGenerator:
             description=description,
             port=spec.default_port,
             use_auth=bool(spec.supports_auth and (use_auth if use_auth is not None else False)),
-            database=(database or ("sqlite" if spec.supports_database else "none")),
+            database=(database or extra.pop("database", None) or ("sqlite" if spec.supports_database else "none")),
             warnings=[],
-            **(extra_options or {}),
+            **extra,
         )
         if options.database == "postgres" and not spec.supports_database:
             options.database = "none"
+        # remember provider for later file injection
+        chosen_auth_provider = (auth_provider or "").strip().lower() or None
 
         result = ScaffoldResult(
             ok=True,
@@ -154,6 +171,44 @@ class ScaffoldGenerator:
             result.error = f"template {spec.id} failed to render: {type(exc).__name__}: {exc}"
             return result
 
+        # Inject auth provider files if requested (row 2)
+        if chosen_auth_provider:
+            try:
+                from .auth_providers import auth_provider_files, get_auth_provider
+
+                provider = get_auth_provider(chosen_auth_provider)
+                extra_files = auth_provider_files(chosen_auth_provider, module=options.module)
+                for rel, content in extra_files.items():
+                    if rel not in files:
+                        files[rel] = content
+                env_key = provider["env"][0] if provider["env"] else ""
+                if env_key and ".env.example" in files:
+                    files[".env.example"] += f"\n# {provider['label']} auth\n{env_key}=\n"
+                result.warnings.append(f"auth provider {chosen_auth_provider} added ({provider['label']})")
+                result.options["auth_provider"] = chosen_auth_provider
+            except Exception as exc:  # noqa: BLE001
+                result.ok = False
+                result.error = f"auth provider {chosen_auth_provider} failed: {exc}"
+                return result
+
+        # Inject background-job example for every starter (row 2: every starter produces a working job)
+        should_add_jobs = add_jobs if add_jobs is not None else True
+        if should_add_jobs:
+            try:
+                from .jobs import flask_jobs, node_jobs, python_jobs
+
+                if spec.id == "flask-htmx":
+                    job_files = flask_jobs()
+                elif spec.kind in ("python-web", "cli", "worker") or spec.id in ("fastapi-react", "cli-tool", "discord-bot"):
+                    job_files = python_jobs(options.module, options.display_name)
+                else:
+                    job_files = node_jobs()
+                for rel, content in job_files.items():
+                    if rel not in files:
+                        files[rel] = content
+            except Exception:
+                pass
+
         placeholders = find_placeholders(files)
         if placeholders:
             result.ok = False
@@ -176,6 +231,10 @@ class ScaffoldGenerator:
             self._write_config(spec, options, result)
             self._record(spec, options, result)
             self._check_python(result)
+            if result.ok:
+                self._run_post_generation_critic(result, options)
+            if result.ok and verify_after:
+                self._verify_generated(result)
 
         result.next_steps = [
             step.replace("{module}", options.module).replace("{name}", options.name)
@@ -261,6 +320,73 @@ class ScaffoldGenerator:
                 result.ok = False
                 result.error = f"generated {rel} does not compile: {exc.msg}"
                 return
+
+    def _run_post_generation_critic(self, result: ScaffoldResult, options: ProjectOptions) -> None:
+        """Deterministic post-generation critic that can force rewrite (row 3)."""
+
+        try:
+            from quality.critic import CodeCritic
+        except Exception:
+            return
+        try:
+            critic = CodeCritic()
+            review = critic.review(self.root)
+            # If critic fails with fixable issues, attempt deterministic fixes
+            if not review.ok:
+                # Record findings for visibility
+                result.warnings.append(f"critic score {review.score}/100: {review.summary()}")
+                # Auto-fix trivial issues: missing README, unpinned deps, env not ignored
+                fixed = self._auto_fix_critic_findings(review)
+                if fixed:
+                    result.warnings.append(f"auto-fixed {len(fixed)} critic findings")
+                    # re-review
+                    review2 = critic.review(self.root)
+                    if review2.ok:
+                        result.warnings.append(f"critic now passing: {review2.score}/100")
+                    result.options["critic"] = {"initial_score": review.score, "final_score": review2.score, "findings": len(review.findings)}
+                else:
+                    result.options["critic"] = {"score": review.score, "findings": len(review.findings)}
+        except Exception:
+            pass
+
+    def _auto_fix_critic_findings(self, review) -> list[str]:
+        fixed: list[str] = []
+        for finding in getattr(review, "findings", []):
+            if finding.rule == "no-readme" and not (self.root / "README.md").exists():
+                try:
+                    (self.root / "README.md").write_text(f"# {self.root.name}\n\nGenerated starter.\n", encoding="utf-8")
+                    fixed.append("no-readme")
+                except Exception:
+                    pass
+            if finding.rule == "env-not-ignored":
+                try:
+                    path = self.root / ".gitignore"
+                    text = path.read_text(encoding="utf-8") if path.exists() else ""
+                    if ".env" not in text:
+                        path.write_text(text + ("\n" if text and not text.endswith("\n") else "") + ".env\n.env.*\n!.env.example\n", encoding="utf-8")
+                        fixed.append("env-not-ignored")
+                except Exception:
+                    pass
+        return fixed
+
+    def _verify_generated(self, result: ScaffoldResult) -> None:
+        """Close the loop: every generated project must run its own tests (row 3)."""
+
+        try:
+            from quality.verify import run_tests
+        except Exception:
+            return
+        try:
+            run = run_tests(self.root, timeout=120)
+            result.options["verify"] = {"ok": run.ok, "exit_code": run.exit_code, "passed": run.passed, "failed": run.failed}
+            if not run.ok:
+                result.warnings.append(f"generated tests failed: {run.failure_signal()[:200]}")
+                # Do not mark scaffold as failed for now; ship gate will block deploy
+                # but we record the failure for visibility
+            else:
+                result.warnings.append(f"generated tests passed: {len(run.passed)} passed")
+        except Exception as exc:  # noqa: BLE001
+            result.warnings.append(f"verify error: {exc}")
 
 
 def scaffold_project(root: str | Path, template_id: str, name: str | None = None, **kwargs) -> ScaffoldResult:

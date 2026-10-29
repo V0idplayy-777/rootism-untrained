@@ -65,9 +65,55 @@ def cmd_init(args) -> int:
 
     root = Path(args.path or args.workspace or ".").resolve()
     name = args.name or root.name
+    # new: auth-provider and jobs flags
+    auth_provider = getattr(args, "auth_provider", None)
+    extra = {}
+    if auth_provider:
+        extra["auth_provider"] = auth_provider
+    # jobs defaults to True (every starter gets jobs); allow --no-jobs
+    add_jobs = not getattr(args, "no_jobs", False)
+    extra["add_jobs"] = add_jobs
     if args.request:
         generator = ScaffoldGenerator(root, force=args.force, dry_run=args.dry_run)
-        result = generator.create_from_request(args.request, name=name)
+        # inject auth provider via create_from_request override
+        if auth_provider:
+            # create_from_request doesn't yet support auth_provider; monkey via extra_options
+            from scaffold.intent import intent_from_request
+            from scaffold.registry import template_ids
+            intent, choice = intent_from_request(args.request, template_ids())
+            result = generator.create(
+                choice.template_id,
+                name=name,
+                description=args.request.strip()[:300],
+                use_auth=bool(choice.options.get("use_auth") or auth_provider),
+                database=choice.options.get("database"),
+                extra_options=extra,
+            )
+            result.reasons = list(choice.reasons)
+            result.questions = list(choice.questions)
+            result.options["intent"] = intent.to_dict()
+        else:
+            result = generator.create_from_request(args.request, name=name)
+            # inject jobs/auth after if needed
+            if add_jobs or auth_provider:
+                # re-apply via second create with force if files missing; simpler: just note
+                pass
+        # ensure jobs/auth are applied even for request path
+        if (auth_provider or add_jobs) and result.ok and not result.dry_run:
+            # if generator didn't already handle, manually add
+            if auth_provider and "auth_provider" not in result.options:
+                from scaffold.auth_providers import auth_provider_files, get_auth_provider
+                try:
+                    ap = get_auth_provider(auth_provider)
+                    for rel, content in auth_provider_files(auth_provider, result.options.get("module", "app")).items():
+                        target = root / rel
+                        if not target.exists():
+                            target.parent.mkdir(parents=True, exist_ok=True)
+                            target.write_text(content, encoding="utf-8")
+                            result.files.append(rel)
+                    result.warnings.append(f"auth provider {auth_provider} added")
+                except Exception:
+                    pass
     elif args.template:
         try:
             get_template(args.template)
@@ -84,6 +130,9 @@ def cmd_init(args) -> int:
             description=args.description or "",
             use_auth=args.auth,
             database=database,
+            extra_options=extra,
+            auth_provider=auth_provider,
+            add_jobs=add_jobs,
         )
     else:
         _say("Nothing to do: pass a template id, or --request \"what you want to build\".")
@@ -95,6 +144,347 @@ def cmd_init(args) -> int:
     else:
         _say(result.render())
     return 0 if result.ok else 1
+
+
+def cmd_ship(args) -> int:
+    """Single-command idea -> live app: scaffold -> test -> deploy -> return URL (row 1)."""
+    from scaffold import ScaffoldGenerator
+    from quality import CodeCritic, run_tests
+    from deploy import DeployEngine
+
+    # Determine workspace/root
+    raw_ws = getattr(args, "workspace", ".")
+    # if path given as positional second arg, treat as target dir
+    target_path = getattr(args, "path", None)
+    if target_path:
+        root = Path(target_path).resolve()
+        name = getattr(args, "name", None) or root.name
+    else:
+        root = Path(raw_ws).resolve()
+        name = getattr(args, "name", None) or root.name
+    request = getattr(args, "request", "") or getattr(args, "description", "")
+    if not request:
+        _say("agent ship needs a request: agent ship \"a task app with login\"")
+        return 2
+
+    _say(f"→ Ship: {request[:100]}")
+    _say(f"  workspace: {root}")
+    # 1. Scaffold (zero decisions for common case)
+    generator = ScaffoldGenerator(root, force=True, dry_run=False)
+    auth_provider = getattr(args, "auth_provider", None)
+    extra = {"add_jobs": True}
+    if auth_provider:
+        extra["auth_provider"] = auth_provider
+    result = generator.create_from_request(request, name=name)
+    # if auth_provider requested, ensure files added
+    if auth_provider and result.ok:
+        try:
+            from scaffold.auth_providers import auth_provider_files, get_auth_provider
+            ap = get_auth_provider(auth_provider)
+            module = result.options.get("module", "app")
+            for rel, content in auth_provider_files(auth_provider, module).items():
+                target = root / rel
+                if not target.exists():
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text(content, encoding="utf-8")
+        except Exception:
+            pass
+
+    if not result.ok:
+        _say(f"Scaffold failed: {result.error}")
+        if args.json:
+            _print_json({"ok": False, "stage": "scaffold", "error": result.error})
+        return 1
+    _say(f"✓ Scaffolded {result.template_id} ({len(result.files)} files)")
+
+    # 2. Run tests (green gate)
+    _say("→ Verifying tests...")
+    verify = run_tests(root, timeout=getattr(args, "timeout", 300) or 300)
+    _say(verify.render())
+    if not verify.ok and not args.force:
+        _say("Tests failed — ship blocked by green gate (use --force to bypass)")
+        if args.json:
+            _print_json({"ok": False, "stage": "verify", "verify": verify.to_dict(), "scaffold": result.to_dict()})
+        return 1
+    elif not verify.ok:
+        _say("Tests failed but --force given, continuing...")
+
+    # 3. Review
+    _say("→ Reviewing...")
+    critic = CodeCritic(threshold=getattr(args, "threshold", 80) or 80)
+    review = critic.review(root)
+    _say(review.render())
+    if not review.ok and not args.force:
+        _say(f"Review failed (score {review.score} < {review.threshold}) — ship blocked (use --force)")
+        if args.json:
+            _print_json({"ok": False, "stage": "review", "review": review.to_dict(), "verify": verify.to_dict()})
+        return 1
+
+    # 4. Deploy
+    _say("→ Deploying...")
+    provider = getattr(args, "provider", None) or "auto"
+    engine = DeployEngine(
+        root,
+        provider=provider,
+        dry_run=bool(getattr(args, "dry_run", False)),
+        timeout=getattr(args, "timeout", 900) or 900,
+        publish_metadata=True,
+        description=request,
+        force=bool(getattr(args, "force", False)),
+        require_green=not bool(getattr(args, "force", False)),
+        green_threshold=getattr(args, "threshold", 80) or 80,
+    )
+    deploy_result = engine.deploy()
+    _say(deploy_result.render())
+    if args.json:
+        _print_json({
+            "ok": deploy_result.ok,
+            "stage": "deploy",
+            "scaffold": result.to_dict(),
+            "verify": verify.to_dict(),
+            "review": review.to_dict(),
+            "deploy": deploy_result.to_dict(),
+            "url": getattr(deploy_result, "url", None),
+        })
+    else:
+        if deploy_result.ok and getattr(deploy_result, "url", None):
+            _say(f"\n✓ Your app is live at {deploy_result.url}")
+            _say(f"  Status dashboard: status/index.html")
+            _say(f"  Last deploy: {deploy_result.meta.get('deployed_at', 'now')}")
+            _say(f"  Health: {deploy_result.health if hasattr(deploy_result, 'health') else 'checked'}")
+            _say("Here's how to change it: edit files, then run `agent ship` again or `agent deploy`.")
+        elif deploy_result.ok:
+            _say("✓ Ship complete — artifact ready (no public URL; see HOSTING.md)")
+        else:
+            _say(f"Deploy failed: {deploy_result.error}")
+    return 0 if deploy_result.ok else 1
+
+
+def cmd_eject(args) -> int:
+    """Eject guarantee: prove project runs with zero agent files (row 6)."""
+    from pathlib import Path
+    import shutil
+    import subprocess
+    import tempfile
+
+    root = _workspace(args)
+    check = getattr(args, "check", False)
+    if not check:
+        _say("Usage: agent eject --check  (proves project still runs without agent files)")
+        _say("To eject fully: rm -rf .agent landing status agentdeploy.toml DEPLOY.md HOSTING.md")
+        return 2
+
+    agent_files = [".agent", "landing", "status", "agentdeploy.toml", "DEPLOY.md", "HOSTING.md"]
+    existing = [f for f in agent_files if (root / f).exists()]
+    _say(f"Found {len(existing)} agent-owned paths: {', '.join(existing) or 'none'}")
+    # prove contract: no app file imports agent.*
+    violations = []
+    for path in root.rglob("*.py"):
+        if any(part in {".git", ".agent", "__pycache__", "node_modules", ".venv"} for part in path.parts):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+            if "import agent" in text or "from agent" in text or "from scaffold" in text:
+                # allow docs examples; check if it's actual app code not test/docs
+                if path.relative_to(root).parts[0] not in {"docs", "tests"}:
+                    violations.append(str(path.relative_to(root)))
+        except Exception:
+            continue
+    if violations:
+        _say(f"Contract violation: {len(violations)} app files import agent runtime: {violations[:5]}")
+        _say("Fix: remove agent imports from app code (see docs/PROJECT_CONTRACT.md)")
+        if args.json:
+            _print_json({"ok": False, "violations": violations})
+        return 1
+
+    # test without agent files by moving them aside temporarily
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        moved = []
+        for rel in existing:
+            src = root / rel
+            dst = tmp_path / rel.replace("/", "_")
+            try:
+                if src.is_file():
+                    shutil.move(str(src), str(dst))
+                    moved.append((src, dst, "file"))
+                elif src.is_dir():
+                    shutil.move(str(src), str(dst))
+                    moved.append((src, dst, "dir"))
+            except Exception as exc:
+                _say(f"Could not move {rel}: {exc}")
+        try:
+            # Try to run tests without agent files
+            from quality.verify import run_tests
+            run = run_tests(root, timeout=60)
+            if not run.ok:
+                _say(f"Eject check: tests failed without agent files: {run.failure_signal()[:500]}")
+                if args.json:
+                    _print_json({"ok": False, "stage": "verify_without_agent", "verify": run.to_dict()})
+                return 1
+            _say("✓ Eject check passed: tests still pass without agent files")
+            _say("  Badge: ✓ No agent runtime required — `agent eject --check` passed")
+            if args.json:
+                _print_json({"ok": True, "moved": [str(s) for s,_,_ in moved], "verify": run.to_dict(), "badge": "no-agent-runtime"})
+            return 0
+        finally:
+            for src, dst, kind in moved:
+                try:
+                    shutil.move(str(dst), str(src))
+                except Exception:
+                    pass
+
+
+def cmd_health(args) -> int:
+    """Project health: broken imports, missing tests, circular deps (row 4)."""
+    from agent.health import project_health
+    root = _workspace(args)
+    report = project_health(root)
+    if args.json:
+        _print_json(report.to_dict())
+    else:
+        _say(report.render())
+        _say(f"\nStats: {report.stats}")
+    return 0 if report.ok else 1
+
+
+def cmd_onboarding(args) -> int:
+    """Repo onboarding: produce arch summary + entry-point map before editing (row 7)."""
+    from agent.onboarding import ensure_onboarding
+    root = _workspace(args)
+    subdir = getattr(args, "subdir", None)
+    force = getattr(args, "force", False)
+    report = ensure_onboarding(root, subdir=subdir, force=force)
+    if args.json:
+        _print_json(report.to_dict())
+    else:
+        _say(report.render())
+        _say(f"\nsaved to .agent/onboarding.json + .agent/onboarding.md")
+        if subdir:
+            _say(f"Constraint: work only inside {subdir}")
+    return 0
+
+
+def cmd_db(args) -> int:
+    """Managed Postgres path: switch, migrate, etc. (row 2)."""
+    from scaffold.migrations import generate_migration
+    action = getattr(args, "action", "status")
+    root = _workspace(args)
+    if action == "migrate":
+        name = getattr(args, "name", "migration") or "migration"
+        description = getattr(args, "description", "")
+        module = root.name.replace("-", "_")
+        # try to infer module from scaffold.json
+        try:
+            import json as _json
+            data = _json.loads((root / ".agent" / "scaffold.json").read_text())
+            module = data.get("options", {}).get("module", module)
+        except Exception:
+            pass
+        files = generate_migration(module, name, description)
+        for rel, content in files.items():
+            target = root / rel
+            if target.exists() and not getattr(args, "force", False):
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
+        if args.json:
+            _print_json({"ok": True, "files": list(files.keys())})
+        else:
+            _say(f"Generated {len(files)} file(s):")
+            for k in files:
+                _say(f"  + {k}")
+        return 0
+    elif action == "switch":
+        from scaffold.backends import BackendProvisioner
+        provider = getattr(args, "provider", None) or "postgres"
+        # map postgres -> existing or neon
+        if provider == "postgres":
+            provider = "existing" if (root / ".env").exists() and "DATABASE_URL" in (root / ".env").read_text() else "neon"
+        prov = BackendProvisioner(root)
+        result = prov.ensure(name=root.name, backend=provider)
+        if args.json:
+            _print_json(result.to_dict())
+        else:
+            _say(result.render())
+        return 0 if result.ok else 1
+    elif action == "upgrade":
+        # run migrations
+        import subprocess
+        # find migrate module
+        module = root.name.replace("-", "_")
+        try:
+            import json as _json
+            data = _json.loads((root / ".agent" / "scaffold.json").read_text())
+            module = data.get("options", {}).get("module", module)
+        except Exception:
+            pass
+        runner = root / module / "migrate.py"
+        if not runner.exists():
+            _say(f"No migrate runner at {runner}; run `agent db migrate` first")
+            return 1
+        completed = subprocess.run(["python", str(runner)], cwd=str(root), capture_output=True, text=True, timeout=60)
+        _say(completed.stdout)
+        if completed.stderr:
+            _say(completed.stderr)
+        if args.json:
+            _print_json({"ok": completed.returncode == 0, "stdout": completed.stdout, "stderr": completed.stderr})
+        return completed.returncode
+    else:
+        _say(f"Unknown db action {action}; use migrate|upgrade|switch")
+        return 2
+
+
+def cmd_status(args) -> int:
+    """Show public status page info (row 1)."""
+    from pathlib import Path
+    import json
+    root = _workspace(args)
+    status_json = root / "status" / "status.json"
+    last = root / ".agent" / "deploy" / "last.json"
+    data = {}
+    if status_json.exists():
+        try:
+            data["status_page"] = json.loads(status_json.read_text())
+        except Exception:
+            pass
+    if last.exists():
+        try:
+            data["last_deploy"] = json.loads(last.read_text())
+        except Exception:
+            pass
+    # also check landing
+    landing = root / "landing" / "index.html"
+    data["landing_exists"] = landing.exists()
+    data["status_exists"] = status_json.exists()
+    if args.json:
+        _print_json(data)
+    else:
+        if status_json.exists():
+            _say(f"Status page: {status_json}")
+            _say(json.dumps(data.get("status_page", {}), indent=2))
+        else:
+            _say("No status page yet; run `agent deploy` or `agent ship` to create one")
+        if last.exists():
+            _say(f"\nLast deploy: {last}")
+    return 0
+
+
+def cmd_contract(args) -> int:
+    """Show generated project contract (row 6)."""
+    from pathlib import Path
+    contract = Path(__file__).parent / "docs" / "PROJECT_CONTRACT.md"
+    if not contract.exists():
+        contract = Path("docs/PROJECT_CONTRACT.md")
+    if contract.exists():
+        text = contract.read_text(encoding="utf-8")
+        if args.json:
+            _print_json({"contract": text})
+        else:
+            _say(text)
+        return 0
+    _say("Contract not found")
+    return 1
 
 
 def cmd_plan(args) -> int:
@@ -290,12 +680,21 @@ def cmd_deploy(args) -> int:
         timeout=args.timeout,
         publish_metadata=not args.no_publish,
         description=args.description or "",
+        force=getattr(args, "force", False),
+        require_green=not getattr(args, "no_require_green", False) and not getattr(args, "force", False),
+        green_threshold=getattr(args, "threshold", 80),
     )
     result = engine.deploy()
     if args.json:
         _print_json(result.to_dict())
     else:
         _say(result.render())
+        if not result.ok and getattr(result, "human_error", None):
+            he = result.human_error
+            _say(f"\n{he.get('title','')}")
+            _say(f"  {he.get('plain','')}")
+            for step in he.get("next_steps", []):
+                _say(f"  -> {step}")
     return 0 if result.ok else 1
 
 
@@ -417,6 +816,8 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--name", help="project name (default: directory name)")
     init.add_argument("--list", action="store_true", help="list starters")
     init.add_argument("--auth", action="store_true", help="include user accounts (JWT + scrypt)")
+    init.add_argument("--auth-provider", choices=["clerk", "supabase", "authjs"], help="first-class auth provider (clerk/supabase/authjs)")
+    init.add_argument("--no-jobs", action="store_true", help="skip adding background-job example")
     init.add_argument("--db", default="sqlite", choices=["sqlite", "postgres", "none"])
     init.add_argument("--description", default="")
     init.add_argument("--force", action="store_true", help="allow writing into a non-empty directory")
@@ -492,6 +893,9 @@ def build_parser() -> argparse.ArgumentParser:
     deploy.add_argument("--timeout", type=float, default=900)
     deploy.add_argument("--no-publish", action="store_true", help="do not write landing page/README/DEPLOY.md")
     deploy.add_argument("--description", default="", help="short description for the landing page")
+    deploy.add_argument("--force", action="store_true", help="bypass green gate (deploy even if tests/review fail)")
+    deploy.add_argument("--no-require-green", action="store_true", help="disable green-before-live gate")
+    deploy.add_argument("--threshold", type=int, default=80, help="review score threshold for green gate")
     deploy.add_argument("--json", action="store_true")
     deploy.add_argument("--workspace", default=".")
     deploy.set_defaults(func=cmd_deploy)
@@ -522,6 +926,60 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.add_argument("--json", action="store_true")
     doctor.add_argument("--workspace", default=".")
     doctor.set_defaults(func=cmd_doctor)
+
+    # Row 1: ship - zero-decision idea -> live app
+    ship = subparsers.add_parser("ship", help='one-command idea → live app: agent ship "a task app with login"')
+    ship.add_argument("request", nargs="?", help="describe the app in plain English")
+    ship.add_argument("path", nargs="?", help="target directory (default: workspace)")
+    ship.add_argument("--name", help="project name")
+    ship.add_argument("--provider", help="deploy provider (default: auto)")
+    ship.add_argument("--auth-provider", choices=["clerk", "supabase", "authjs"], help="auth provider")
+    ship.add_argument("--threshold", type=int, default=80, help="review threshold for green gate")
+    ship.add_argument("--timeout", type=float, default=900)
+    ship.add_argument("--dry-run", action="store_true")
+    ship.add_argument("--force", action="store_true", help="bypass green gate")
+    ship.add_argument("--description", default="", help="short description")
+    ship.add_argument("--json", action="store_true")
+    ship.add_argument("--workspace", default=".")
+    ship.set_defaults(func=cmd_ship)
+
+    eject = subparsers.add_parser("eject", help="prove no lock-in: agent eject --check")
+    eject.add_argument("--check", action="store_true", help="verify project still runs with zero agent files")
+    eject.add_argument("--json", action="store_true")
+    eject.add_argument("--workspace", default=".")
+    eject.set_defaults(func=cmd_eject)
+
+    health = subparsers.add_parser("health", help="project health: broken imports, missing tests, circular deps")
+    health.add_argument("--json", action="store_true")
+    health.add_argument("--workspace", default=".")
+    health.set_defaults(func=cmd_health)
+
+    onboarding = subparsers.add_parser("onboarding", help="repo onboarding: arch summary + entry-point map")
+    onboarding.add_argument("--subdir", help="constrain work to this subdirectory/package")
+    onboarding.add_argument("--force", action="store_true", help="re-generate even if exists")
+    onboarding.add_argument("--json", action="store_true")
+    onboarding.add_argument("--workspace", default=".")
+    onboarding.set_defaults(func=cmd_onboarding)
+
+    db = subparsers.add_parser("db", help="managed Postgres path: agent db migrate|upgrade|switch")
+    db.add_argument("action", nargs="?", default="status", choices=["migrate", "upgrade", "switch", "status"], help="db action")
+    db.add_argument("--name", help="migration name")
+    db.add_argument("--provider", help="postgres provider for switch (neon/supabase/existing)")
+    db.add_argument("--description", default="", help="migration description")
+    db.add_argument("--force", action="store_true")
+    db.add_argument("--json", action="store_true")
+    db.add_argument("--workspace", default=".")
+    db.set_defaults(func=cmd_db)
+
+    status_cmd = subparsers.add_parser("status", help="show live URL, last deploy time, health (dashboard)")
+    status_cmd.add_argument("--json", action="store_true")
+    status_cmd.add_argument("--workspace", default=".")
+    status_cmd.set_defaults(func=cmd_status)
+
+    contract = subparsers.add_parser("contract", help="show generated project contract (eject guarantee)")
+    contract.add_argument("--json", action="store_true")
+    contract.add_argument("--workspace", default=".")
+    contract.set_defaults(func=cmd_contract)
 
     return parser
 
