@@ -219,8 +219,6 @@ def verify_3b_params(tight: bool = False) -> None:
 
     cfg = get_3b_tight_config() if tight else get_3b_config()
     total = cfg.total_parameters()
-    # 26-layer variant is 3.33B -> allow 2.9-3.5B as "3B class"
-    # tight variant is 3.03B -> allow 2.95-3.15B
     if tight:
         assert 2.95e9 < total < 3.15e9, f"tight 3B params {total/1e9:.3f}B out of range"
     else:

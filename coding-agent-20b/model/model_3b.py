@@ -45,9 +45,6 @@ from .config_3b import (
     get_3b_tight_config,
 )
 
-# Re-export model components lazily so this file is importable without torch
-# (mirrors model/__init__.py's lazy pattern). Heavy imports happen on first
-# attribute access or inside get_default_3b_model().
 __all__ = [
     "CodingAgentModel",
     "CodingAgent3BModel",
