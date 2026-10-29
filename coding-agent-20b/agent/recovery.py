@@ -160,6 +160,7 @@ class RecoveryPolicy:
         self._tool_streak.clear()
 
         self._backtracks = 0
+        self.metrics = RecoveryMetrics()
 
     def decide(
         self,
@@ -369,7 +370,9 @@ class RecoveryPolicy:
                 ),
             )
 
-        return RecoveryDecision(RecoveryAction.PROCEED, "no intervention needed")
+        dec = RecoveryDecision(RecoveryAction.PROCEED, "no intervention needed")
+        self.metrics.record(dec)
+        return dec
 
     def note_success(self, tool: str | None) -> None:
         """A successful call clears the tool cooldown (call after every success)."""
@@ -495,3 +498,52 @@ class StallDetector:
         self._scores.clear()
 
         self._actions.clear()
+
+@dataclass
+class RecoveryMetrics:
+    """Measurable policy: track loop_rate / escalation_rate on held-out hard trajectories (row 5)."""
+    total_steps: int = 0
+    loops: int = 0
+    escalations: int = 0
+    switches: int = 0
+    backtracks: int = 0
+    history: list[dict] = field(default_factory=list)
+
+    def record(self, decision) -> None:
+        self.total_steps += 1
+        if decision.action == RecoveryAction.PROCEED:
+            return
+        self.history.append({"step": self.total_steps, "action": str(decision.action), "reason": decision.reason})
+        if decision.action in (RecoveryAction.RETRY, RecoveryAction.CHANGE):
+            # loop proxy: repeated same signature
+            self.loops += 1
+        if decision.action == RecoveryAction.ESCALATE:
+            self.escalations += 1
+        if decision.action == RecoveryAction.SWITCH:
+            self.switches += 1
+        if decision.action == RecoveryAction.BACKTRACK:
+            self.backtracks += 1
+
+    @property
+    def loop_rate(self) -> float:
+        return self.loops / max(1, self.total_steps)
+
+    @property
+    def escalation_rate(self) -> float:
+        return self.escalations / max(1, self.total_steps)
+
+    def to_dict(self) -> dict:
+        return {
+            "total_steps": self.total_steps,
+            "loops": self.loops,
+            "escalations": self.escalations,
+            "switches": self.switches,
+            "backtracks": self.backtracks,
+            "loop_rate": round(self.loop_rate, 4),
+            "escalation_rate": round(self.escalation_rate, 4),
+            "history": self.history[-20:],
+        }
+
+    def minimise_report(self) -> str:
+        return f"loop_rate {self.loop_rate:.2%} escalation_rate {self.escalation_rate:.2%} (goal: minimise both)"
+

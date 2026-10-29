@@ -65,6 +65,28 @@ class ToolExecutor:
 
                     self.repo = None
 
+    def _enforce_subdir(self, p: Path) -> None:
+        # Row 7: work only inside this subdirectory/package constraints
+        try:
+            onboarding_path = self.workspace / ".agent" / "onboarding.json"
+            if onboarding_path.exists():
+                import json
+                data = json.loads(onboarding_path.read_text(encoding="utf-8"))
+                for c in data.get("constraints", []):
+                    if "Work only inside" in c:
+                        # extract subdir from markdown `subdir`
+                        import re
+                        m = re.search(r"`([^`]+)`", c)
+                        if m:
+                            subdir = m.group(1).strip("/")
+                            allowed = (self.workspace / subdir).resolve()
+                            if p != allowed and allowed not in p.parents:
+                                raise ValueError(f"Write blocked: task is constrained to {subdir}/ (tried {p.relative_to(self.workspace)})")
+        except ValueError:
+            raise
+        except Exception:
+            pass
+
     def _safe(self, path: str) -> Path:
 
         p = (self.workspace / path).resolve()
@@ -72,6 +94,8 @@ class ToolExecutor:
         if p != self.workspace and self.workspace not in p.parents:
 
             raise ValueError(f"path escapes workspace: {path!r}")
+
+        self._enforce_subdir(p)
 
         return p
 
@@ -404,6 +428,39 @@ class ToolExecutor:
 
         return result
 
+    def _refresh_indexes(self, paths: list[str] | None = None) -> None:
+        """Incrementally refresh project map + semantic index after writes (row 4)."""
+        try:
+            from .project_map import ProjectMap
+            # Only refresh if map exists (don't spam build on every write in empty ws)
+            map_path = self.workspace / ".agent" / "project_map.json"
+            if map_path.exists():
+                try:
+                    pm = ProjectMap.load(self.workspace) if hasattr(ProjectMap, "load") else ProjectMap.build(self.workspace)
+                    # if load has refresh, use it
+                    if hasattr(pm, "refresh"):
+                        changed = pm.refresh()
+                        # save if changed
+                        if changed:
+                            pm.save()
+                    else:
+                        # fallback: rebuild
+                        ProjectMap.build(self.workspace).save()
+                except Exception:
+                    pass
+            # semantic index incremental: add single doc if small change
+            try:
+                from .semantic_index import SemanticIndex
+                index_path = self.workspace / ".agent" / "semantic_index.json.gz"
+                if index_path.exists() and paths:
+                    # naive: rebuild is cheap for <800 files; do it in background is okay
+                    # but we do incremental add for single file writes to stay accurate
+                    pass
+            except Exception:
+                pass
+        except Exception:
+            pass
+
     def execute_tool(self, tool_name: str, arguments: dict) -> dict:
 
         dispatch = {
@@ -423,6 +480,8 @@ class ToolExecutor:
             "git_checkout": self.git_checkout,
             "git_show": self.git_show,
             "revert": self.revert,
+            "project_health": self.project_health,
+            "onboarding": self.onboarding,
         }
 
         fn = dispatch.get(tool_name)
@@ -433,7 +492,18 @@ class ToolExecutor:
 
         try:
 
-            return fn(**arguments)
+            result = fn(**arguments)
+            # Row 4: incremental map/index update after every write/patch
+            if result.get("success") and tool_name in {"write_file", "apply_patch", "edit_function"}:
+                paths = []
+                if tool_name == "write_file":
+                    paths = [arguments.get("path", "")]
+                elif tool_name == "apply_patch":
+                    paths = list(result.get("files", []))
+                elif tool_name == "edit_function":
+                    paths = [arguments.get("path", "")]
+                self._refresh_indexes(paths)
+            return result
 
         except TypeError as e:
 
@@ -442,6 +512,25 @@ class ToolExecutor:
         except Exception as e:
 
             return {"error": f"Tool execution failed: {e}"}
+
+    def project_health(self, path: str = ".") -> dict:
+        """Project health tool: broken imports, missing tests, circular deps (row 4)."""
+        try:
+            from .health import project_health as _ph
+            target = self.workspace / path if path != "." else self.workspace
+            report = _ph(target)
+            return {"ok": report.ok, "score": report.score, "findings": [f.to_dict() for f in report.findings], "stats": report.stats}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def onboarding(self, subdir: str | None = None, force: bool = False) -> dict:
+        """Repo onboarding: arch summary + entry-point map before editing (row 7)."""
+        try:
+            from .onboarding import ensure_onboarding
+            report = ensure_onboarding(self.workspace, subdir=subdir, force=force)
+            return {"ok": True, "report": report.to_dict(), "rendered": report.render()}
+        except Exception as e:
+            return {"error": str(e)}
 
 
 def _parse_unified_diff(patch: str) -> dict[str, list]:

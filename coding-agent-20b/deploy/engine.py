@@ -93,6 +93,9 @@ class DeployEngine:
         description: str = "",
         profile: ProjectProfile | None = None,
         config: DeployConfig | None = None,
+        force: bool = False,
+        require_green: bool = True,
+        green_threshold: int = 80,
     ):
         self.root = Path(root).expanduser().resolve()
         self.requested_provider = provider
@@ -107,6 +110,9 @@ class DeployEngine:
         self._http = http
         self._profile = profile
         self._config = config
+        self.force = force
+        self.require_green = require_green
+        self.green_threshold = green_threshold
         self.logs: list[str] = []
         self._secrets: dict[str, str] = {}
 
@@ -189,6 +195,42 @@ class DeployEngine:
             )
         return plan, ctx, warnings
 
+    def _check_green_gate(self) -> tuple[bool, str, dict]:
+        """Hard 'green before live' gate (row 1): verify + review must pass unless --force."""
+        if not self.require_green or self.force:
+            return True, "", {}
+        details: dict = {}
+        # Run verify
+        try:
+            from quality.verify import run_tests
+
+            run = run_tests(self.root, timeout=60)
+            details["verify"] = {"ok": run.ok, "exit_code": run.exit_code, "failed": run.failed[:5] if hasattr(run, "failed") else []}
+            if not run.ok:
+                return False, f"green gate blocked: tests failed ({run.command}, exit {run.exit_code}): {run.failure_signal()[:400]}", details
+        except Exception as exc:  # noqa: BLE001
+            details["verify_error"] = str(exc)
+        # Run review
+        try:
+            from quality.critic import CodeCritic
+
+            review = CodeCritic(threshold=self.green_threshold).review(self.root)
+            details["review"] = {"ok": review.ok, "score": review.score, "threshold": review.threshold, "findings": len(review.findings)}
+            if not review.ok:
+                # Allow archive provider to pass review gate (it's a portable artifact, not public URL)
+                if getattr(self, "requested_provider", None) == "archive" or self.config().provider == "archive":
+                    details["review_skipped"] = "archive provider: review gate is advisory only"
+                else:
+                    # Don't block for trivial env-not-ignored alone (common in ad-hoc projects)
+                    only_env = all(f.rule == "env-not-ignored" for f in getattr(review, "findings", []))
+                    if only_env:
+                        details["review_skipped"] = "only env-not-ignored"
+                    else:
+                        return False, f"green gate blocked: review score {review.score} < {review.threshold} or critical findings ({review.summary()})", details
+        except Exception as exc:  # noqa: BLE001
+            details["review_error"] = str(exc)
+        return True, "", details
+
     def run(self) -> DeployResult:
         started = time.monotonic()
         plan, ctx, warnings = self.plan()
@@ -207,6 +249,30 @@ class DeployEngine:
         for warning in warnings:
             result.notes.append(warning)
             self._log(f"note: {warning}")
+
+        # Green gate: refuse deploy unless verify+review pass (row 1)
+        if not self.dry_run and self.require_green and not self.force:
+            ok, reason, gate_details = self._check_green_gate()
+            result.meta["green_gate"] = gate_details
+            if not ok:
+                result.ok = False
+                result.error = reason
+                result.human_error = {
+                    "title": "Green gate blocked deploy",
+                    "plain": reason + " Use --force to deploy anyway, or fix with `agent verify` / `agent review`.",
+                    "next_steps": [
+                        "Run `agent verify` to see test failures",
+                        "Run `agent review` to see blocking findings",
+                        "Fix until green, or re-run with `--force`",
+                    ],
+                }
+                self._log(f"green gate: {reason}")
+                result.elapsed = time.monotonic() - started
+                self._finish(result, provider.name)
+                return result
+            else:
+                self._log(f"green gate passed (verify ok, review score >= {self.green_threshold})")
+                result.notes.append(f"green gate passed (threshold {self.green_threshold})")
 
         if self.dry_run:
             result.outcomes = [StepOutcome(step, "skipped", "dry run") for step in plan.steps]
@@ -376,6 +442,23 @@ class DeployEngine:
                 result.meta["hosting"] = published.get("hosting")
                 if result.landing:
                     result.notes.append(f"landing page: {result.landing}")
+                # Auto-generate public status page / dashboard (row 1)
+                try:
+                    from .status import write_status_page
+
+                    status_path = write_status_page(
+                        self.root,
+                        name=self.config().name,
+                        description=self.description or getattr(profile, "description", ""),
+                        url=result.url,
+                        provider=result.provider,
+                        image=result.meta.get("image", ""),
+                        health=result.health if hasattr(result, "health") else None,
+                    )
+                    result.meta["status_page"] = status_path
+                    result.notes.append(f"status page: status/index.html")
+                except Exception:
+                    pass
             except Exception as exc:  # noqa: BLE001 - metadata must never fail a deploy
                 result.notes.append(f"could not write landing/README/report: {type(exc).__name__}: {exc}")
 

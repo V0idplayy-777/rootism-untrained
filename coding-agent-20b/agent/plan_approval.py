@@ -306,3 +306,36 @@ class PlanDrafter:
 
 def draft_plan(root: str | Path, goal: str, generate_fn: Callable[[str], str] | None = None) -> ProjectPlan:
     return PlanDrafter(root, generate_fn).draft(goal)
+
+# Row 5: smarter plan approval - only high-blast-radius steps need human approval
+HIGH_RISK_KEYWORDS = {"deploy", "delete", "remove", "production", "database", "migrate", "drop", "secrets", "credentials", "overwrite"}
+HIGH_RISK_FILE_PATTERNS = {".env", "production", "migrate", "alembic", "Dockerfile"}
+
+def risk_score(item: PlanItem) -> str:
+    """Heuristic risk: low/medium/high based on action/files."""
+    text = (item.action + " " + " ".join(item.files)).lower()
+    if any(kw in text for kw in HIGH_RISK_KEYWORDS):
+        return "high"
+    if len(item.files) > 10:
+        return "high"
+    if any(pat in f for f in item.files for pat in HIGH_RISK_FILE_PATTERNS):
+        return "high"
+    if len(item.files) > 3:
+        return "medium"
+    return item.risk or "low"
+
+def needs_approval(plan: ProjectPlan) -> bool:
+    """True if any item is high risk; low-risk can proceed with logging."""
+    for item in plan.items:
+        if risk_score(item) == "high":
+            return True
+    return False
+
+def auto_approve_low_risk(plan: ProjectPlan) -> bool:
+    """Auto-approve if no high-risk items; log instead of blocking."""
+    if not needs_approval(plan):
+        plan.status = "approved"
+        plan.updated_at = __import__("time").time()
+        plan.notes.append("auto-approved (low-risk)")
+        return True
+    return False

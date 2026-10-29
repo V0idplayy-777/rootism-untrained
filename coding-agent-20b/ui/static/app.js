@@ -260,20 +260,89 @@ async function deploy() {
       addAgent(`Deployed. Live at ${data.url}`);
       state.previewUrl = data.url;
     }
+    // Plain-language for non-engineers (row 8)
+    if (data.plain || data.plain_success) {
+      addAgent(data.plain || data.plain_success);
+    }
     eventCard({
       type: data.ok ? "done" : "error",
-      message: data.ok ? `Deployed with ${data.provider}` : "Deploy failed",
-      data: data.ok ? { url: data.url } : (data.human_error || { plain: data.error }),
+      message: data.ok ? `Deployed with ${data.provider}` : (data.human?.title || "Deploy failed"),
+      data: data.ok ? { url: data.url } : (data.human || data.human_error || { plain: data.error }),
     });
     if (data.rendered) {
       const node = el(`<details class="event ok"><summary>deploy log</summary><pre>${esc(data.rendered)}</pre></details>`);
       $("#transcript").append(node);
     }
+    // Update status card
+    const sc = $("#status-card");
+    if (sc) sc.textContent = data.ok ? `✓ Live: ${data.url || "artifact ready"} • status/index.html updated` : `✗ ${data.human?.plain || data.error || "deploy failed"}`;
   } catch (error) {
     eventCard({ type: "error", message: "Deploy failed", data: { plain: String(error) } });
   } finally {
     button.disabled = false;
     button.textContent = "Deploy";
+    refreshInfo();
+    scrollDown();
+  }
+}
+
+async function ship() {
+  const input = $("#input").value.trim() || $("#input").placeholder;
+  const button = $("#ship-btn");
+  if (!input || input.length < 5) {
+    eventCard({ type: "error", message: "Tell me what to build first", data: { plain: "Type a sentence like 'a task app with login' then hit Ship it." } });
+    return;
+  }
+  button.disabled = true;
+  const orig = button.textContent;
+  button.textContent = "Shipping…";
+  addUser(input);
+  $("#input").value = "";
+  eventCard({ type: "status", message: "Ship it: scaffolding → testing → reviewing → deploying (one click, no decisions)", data: {} });
+  try {
+    const response = await fetch("/api/ship", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ request: input, provider: null, dry_run: false, force: false }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) {
+      const human = data.human || { title: data.error || "Ship failed", plain: data.error || "unknown", next_steps: [] };
+      eventCard({ type: "error", message: human.title || "Ship needs work", data: human });
+      if (data.verify) {
+        const v = data.verify;
+        eventCard({ type: "tests", message: v.ok ? "Tests passed" : "Tests failed", data: v });
+      }
+      if (data.review) {
+        const r = data.review;
+        eventCard({ type: "review", message: `Review score ${r.score}/100`, data: r });
+      }
+      if (data.plain) addAgent(data.plain);
+    } else {
+      if (data.url) {
+        const link = $("#live-link");
+        link.hidden = false;
+        link.href = data.url;
+        link.textContent = data.url;
+        // Auto open preview
+        startPreview();
+      }
+      addAgent(data.plain_success || data.plain || `Shipped! ${data.url ? "Live at " + data.url : "Artifact ready."}`);
+      eventCard({ type: "done", message: data.ok ? `Shipped with ${data.provider || data.deploy?.provider || "archive"}` : "Shipped", data: { url: data.url, plain: data.plain_success } });
+      const sc = $("#status-card");
+      if (sc) sc.textContent = data.url ? `✓ Live at ${data.url}` : "✓ Artifact ready — see status/index.html";
+    }
+    if (data.deploy?.rendered || data.rendered) {
+      const rendered = data.deploy?.rendered || data.rendered;
+      const node = el(`<details class="event ok"><summary>deploy log</summary><pre>${esc(rendered)}</pre></details>`);
+      $("#transcript").append(node);
+    }
+  } catch (error) {
+    eventCard({ type: "error", message: "Ship failed", data: { plain: String(error), next_steps: ["Check that your description is a sentence", "Try again, or use `agent deploy --dry-run`"] } });
+    addAgent("Sorry — I couldn't ship that. Try a simpler description, or check the deploy log above. Your idea is safe; just re-hit Ship it.");
+  } finally {
+    button.disabled = false;
+    button.textContent = orig;
     refreshInfo();
     scrollDown();
   }
@@ -423,6 +492,7 @@ $("#input").addEventListener("keydown", (event) => {
 });
 
 $("#deploy-btn").onclick = deploy;
+$("#ship-btn").onclick = ship;
 $("#preview-btn").onclick = startPreview;
 $("#preview-close").onclick = async () => {
   $("#preview-panel").hidden = true;
