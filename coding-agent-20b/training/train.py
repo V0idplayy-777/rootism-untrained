@@ -496,8 +496,6 @@ class CheckpointManager:
 def train(args: argparse.Namespace):
     """Main training function."""
 
-    # The 3B recipe uses its own budget-aware path; leave the legacy paths for
-    # the other model sizes untouched.
     with open(args.config) as f:
         recipe = json.load(f)
     recipe_size = recipe.get("model_size", "20B")

@@ -88,7 +88,7 @@ class LocalAccumulatingEngine:
         self.saved = []
 
     def __call__(self, *, input_ids, labels):
-        assert labels is input_ids  # the model, not the loader, shifts labels
+        assert labels is input_ids
         if self.module.training:
             self.training_inputs.append(input_ids.detach().clone())
         return self.module(input_ids=input_ids, labels=labels)
@@ -227,13 +227,12 @@ def test_token_stream_shards_data_across_ranks_and_resumes(tmp_path):
     rank1 = TokenBatchStream(dataset, batch_size=1, rank=1, world_size=2, seed=7)
     first0, first1 = next(rank0), next(rank1)
     assert not torch.equal(first0, first1)
-    assert (first0[0, 1:] - first0[0, :-1] == 1).all()  # sequence spans multiple small shards
+    assert (first0[0, 1:] - first0[0, :-1] == 1).all()
     assert (first1[0, 1:] - first1[0, :-1] == 1).all()
     saved_epoch, saved_batch = rank0.epoch, rank0.batch_in_epoch
     expected = next(rank0)
     resumed = TokenBatchStream(dataset, 1, 0, 2, 7, epoch=saved_epoch, batch_in_epoch=saved_batch)
     assert torch.equal(next(resumed), expected)
-    # Advancing from the end of an epoch must reproduce the next epoch too.
     saved_epoch, saved_batch = rank0.epoch, rank0.batch_in_epoch
     expected = next(rank0)
     resumed = TokenBatchStream(dataset, 1, 0, 2, 7, epoch=saved_epoch, batch_in_epoch=saved_batch)
@@ -322,7 +321,6 @@ def test_token_based_checkpoint_interval(tmp_path, recipe):
     metadata = checkpoint_metadata(plan, stream, tmp_path / "data" / "train_manifest.json")
     engine = LocalAccumulatingEngine(_tiny_model(), plan.gradient_accumulation_steps)
     run_3b_training(engine, engine.optimizer, stream, config, plan, tmp_path / "ckpt", metadata, 0)
-    # Cross 20 and 40 input tokens, and do not duplicate the final save.
     assert engine.saved == ["step_00000002", "step_00000003"]
 
 

@@ -92,7 +92,6 @@ def build_training_plan(config: dict, world_size: int, max_steps: int | None = N
         raise ValueError("total_tokens must cover at least one complete global batch")
     if max_steps is not None and (isinstance(max_steps, bool) or not isinstance(max_steps, int) or max_steps <= 0):
         raise ValueError("max_steps must be a positive integer")
-    # A step override may shorten a run, but can never bypass the token budget.
     run_steps = min(total_steps, max_steps) if max_steps is not None else total_steps
     warmup_steps = min(warmup_tokens // tokens_per_step, total_steps - 1)
     return TrainingPlan(
@@ -139,7 +138,6 @@ def build_deepspeed_config(template: dict, config: dict, plan: TrainingPlan, hid
         raise ValueError(f"Unsupported precision: {precision}")
     result["bf16"] = {"enabled": precision == "bf16"}
     result["fp16"] = {"enabled": precision == "fp16"}
-    # The shared template requests FP16 communication even for BF16 training.
     result.pop("communication_data_type", None)
 
     zero = result.setdefault("zero_optimization", {})
@@ -149,7 +147,6 @@ def build_deepspeed_config(template: dict, config: dict, plan: TrainingPlan, hid
             zero[key] = {**zero.get(key, {}), "device": "cpu"}
         else:
             zero.pop(key, None)
-    # DeepSpeed itself does not resolve the Hugging Face-style 'auto' values.
     auto_values = {
         "reduce_bucket_size": hidden_size * hidden_size,
         "stage3_prefetch_bucket_size": int(0.9 * hidden_size * hidden_size),
@@ -171,8 +168,6 @@ def build_deepspeed_config(template: dict, config: dict, plan: TrainingPlan, hid
     )
     # One cosine schedule is applied at optimizer-step boundaries in the loop.
     result.pop("scheduler", None)
-    # The model uses torch checkpointing; DeepSpeed's separate activation
-    # checkpointing/profiler settings are not used by this path.
     result.pop("activation_checkpointing", None)
     result.pop("flops_profiler", None)
     return result
@@ -333,8 +328,6 @@ def save_3b_checkpoint(engine, checkpoint_dir: Path, state: PretrainState, metad
     if torch.distributed.is_available() and torch.distributed.is_initialized():
         torch.distributed.barrier()
     if rank == 0:
-        # Only rotate checkpoints created by this trainer, not unrelated step
-        # directories a user may already have in the output location.
         (checkpoint_dir / tag / ".3b-pretrain").write_text("3B pretraining checkpoint\n")
         if keep_last > 0:
             checkpoints = sorted(
@@ -365,7 +358,6 @@ def evaluate_3b(engine, dataset, config: dict, plan: TrainingPlan, rank: int) ->
     with torch.no_grad():
         for _ in range(max_batches):
             inputs = next(stream).to(engine.device)
-            # CodingAgentModel shifts labels internally. Do not shift them here.
             losses.append(engine(input_ids=inputs, labels=inputs).detach().float())
     loss = torch.stack(losses).mean()
     if torch.distributed.is_available() and torch.distributed.is_initialized():
@@ -432,7 +424,6 @@ def run_3b_training(
             loss = engine(input_ids=inputs, labels=inputs)
             losses.append(loss.detach().float())
             # DeepSpeed scales the loss and steps the optimizer at its own
-            # accumulation boundary; call both methods for every micro-batch.
             engine.backward(loss)
             engine.step()
         if getattr(engine, "global_steps", state.step + 1) != state.step + 1:

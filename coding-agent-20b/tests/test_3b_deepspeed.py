@@ -39,7 +39,6 @@ def test_real_zero3_accumulation_checkpoint_and_resume(tmp_path, monkeypatch):
     monkeypatch.setenv("RANK", "0")
     monkeypatch.setenv("LOCAL_RANK", "0")
     monkeypatch.setenv("WORLD_SIZE", "1")
-    # Avoid compiling optional shared-memory ops or requiring numactl in CI.
     monkeypatch.setattr(importlib.import_module("deepspeed.comm.torch"), "build_shm_op", lambda: None)
     monkeypatch.setattr(get_accelerator(), "device_count", lambda: 1)
     dist.init_process_group("gloo", init_method=f"file://{tmp_path / 'rendezvous'}", rank=0, world_size=1)
@@ -113,7 +112,6 @@ def test_real_zero3_accumulation_checkpoint_and_resume(tmp_path, monkeypatch):
         assert first.tokens_processed == 16
         assert (tmp_path / "checkpoints" / "latest").read_text() == "step_00000001"
 
-        # ZeRO-3 requires a fresh engine when loading its own checkpoint.
         resumed_engine, resumed_optimizer = new_engine()
         restored = restore_3b_checkpoint(resumed_engine, tmp_path / "checkpoints", plan, metadata)
         final = run_3b_training(
@@ -131,7 +129,6 @@ def test_real_zero3_accumulation_checkpoint_and_resume(tmp_path, monkeypatch):
         assert final.tokens_processed == 32 <= recipe["training"]["total_tokens"]
         assert (tmp_path / "checkpoints" / "latest").read_text() == "step_00000002"
 
-        # Consolidation must retain the base model's keys for inference.
         from deepspeed.utils.zero_to_fp32 import get_fp32_state_dict_from_zero_checkpoint
         from model.model import CodingAgentModel
 
