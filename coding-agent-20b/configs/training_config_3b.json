@@ -1,0 +1,56 @@
+{
+  "model_name": "CodingAgent-3B",
+  "model_size": "3B",
+  "notes": "EXACT same architecture family as CodingAgent-20B, scaled to ~3B. Width halved (6144->3072, 16384->8192, 48/8->24/4), depth 60->23, head_dim 128, RoPE 500k, sliding window 4096, vocab 128256 preserved. See model/config_3b.py for breakdown. Training recipe identical but with smaller batch/steps for 3B efficiency.",
+  "training": {
+    "total_tokens": 100000000000,
+    "learning_rate": 0.0003,
+    "min_learning_rate": 3e-05,
+    "warmup_tokens": 1000000000,
+    "weight_decay": 0.1,
+    "beta1": 0.9,
+    "beta2": 0.95,
+    "eps": 1e-08,
+    "max_grad_norm": 1.0,
+    "precision": "bf16",
+    "seed": 42
+  },
+  "batching": {
+    "global_batch_size": 1024,
+    "micro_batch_size_per_gpu": 4,
+    "gradient_accumulation_steps": "auto",
+    "sequence_length": 8192
+  },
+  "deepspeed": {
+    "stage": 3,
+    "offload_optimizer": true,
+    "offload_param": false,
+    "activation_checkpointing": true,
+    "config_file": "configs/ds_config_zero3.json"
+  },
+  "data": {
+    "data_dir": "data/processed",
+    "num_workers": 4,
+    "prefetch_factor": 2,
+    "pin_memory": true
+  },
+  "checkpointing": {
+    "save_dir": "checkpoints-3b",
+    "save_every_steps": 1000,
+    "save_every_tokens": 500000000,
+    "keep_last_n": 5,
+    "save_optimizer_state": true
+  },
+  "logging": {
+    "log_every_steps": 10,
+    "eval_every_steps": 500,
+    "wandb_project": "coding-agent-3b",
+    "wandb_entity": null,
+    "tensorboard_dir": "logs/tensorboard-3b"
+  },
+  "evaluation": {
+    "eval_tokens": 10000000,
+    "eval_batch_size": 8,
+    "metrics": ["loss", "perplexity", "token_accuracy"]
+  }
+}
