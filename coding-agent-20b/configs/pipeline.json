@@ -48,7 +48,10 @@
           "induction",
           "recovery",
           "project",
-          "repair"
+          "repair",
+          "app",
+          "app-repair",
+          "app-taste"
         ]
       }
     },
@@ -70,15 +73,21 @@
           "instruction-induction",
           "recovery-sft",
           "project-scaffold-sft",
-          "repair-trace-sft"
+          "repair-trace-sft",
+          "app-sft",
+          "app-repair-sft",
+          "app-taste-sft"
         ],
         "upsample": {
           "security-sft": 3.0,
           "creative-sft": 2.0,
           "instruction-induction": 1.5,
           "recovery-sft": 2.0,
-          "project-scaffold-sft": 1.5,
-          "repair-trace-sft": 2.0
+          "project-scaffold-sft": 2.0,
+          "repair-trace-sft": 2.5,
+          "app-sft": 3.0,
+          "app-repair-sft": 3.0,
+          "app-taste-sft": 2.5
         },
         "security_examples_per_batch": 8
       }
@@ -95,6 +104,19 @@
       "extra": {
         "beta": 0.1,
         "reference_model": "sft"
+      },
+      "data": {
+        "sources": [
+          "app-preference-dpo",
+          "security-dpo",
+          "repair-trace-dpo"
+        ],
+        "upsample": {
+          "app-preference-dpo": 4.0,
+          "security-dpo": 2.0,
+          "repair-trace-dpo": 2.0
+        },
+        "beta": 0.1
       }
     }
   ],

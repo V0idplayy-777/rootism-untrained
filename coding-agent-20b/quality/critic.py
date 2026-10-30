@@ -462,7 +462,7 @@ class CodeCritic:
                         "reliability",
                     )
                 )
-        if "Dockerfile" not in names and source:
+        if "Dockerfile" not in names and not (root / "Dockerfile").exists() and source:
             findings.append(
                 self._f("no-dockerfile", "nit", "(project)", 0, "no Dockerfile", "run `agent deploy` to generate one", "packaging")
             )

@@ -15,11 +15,13 @@ from .coolify import CoolifyProvider
 from .fly import FlyProvider
 from .github_pages import GitHubPagesProvider
 from .local import LocalDockerProvider
+from .process import LocalProcessProvider
 from .render import RenderProvider
 from .vercel import VercelProvider
 
 PROVIDERS: dict[str, type[DeployProvider]] = {
     "local": LocalDockerProvider,
+    "process": LocalProcessProvider,
     "vercel": VercelProvider,
     "fly": FlyProvider,
     "render": RenderProvider,
@@ -32,6 +34,7 @@ PROVIDER_ORDER = ["local", "vercel", "github-pages", "fly", "render", "coolify",
 
 PROVIDER_NOTES = {
     "local": "no account needed; container runs on this machine (localhost URL)",
+    "process": "no Docker needed; runs the detected start command on this machine (localhost URL)",
     "vercel": "free tier; best for static/Next.js; needs VERCEL_TOKEN",
     "github-pages": "free public URL for static sites; uses the repo's git remote",
     "fly": "free allowance; containers; needs flyctl + a token",

@@ -228,3 +228,19 @@ def test_ui_preview_route_serves_static_file(client):
 def test_ui_file_endpoint_blocks_traversal(client):
     data = client.get("/api/file", params={"path": "../../etc/passwd"}).json()
     assert data["ok"] is False
+
+
+def test_ui_builds_a_product_blueprint_with_a_taste_gate(empty_client):
+    response = empty_client.post(
+        "/api/chat",
+        json={"message": "a team task list where I can share tasks with teammates", "mode": "simple"},
+    )
+    assert response.status_code == 200
+    events = parse_sse(response.text)
+    types = [event["type"] for event in events]
+    assert "plan" in types and "scaffold" in types and "taste" in types
+    assert "error" not in types
+    scaffold = next(event for event in events if event["type"] == "scaffold")
+    assert scaffold["data"]["blueprint"] == "shared-tasks"
+    taste = next(event for event in events if event["type"] == "taste")
+    assert taste["data"]["ok"] is True and taste["data"]["score"] >= 90

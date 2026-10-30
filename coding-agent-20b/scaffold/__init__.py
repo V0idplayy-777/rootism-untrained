@@ -18,6 +18,9 @@ from .backends import (
     validate_postgres_url,
 )
 from .auth_providers import auth_provider_files, get_auth_provider, list_auth_providers
+from .app_builder import BuildReport, NoBlueprint, build_app, repair_generated
+from .blueprint import BlueprintOptions, generate_app, render_blueprint
+from .blueprints import AppBlueprint, all_blueprints, get_blueprint, match_blueprint, split
 from .backends import (
     BackendProvisioner,
     BackendResult,
@@ -33,18 +36,26 @@ from .registry import catalog, get_template, list_templates, template_ids
 from .spec import ProjectOptions, TemplateSpec
 
 __all__ = [
+    "AppBlueprint",
     "BackendProvisioner",
     "BackendResult",
+    "BlueprintOptions",
+    "BuildReport",
+    "NoBlueprint",
     "ProjectIntent",
     "ProjectOptions",
     "ScaffoldChoice",
     "ScaffoldGenerator",
     "ScaffoldResult",
     "TemplateSpec",
+    "all_blueprints",
     "auth_provider_files",
+    "build_app",
     "available_backends",
     "catalog",
     "choose_template",
+    "generate_app",
+    "get_blueprint",
     "generate_migration",
     "get_auth_provider",
     "get_template",
@@ -52,11 +63,15 @@ __all__ = [
     "list_auth_providers",
     "list_templates",
     "mask_url",
+    "match_blueprint",
     "node_jobs",
     "parse_intent",
     "plan_for",
     "python_jobs",
+    "render_blueprint",
+    "repair_generated",
     "scaffold_project",
+    "split",
     "switch_to_postgres_instructions",
     "template_ids",
     "validate_postgres_url",

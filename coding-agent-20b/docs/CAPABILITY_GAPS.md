@@ -10,10 +10,11 @@ training data, training/eval harnesses and agent-side machinery.
 |---|-----|-----------|-------------|
 | 1 | Tokenizer: 320-token placeholder, code-aware pre-tok but not competitive | Streaming BPE on a real corpus + exact vocab alignment + competitive gate | `scripts/evaluate_tokenizer.py`, `validation.json`, `benchmark.json` |
 | 2 | 8k/32k context vs real repos | AST+block chunking, hybrid multi-query retrieval + call graph, hierarchical summaries, token-budgeted assembly, 64k YaRN profile | `evaluation/retrieval_ablation.py` (gold-file recall, per-task feature provenance) |
-| 3 | Multi-step tool use: recovery, 15–20 call planning, session state | `SessionState`, `ContextWindow` compaction, `RecoveryPolicy` ladder, `StallDetector`, resumable state | `evaluate_trajectories` (`recovery_after_3`, `loop_rate`, `plan_completion`, `state_coherence`) |
+| 3 | Multi-step tool use: recovery, 15–20 call planning, session state | `SessionState`, `ContextWindow` compaction, pin-protected `WorkingSet` excerpts, mid-task `read_file`, deploy/schema-aware observation compaction, `RecoveryPolicy` ladder, `StallDetector`, resumable state | `evaluate_trajectories` (`recovery_after_3`, `loop_rate`, `plan_completion`, `state_coherence`) + `tests/test_context_state.py` |
 | 4 | Security-critical generation lags general coding | Curated safe/vulnerable pairs (CWE-tagged), review rubric, security SFT/DPO, mixture upsampling | `evaluation/security_eval.py` (`overall_vuln_rate`, per-CWE counts) |
 | 5 | Training distribution: unusual phrasing, distant concepts | Phrasing styles, 19 cross-domain families, constraint conflicts, multi-turn clarification, error recovery, real-code induction | `dataset/augmentation.py` + `dataset/instruction_induction.py` tests + SFT mixture composition |
 | 6 | Long functions / deep reasoning need scratch space | Plan → skeleton → per-unit fill, explicit scratch budget, execution-checked self-consistency | `model/longform.py` traces + `ReasoningBudget` |
+| 7 | "Idea → running app": no whole-product corpus, no design gate, no end-to-end scoreboard | 65 realistic blueprints, full-project renderer (schema/auth/API/SPA/tests/deploy), taste critic, preference + repair corpus, `agent app` build→verify→repair path | `python -m evaluation.app_suite --split all` (65/65 running apps) + `dataset/app_corpus.py` rows with recorded test evidence |
 
 ---
 
@@ -341,7 +342,7 @@ deployment and a surface a non-engineer can use. This section tracks that work.
 
 | # | Gap | Mechanism | Verify |
 |---|-----|-----------|--------|
-| 7.1 | No end-to-end deploy | `deploy/`: detection → Dockerfile/compose → provider → health check → landing/README/report | `tests/test_deploy.py` |
+| 7.1 | No end-to-end deploy | `deploy/`: detection → Dockerfile/compose → provider → health check → landing/README/report; `process` provider runs the app without Docker or accounts | `tests/test_deploy.py`, `tests/test_process_provider.py` |
 | 7.2 | Only ad-hoc single files | `scaffold/`: six starters, optional auth/DB, managed Postgres, intent routing | `tests/test_scaffold.py` |
 | 7.3 | No review/test loop | `quality/`: critic, test runner + failure parsing, generated tests, humanised errors | `tests/test_quality.py` |
 | 7.4 | No project memory | `agent/project_map.py`, `agent/semantic_index.py`, `agent/checkpoint.py`, `agent/plan_approval.py` | `tests/test_project_memory.py` |
@@ -387,3 +388,78 @@ own test suite is executed in CI (`tests/test_scaffold.py`).
    held-out set not used in training.
 5. Clarification tasks: model asks before coding on ≥80% of ambiguous prompts
    and still solves the unambiguous paraphrase variants.
+
+
+---
+
+## 7. Idea → running app
+
+**Problem.** The stack could scaffold starters and review diffs, but it had no
+corpus of *whole products*, no way to judge whether an interface was finished,
+and no end-to-end measure of the product promise. A model can pass unit tests
+and still ship a fixed-width 2018 template with no empty state.
+
+**What changed.**
+
+- `scaffold/blueprints.py`: 65 product blueprints (typed fields, relations,
+  enum/bool/date coverage, auth on/off, and a board/schedule/team/stats feature),
+  with a stable hash split (47 train / 18 held out) and a prompt matcher.
+- `scaffold/blueprint.py` + `blueprint_web.py`: a renderer for a complete,
+  runnable project — schema, migrations, scoped store, API, auth, a
+  dependency-free SPA with a real token layer, tests, Docker/compose/deploy
+  config, README.
+- `quality/taste.py`: a design gate with named findings (tokens, dark mode,
+  breakpoints, empty/loading/error states, focus, labels, copy, legacy smells).
+- `scaffold/blueprint_variants.py`: plausible downgrades used as preference
+  pairs and repair traces, never in the default build.
+- `dataset/app_corpus.py`: SFT, preference, repair and taste rows; `--verify`
+  records real pytest evidence; held-out ids are excluded.
+- `evaluation/app_suite.py`: six gates per prompt, including booting uvicorn and
+  checking `/healthz` and `/`.
+- `scaffold/app_builder.py` + `agent app`: build → test → critic → taste → deploy
+  plan, a loud failure with the failing assertion, and a deterministic repair
+  that restores generated files with a backup.
+- Mixture: app sources are 25% (was 3% for scaffold+repair); pipeline configs
+  upsample the same sources in midtrain, SFT and DPO.
+
+**How it is verified.**
+
+```bash
+python -m pytest tests/ -q
+python -m evaluation.app_suite --split all
+python -m evaluation.app_suite --guards
+python -m dataset.app_corpus --out data/app-corpus --verify
+agent app "a team task list where I can share tasks with teammates"
+```
+
+Last runs: **305 passed, 6 skipped**; suite **65/65 in 121s**; guards reject
+each variant for the intended reason; the full `--verify` corpus run completed
+with **47/47 blueprints** carrying observed pytest evidence (11 MB).
+
+Routing is measured separately on wording the blueprints were not authored from
+(`evaluation/prompt_suite.py`): the 40-prompt tuning split is 100%, but the
+then-frozen **34-prompt holdout is 15/23 (65%) on catalogue prompts and 11/11
+(100%) on refusal**. That gap is the honest generalisation number, and the next
+fix is a learned router, not more keyword aliases.
+
+The learned path has a real harness (`evaluation/model_suite.py`, eight held-out
+tasks with pre-written tests, any stdin/stdout model) but **no checkpoint**, so a
+real run is not possible in this checkout. `model_suite` reports that explicitly
+and exits 2 instead of pretending a stub is a model.
+
+A live local deploy now exists: the `process` provider booted a generated
+28-file FastAPI app, passed the green gate, answered `/healthz` with 200 and
+returned a URL. It is localhost-only; a public URL still requires a hosted
+provider account.
+
+**Still not solved.**
+
+- Taste is heuristic, not perceptual: it cannot judge visual originality.
+- The catalogue is small-product shaped; long-tail domains fall back to starters.
+- Repair is restoration of generated modules, not general program synthesis.
+- Hosted deploys are planned and locally booted, not exercised against live
+  provider APIs in CI; the `process` provider is a real but localhost-only run.
+- Unseen-wording routing is 65% on the frozen holdout; out-of-catalogue refusal
+  is 100%, so the failure mode is "fall back/refuse", not "confidently wrong".
+- No model checkpoint exists in this repository; the model-path harness is ready
+  but its quality is unmeasured.

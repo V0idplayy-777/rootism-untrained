@@ -428,3 +428,52 @@ def test_retrieval_ablation_metrics(tmp_path, monkeypatch):
     assert ablation["hierarchical"]["context_tokens"] >= ablation["none"]["context_tokens"]
 
     assert "hierarchical_vs_flat" in ablation
+
+
+def test_working_set_excerpts_survive_compaction():
+    state = SessionState(task="fix the auth middleware")
+    window = ContextWindow("system", state.task, state, budget_tokens=1200, keep_recent_steps=2)
+    window.add_observation(
+        "read_file",
+        {"path": "pkg/auth.py"},
+        {"path": "pkg/auth.py", "content": "def check():\n    return False\n"},
+    )
+    for index in range(20):
+        window.add_observation("list_files", {}, {"files": [f"f{index}.py"]})
+    text, stats = window.assemble()
+    assert "<|file_chunk|> pkg/auth.py" in text
+    assert "def check():" in text
+    assert stats["working_set_files"] >= 1
+    assert stats["truncated"] or stats["steps_compacted"] >= 0
+
+
+def test_observation_compaction_keeps_exact_failures_and_deploy_errors():
+    compactor = ObservationCompactor()
+    tests = compactor.summarise_tests(
+        {
+            "returncode": 1,
+            "stdout": (
+                "FAILED tests/test_auth.py::test_expiry - AssertionError: assert 1 == 2\n"
+                "E   assert 1 == 2\n"
+                "E    +  where 1 = expired(now)\n"
+                "FAILED tests/test_api.py::test_scope - assert False\n"
+                "E   assert False\n"
+            ),
+        }
+    )
+    assert "test_auth.py::test_expiry" in tests
+    assert "E   assert 1 == 2" in tests
+    assert "E    +  where 1 = expired(now)" in tests
+    deploy = compactor.summarise("deploy", {}, {"ok": False, "provider": "fly", "error": "health check failed: /healthz 500"})
+    assert "health check failed: /healthz 500" in deploy
+    assert "fly" in deploy
+
+
+def test_session_state_round_trip_keeps_the_working_set(tmp_path):
+    state = SessionState(task="ship it")
+    state.pin_file("pkg/auth.py", "def check():\n    return False\n")
+    path = tmp_path / "state.json"
+    state.save(str(path))
+    loaded = SessionState.load(str(path))
+    assert "pkg/auth.py" in loaded.working_set.pinned
+    assert "def check():" in loaded.working_set.excerpts["pkg/auth.py"]

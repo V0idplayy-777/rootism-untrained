@@ -20,19 +20,27 @@ class SourceSpec:
 
 
 DEFAULT_MIXTURE: list[SourceSpec] = [
-    SourceSpec("the-stack-code", 0.50, 1.0, "code"),
-    SourceSpec("github-issues", 0.06, 2.0, "issues"),
-    SourceSpec("github-prs", 0.08, 2.0, "prs"),
-    SourceSpec("tests", 0.08, 2.5, "tests"),
-    SourceSpec("docs-and-comments", 0.06, 1.5, "docs"),
-    SourceSpec("instruction-sft", 0.08, 1.0, "instruction"),
+    SourceSpec("the-stack-code", 0.33, 1.0, "code"),
+    SourceSpec("github-issues", 0.05, 2.0, "issues"),
+    SourceSpec("github-prs", 0.06, 2.0, "prs"),
+    SourceSpec("tests", 0.07, 2.5, "tests"),
+    SourceSpec("docs-and-comments", 0.05, 1.5, "docs"),
+    SourceSpec("instruction-sft", 0.07, 1.0, "instruction"),
     # Security-critical code is rare in public corpora but must not be rare in
     SourceSpec("security-sft", 0.03, 3.0, "security"),
-    SourceSpec("creative-sft", 0.03, 2.0, "creative"),
-    SourceSpec("instruction-induction", 0.03, 1.5, "instruction"),
+    SourceSpec("creative-sft", 0.02, 2.0, "creative"),
+    SourceSpec("instruction-induction", 0.02, 1.5, "instruction"),
     SourceSpec("recovery-sft", 0.02, 2.0, "instruction"),
-    SourceSpec("project-scaffold-sft", 0.015, 1.5, "instruction"),
-    SourceSpec("repair-trace-sft", 0.015, 2.0, "instruction"),
+    SourceSpec("project-scaffold-sft", 0.05, 2.0, "instruction"),
+    SourceSpec("repair-trace-sft", 0.05, 2.5, "instruction"),
+    # Whole-product generation is the product: request -> running app, the
+    # near-misses that teach preference, the repair trail, and the design taste
+    # behind the default interface. 0.18 here plus 0.10 in the two sources above
+    # is the deliberate upsample (was 0.03 combined).
+    SourceSpec("app-sft", 0.07, 3.0, "instruction"),
+    SourceSpec("app-repair-sft", 0.05, 3.0, "instruction"),
+    SourceSpec("app-taste-sft", 0.03, 2.5, "instruction"),
+    SourceSpec("app-preference-dpo", 0.03, 3.0, "instruction"),
 ]
 
 

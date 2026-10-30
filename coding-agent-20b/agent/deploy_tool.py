@@ -85,6 +85,11 @@ def scaffold_tool(args: dict[str, Any] | None, workspace: str | Path) -> dict[st
     forced = bool(args.get("force"))
     dry_run = bool(args.get("dry_run"))
 
+    if request and not template:
+        payload = _blueprint_tool(request, workspace, forced, dry_run)
+        if payload is not None:
+            return payload
+
     generator = ScaffoldGenerator(workspace, force=forced, dry_run=dry_run)
     if request and not template:
         result = generator.create_from_request(request, name=name)
@@ -122,6 +127,114 @@ def scaffold_tool(args: dict[str, Any] | None, workspace: str | Path) -> dict[st
             "pick an empty directory, or pass force=true to add the starter alongside them."
         )
     return payload
+
+
+
+STARTER_KEYWORDS = (
+    "flask",
+    "django",
+    "fastapi",
+    "next.js",
+    "nextjs",
+    "react",
+    "vue",
+    "svelte",
+    "cli",
+    "command line",
+    "discord",
+    "slack bot",
+    "static site",
+    "landing page",
+)
+
+
+def _blueprint_tool(
+    request: str, workspace: str | Path, forced: bool, dry_run: bool
+) -> dict[str, Any] | None:
+    """Build a full product from the blueprint catalogue when the request fits."""
+    from scaffold.blueprint import render_blueprint
+    from scaffold.blueprints import match_blueprint
+
+    lowered = request.lower()
+    if any(token in lowered for token in STARTER_KEYWORDS):
+        return None
+    blueprint = match_blueprint(request)
+    if blueprint is None:
+        return None
+    root = Path(workspace)
+    if root.exists() and any(root.iterdir()) and not forced and not dry_run:
+        return None
+    project = render_blueprint(blueprint)
+    if not dry_run:
+        project.write(root, force=forced)
+    return {
+        "success": True,
+        "template": blueprint.id,
+        "blueprint": True,
+        "root": str(root),
+        "files": sorted(project.files)[:40],
+        "file_count": len(project.files),
+        "next_steps": [
+            "python -m pytest -q",
+            "python -m uvicorn " + blueprint.id.replace("-", "_") + ".main:app --reload",
+            "agent app \"" + request + "\" --repair (if a later edit breaks a gate)",
+        ],
+        "dry_run": dry_run,
+    }
+
+def build_app_tool(
+    args: dict[str, Any] | None,
+    workspace: str | Path,
+    *,
+    emit: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
+    """Build a whole product and report every gate; optionally repair once."""
+    from scaffold.app_builder import (
+        NoBlueprint,
+        build_app,
+        repair_generated,
+        resolve_blueprint,
+    )
+
+    args = dict(args or {})
+    request = (args.get("request") or "").strip()
+    blueprint_id = args.get("blueprint") or None
+    if not request and not blueprint_id:
+        return {"success": False, "error": "provide request or blueprint"}
+    try:
+        report = build_app(
+            workspace,
+            request or blueprint_id or "",
+            blueprint_id=blueprint_id,
+            force=bool(args.get("force")),
+        )
+    except NoBlueprint as exc:
+        return {"success": False, "error": str(exc), "suggestions": exc.suggestions}
+    if not report.ok and args.get("repair"):
+        if emit:
+            emit("gates failed; restoring generated modules")
+        blueprint = resolve_blueprint(request or blueprint_id or "", blueprint_id)
+        repaired = repair_generated(workspace, blueprint)
+        if repaired.restored:
+            report = build_app(
+                workspace,
+                request or blueprint.id,
+                blueprint_id=blueprint.id,
+                force=True,
+                write_project=False,
+            )
+    return {
+        "success": report.ok,
+        "blueprint": report.blueprint_id,
+        "files": len(report.files),
+        "preview": report.preview_command,
+        "tests": bool(report.verify and report.verify.ok),
+        "critic": {"score": report.critic_score, "ok": report.critic_ok},
+        "taste": {"score": report.taste.score if report.taste else 0, "ok": bool(report.taste and report.taste.ok)},
+        "deploy_provider": report.deploy_provider,
+        "failures": report.failures,
+        "summary": report.summary(),
+    }
 
 
 def project_map_tool(args: dict[str, Any] | None, workspace: str | Path) -> dict[str, Any]:
@@ -193,6 +306,7 @@ def checkpoint_tool(args: dict[str, Any] | None, workspace: str | Path) -> dict[
 TOOL_HANDLERS: dict[str, Callable[..., dict[str, Any]]] = {
     "deploy": deploy_tool,
     "scaffold_project": scaffold_tool,
+    "build_app": build_app_tool,
     "project_map": project_map_tool,
     "search_project": symbol_search_tool,
     "checkpoint": checkpoint_tool,
@@ -212,7 +326,7 @@ def handle_tool(
     if handler is None:
         return None
     try:
-        if name == "deploy":
+        if name in {"deploy", "build_app"}:
             return handler(args, workspace, emit=emit)
         return handler(args, workspace)
     except Exception as exc:  # noqa: BLE001 - a tool bug must not kill the session
@@ -240,7 +354,7 @@ def tool_schemas() -> dict[str, dict[str, Any]]:
                 "properties": {
                     "provider": {
                         "type": "string",
-                        "enum": ["auto", "local", "vercel", "github-pages", "fly", "render", "coolify", "archive"],
+                        "enum": ["auto", "process", "local", "vercel", "github-pages", "fly", "render", "coolify", "archive"],
                         "description": "Target host; 'auto' picks the best usable one",
                     },
                     "dry_run": {
@@ -252,6 +366,32 @@ def tool_schemas() -> dict[str, dict[str, Any]]:
                         "type": "boolean",
                         "description": "Write landing page, README link and DEPLOY.md",
                         "default": True,
+                    },
+                },
+            },
+        },
+        "build_app": {
+            "name": "build_app",
+            "description": (
+                "Build a complete product from a plain-English request, then prove it: "
+                "tests, code critic, taste gate and deploy plan. Returns the exact failures "
+                "when it is not shippable, and can restore generated modules once (repair). "
+                "Use this instead of hand-writing a whole app file by file."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "request": {"type": "string", "description": "What the user asked for, verbatim"},
+                    "blueprint": {"type": "string", "description": "Optional known blueprint id"},
+                    "repair": {
+                        "type": "boolean",
+                        "description": "Restore generated modules once when a gate fails",
+                        "default": False,
+                    },
+                    "force": {
+                        "type": "boolean",
+                        "description": "Overwrite generated files in a non-empty directory",
+                        "default": False,
                     },
                 },
             },

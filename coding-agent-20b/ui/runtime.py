@@ -28,9 +28,36 @@ from typing import Callable, Iterator
 from deploy import DeployEngine, detect_project
 from quality import CodeCritic, humanize, run_tests, write_generated_tests
 from scaffold import ScaffoldGenerator, catalog, parse_intent
+from scaffold.blueprint import render_blueprint
+from scaffold.blueprints import match_blueprint
+from quality.taste import taste_of
 from scaffold.generator import plan_for
 
 SESSION_FILE = Path(".agent") / "ui_sessions.json"
+
+STARTER_HINTS = (
+    "flask",
+    "django",
+    "fastapi",
+    "next.js",
+    "nextjs",
+    "react",
+    "vue",
+    "svelte",
+    "cli",
+    "command line",
+    "discord",
+    "static site",
+    "landing page",
+)
+
+
+def blueprint_for(message: str):
+    """A product blueprint when the sentence is a product, not a stack choice."""
+    lowered = (message or "").lower()
+    if any(token in lowered for token in STARTER_HINTS):
+        return None
+    return match_blueprint(message)
 
 
 @dataclass
@@ -229,6 +256,10 @@ class AgentRuntime:
             yield from self._existing_project_flow(message, mode)
 
     def _scaffold_flow(self, message: str, mode: str, require_approval: bool) -> Iterator[dict]:
+        blueprint = blueprint_for(message)
+        if blueprint is not None:
+            yield from self._blueprint_flow(blueprint, mode, require_approval)
+            return
         draft = plan_for(message, name=self.root.name)
         plan_id = f"scaffold-{int(time.time()) % 100000:05d}"
         steps = draft["steps"]
@@ -266,6 +297,53 @@ class AgentRuntime:
         yield from self._verify_and_review(mode, generated_tests=True)
         yield from self._deploy_plan()
 
+    def _blueprint_flow(self, blueprint, mode: str, require_approval: bool) -> Iterator[dict]:
+        """Render a whole product from the catalogue, then run the real gates."""
+        project = render_blueprint(blueprint)
+        plan_id = f"app-{int(time.time()) % 100000:05d}"
+        steps = [
+            "Model the domain: " + ", ".join(entity.table for entity in blueprint.entities),
+            "Persistence, auth and row isolation",
+            "API, validation and feature flow",
+            "Responsive UI with design tokens and states",
+            "Tests, then deploy plan",
+        ]
+        yield _event(
+            "plan",
+            f"Plan: {blueprint.title} ({len(project.files)} files)",
+            {
+                "id": plan_id,
+                "template": blueprint.id,
+                "title": blueprint.title,
+                "steps": steps,
+                "files": sorted(project.files),
+                "reasons": [blueprint.prompt],
+                "questions": [],
+                "awaiting_approval": require_approval,
+                "blueprint": blueprint.id,
+            },
+        )
+        if require_approval:
+            self._pending = {
+                "id": plan_id,
+                "message": blueprint.prompt,
+                "mode": mode,
+                "blueprint": blueprint.id,
+            }
+            yield _event("plan_pending", "Waiting for plan approval.", {"id": plan_id})
+            return
+        project.write(self.root)
+        if mode == "power":
+            for path in sorted(project.files):
+                yield _event("file", f"+ {path}", {"path": path})
+        yield _event(
+            "scaffold",
+            f"Built {blueprint.title}: {len(project.files)} files, tests included",
+            {"files": sorted(project.files), "blueprint": blueprint.id, "warnings": []},
+        )
+        yield from self._verify_and_review(mode, generated_tests=False, strict_taste=True)
+        yield from self._deploy_plan()
+
     def continue_plan(self, plan_id: str = "") -> Iterator[dict]:
         pending = getattr(self, "_pending", None)
         if not pending:
@@ -273,6 +351,15 @@ class AgentRuntime:
             return
         message = pending["message"]
         mode = pending.get("mode", "simple")
+        blueprint = blueprint_for(message) if pending.get("blueprint") else None
+        if blueprint is not None:
+            project = render_blueprint(blueprint)
+            project.write(self.root)
+            self._pending = None
+            yield _event("scaffold", f"Built {blueprint.title}: {len(project.files)} files", {"files": sorted(project.files)})
+            yield from self._verify_and_review(mode, generated_tests=False, strict_taste=True)
+            yield from self._deploy_plan()
+            return
         result = ScaffoldGenerator(self.root).create_from_request(message, name=self.root.name)
         self._pending = None
         if not result.ok:
@@ -296,7 +383,7 @@ class AgentRuntime:
             {"ok": True, "steps": 3},
         )
 
-    def _verify_and_review(self, mode: str, generated_tests: bool) -> Iterator[dict]:
+    def _verify_and_review(self, mode: str, generated_tests: bool, strict_taste: bool = False) -> Iterator[dict]:
         if generated_tests:
             gen = write_generated_tests(self.root)
             if gen["written"]:
@@ -318,6 +405,18 @@ class AgentRuntime:
             f"Review: {review.summary()}",
             {"score": review.score, "ok": review.ok, "findings": top, "counts": review.to_dict()["counts"]},
         )
+        taste = taste_of(self.root)
+        yield _event(
+            "taste",
+            taste.summary(),
+            {"score": taste.score, "ok": taste.ok, "findings": [item.to_dict() for item in taste.findings[:5]]},
+        )
+        if strict_taste and not taste.ok:
+            yield _event(
+                "error",
+                "The interface is not at the product bar: " + ", ".join(item.rule for item in taste.findings[:4]),
+                {"plain": taste.summary(), "taste": taste.to_dict()},
+            )
 
     def _deploy_plan(self) -> Iterator[dict]:
         try:

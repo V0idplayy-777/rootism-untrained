@@ -1,0 +1,613 @@
+{
+  "version": 1,
+  "split": "holdout",
+  "cases": [
+    {
+      "prompt": "a shared whiteboard of sticky notes for the team",
+      "kind": "catalogue",
+      "expected": [
+        "shared-notes",
+        "notes-app"
+      ],
+      "matched": "shared-notes",
+      "score": 8,
+      "exact": true,
+      "accepted": true,
+      "refused": false,
+      "evidence": [
+        "word:shared",
+        "word:note",
+        "word:note",
+        "word:shared"
+      ]
+    },
+    {
+      "prompt": "a list of suppliers and their phone numbers",
+      "kind": "catalogue",
+      "expected": [
+        "contact-book"
+      ],
+      "matched": "contact-book",
+      "score": 5,
+      "exact": true,
+      "accepted": true,
+      "refused": false,
+      "evidence": [
+        "hint:phone number"
+      ]
+    },
+    {
+      "prompt": "keep a tally of my daily coffee spending",
+      "kind": "catalogue",
+      "expected": [
+        "expense-log",
+        "budget-categories"
+      ],
+      "matched": "budget-categories",
+      "score": 3,
+      "exact": false,
+      "accepted": true,
+      "refused": false,
+      "evidence": [
+        "hint:spending"
+      ]
+    },
+    {
+      "prompt": "a seating plan for the wedding",
+      "kind": "catalogue",
+      "expected": [
+        "event-guests"
+      ],
+      "matched": null,
+      "score": 0,
+      "exact": false,
+      "accepted": false,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "an editorial plan for next month's newsletters",
+      "kind": "catalogue",
+      "expected": [
+        "content-calendar"
+      ],
+      "matched": "content-calendar",
+      "score": 3,
+      "exact": true,
+      "accepted": true,
+      "refused": false,
+      "evidence": [
+        "hint:editorial"
+      ]
+    },
+    {
+      "prompt": "follow orders from checkout to doorstep",
+      "kind": "catalogue",
+      "expected": [
+        "order-fulfilment"
+      ],
+      "matched": null,
+      "score": 0,
+      "exact": false,
+      "accepted": false,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "sign out cameras and laptops to staff",
+      "kind": "catalogue",
+      "expected": [
+        "equipment-rentals"
+      ],
+      "matched": "org-structure",
+      "score": 4,
+      "exact": false,
+      "accepted": false,
+      "refused": false,
+      "evidence": [
+        "hint:staff"
+      ]
+    },
+    {
+      "prompt": "who is on shift at the cafe this week",
+      "kind": "catalogue",
+      "expected": [
+        "team-roster",
+        "volunteer-roster",
+        "desk-bookings"
+      ],
+      "matched": "volunteer-roster",
+      "score": 3,
+      "exact": false,
+      "accepted": true,
+      "refused": false,
+      "evidence": [
+        "hint:shift"
+      ]
+    },
+    {
+      "prompt": "a company directory with job titles",
+      "kind": "catalogue",
+      "expected": [
+        "org-structure",
+        "team-roster"
+      ],
+      "matched": null,
+      "score": 0,
+      "exact": false,
+      "accepted": false,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "monthly objectives for each squad",
+      "kind": "catalogue",
+      "expected": [
+        "shared-goals"
+      ],
+      "matched": "shared-goals",
+      "score": 3,
+      "exact": true,
+      "accepted": true,
+      "refused": false,
+      "evidence": [
+        "hint:objective"
+      ]
+    },
+    {
+      "prompt": "a stocktake of the stockroom",
+      "kind": "catalogue",
+      "expected": [
+        "inventory-simple",
+        "warehouse-stock"
+      ],
+      "matched": null,
+      "score": 0,
+      "exact": false,
+      "accepted": false,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "a list of all the plants in the office and their watering days",
+      "kind": "catalogue",
+      "expected": [
+        "plant-care"
+      ],
+      "matched": "plant-care",
+      "score": 5,
+      "exact": true,
+      "accepted": true,
+      "refused": false,
+      "evidence": [
+        "hint:plant",
+        "word:plant",
+        "word:plant"
+      ]
+    },
+    {
+      "prompt": "a log of gym classes I attend",
+      "kind": "catalogue",
+      "expected": [
+        "gym-tracker",
+        "workout-log"
+      ],
+      "matched": "gym-tracker",
+      "score": 4,
+      "exact": true,
+      "accepted": true,
+      "refused": false,
+      "evidence": [
+        "hint:gym",
+        "word:gym"
+      ]
+    },
+    {
+      "prompt": "a list of dishes we serve and what's in them",
+      "kind": "catalogue",
+      "expected": [
+        "restaurant-menu",
+        "recipe-ingredients"
+      ],
+      "matched": "restaurant-menu",
+      "score": 4,
+      "exact": true,
+      "accepted": true,
+      "refused": false,
+      "evidence": [
+        "hint:dish",
+        "word:dish"
+      ]
+    },
+    {
+      "prompt": "a list of the flats we manage and their tenants",
+      "kind": "catalogue",
+      "expected": [
+        "property-maintenance"
+      ],
+      "matched": "property-maintenance",
+      "score": 3,
+      "exact": true,
+      "accepted": true,
+      "refused": false,
+      "evidence": [
+        "hint:tenant"
+      ]
+    },
+    {
+      "prompt": "a register of the children in my class",
+      "kind": "catalogue",
+      "expected": [
+        "class-roster"
+      ],
+      "matched": null,
+      "score": 0,
+      "exact": false,
+      "accepted": false,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "track the books I lend to friends",
+      "kind": "catalogue",
+      "expected": [
+        "reading-list"
+      ],
+      "matched": "equipment-rentals",
+      "score": 5,
+      "exact": false,
+      "accepted": false,
+      "refused": false,
+      "evidence": [
+        "hint:lend"
+      ]
+    },
+    {
+      "prompt": "a queue of customer emails for the support team",
+      "kind": "catalogue",
+      "expected": [
+        "support-queues",
+        "support-board",
+        "shared-inbox"
+      ],
+      "matched": null,
+      "score": 0,
+      "exact": false,
+      "accepted": false,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "track candidate applications for each role",
+      "kind": "catalogue",
+      "expected": [
+        "hiring-pipeline",
+        "job-applications"
+      ],
+      "matched": "hiring-pipeline",
+      "score": 4,
+      "exact": true,
+      "accepted": true,
+      "refused": false,
+      "evidence": [
+        "hint:candidate",
+        "word:candidate"
+      ]
+    },
+    {
+      "prompt": "a weekly rota for the volunteers",
+      "kind": "catalogue",
+      "expected": [
+        "volunteer-roster"
+      ],
+      "matched": "volunteer-roster",
+      "score": 4,
+      "exact": true,
+      "accepted": true,
+      "refused": false,
+      "evidence": [
+        "hint:volunteer",
+        "word:volunteer"
+      ]
+    },
+    {
+      "prompt": "a project timeline with milestones",
+      "kind": "catalogue",
+      "expected": [
+        "project-milestones"
+      ],
+      "matched": "project-milestones",
+      "score": 5,
+      "exact": true,
+      "accepted": true,
+      "refused": false,
+      "evidence": [
+        "hint:milestone",
+        "word:milestone",
+        "word:milestone"
+      ]
+    },
+    {
+      "prompt": "a kanban for our design team",
+      "kind": "catalogue",
+      "expected": [
+        "task-board",
+        "sprint-board"
+      ],
+      "matched": "task-board",
+      "score": 6,
+      "exact": true,
+      "accepted": true,
+      "refused": false,
+      "evidence": [
+        "hint:kanban",
+        "word:kanban"
+      ]
+    },
+    {
+      "prompt": "a list of invoices waiting to be paid",
+      "kind": "catalogue",
+      "expected": [
+        "client-invoices"
+      ],
+      "matched": "client-invoices",
+      "score": 4,
+      "exact": true,
+      "accepted": true,
+      "refused": false,
+      "evidence": [
+        "hint:invoice",
+        "word:invoice"
+      ]
+    },
+    {
+      "prompt": "a booking sheet for the tennis courts",
+      "kind": "out-of-catalogue",
+      "expected": [],
+      "matched": null,
+      "score": 0,
+      "exact": true,
+      "accepted": true,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "a spell checker for old English",
+      "kind": "out-of-catalogue",
+      "expected": [],
+      "matched": null,
+      "score": 0,
+      "exact": true,
+      "accepted": true,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "a PDF renderer in C",
+      "kind": "out-of-catalogue",
+      "expected": [],
+      "matched": null,
+      "score": 0,
+      "exact": true,
+      "accepted": true,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "a packet sniffer for wifi",
+      "kind": "out-of-catalogue",
+      "expected": [],
+      "matched": null,
+      "score": 0,
+      "exact": true,
+      "accepted": true,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "a recommender system for movies at scale",
+      "kind": "out-of-catalogue",
+      "expected": [],
+      "matched": null,
+      "score": 0,
+      "exact": true,
+      "accepted": true,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "a programming language interpreter",
+      "kind": "out-of-catalogue",
+      "expected": [],
+      "matched": null,
+      "score": 0,
+      "exact": true,
+      "accepted": true,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "a blockchain smart contract auditor",
+      "kind": "out-of-catalogue",
+      "expected": [],
+      "matched": null,
+      "score": 0,
+      "exact": true,
+      "accepted": true,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "a real-time audio mixer",
+      "kind": "out-of-catalogue",
+      "expected": [],
+      "matched": null,
+      "score": 0,
+      "exact": true,
+      "accepted": true,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "a container runtime",
+      "kind": "out-of-catalogue",
+      "expected": [],
+      "matched": null,
+      "score": 0,
+      "exact": true,
+      "accepted": true,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "a satellite orbit simulator",
+      "kind": "out-of-catalogue",
+      "expected": [],
+      "matched": null,
+      "score": 0,
+      "exact": true,
+      "accepted": true,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "a TCP congestion control simulator",
+      "kind": "out-of-catalogue",
+      "expected": [],
+      "matched": null,
+      "score": 0,
+      "exact": true,
+      "accepted": true,
+      "refused": true,
+      "evidence": []
+    }
+  ],
+  "metrics": {
+    "total": 34,
+    "catalogue": 23,
+    "out_of_catalogue": 11,
+    "catalogue_accepted": 15,
+    "catalogue_accuracy": 0.6522,
+    "catalogue_exact": 13,
+    "catalogue_exact_accuracy": 0.5652,
+    "out_refused": 11,
+    "out_refusal_rate": 1.0,
+    "false_claims": 0,
+    "overall_passed": 26,
+    "overall_accuracy": 0.7647
+  },
+  "failures": [
+    {
+      "prompt": "a seating plan for the wedding",
+      "kind": "catalogue",
+      "expected": [
+        "event-guests"
+      ],
+      "matched": null,
+      "score": 0,
+      "exact": false,
+      "accepted": false,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "follow orders from checkout to doorstep",
+      "kind": "catalogue",
+      "expected": [
+        "order-fulfilment"
+      ],
+      "matched": null,
+      "score": 0,
+      "exact": false,
+      "accepted": false,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "sign out cameras and laptops to staff",
+      "kind": "catalogue",
+      "expected": [
+        "equipment-rentals"
+      ],
+      "matched": "org-structure",
+      "score": 4,
+      "exact": false,
+      "accepted": false,
+      "refused": false,
+      "evidence": [
+        "hint:staff"
+      ]
+    },
+    {
+      "prompt": "a company directory with job titles",
+      "kind": "catalogue",
+      "expected": [
+        "org-structure",
+        "team-roster"
+      ],
+      "matched": null,
+      "score": 0,
+      "exact": false,
+      "accepted": false,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "a stocktake of the stockroom",
+      "kind": "catalogue",
+      "expected": [
+        "inventory-simple",
+        "warehouse-stock"
+      ],
+      "matched": null,
+      "score": 0,
+      "exact": false,
+      "accepted": false,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "a register of the children in my class",
+      "kind": "catalogue",
+      "expected": [
+        "class-roster"
+      ],
+      "matched": null,
+      "score": 0,
+      "exact": false,
+      "accepted": false,
+      "refused": true,
+      "evidence": []
+    },
+    {
+      "prompt": "track the books I lend to friends",
+      "kind": "catalogue",
+      "expected": [
+        "reading-list"
+      ],
+      "matched": "equipment-rentals",
+      "score": 5,
+      "exact": false,
+      "accepted": false,
+      "refused": false,
+      "evidence": [
+        "hint:lend"
+      ]
+    },
+    {
+      "prompt": "a queue of customer emails for the support team",
+      "kind": "catalogue",
+      "expected": [
+        "support-queues",
+        "support-board",
+        "shared-inbox"
+      ],
+      "matched": null,
+      "score": 0,
+      "exact": false,
+      "accepted": false,
+      "refused": true,
+      "evidence": []
+    }
+  ]
+}

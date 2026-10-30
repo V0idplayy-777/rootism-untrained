@@ -491,7 +491,7 @@ def _synonym_query(task: str) -> str:
     return " ".join(sorted(words))
 
 
-def expand_query(task: str) -> list[str]:
+def expand_query(task: str, max_hops: int = 0) -> list[str]:
     """Split a task into complementary retrieval queries.
 
     Lexical retrieval over identifier tokens handles natural language poorly
