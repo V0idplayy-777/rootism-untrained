@@ -451,8 +451,6 @@ class SwiGLUMLP(nn.Module):
 
         if self.use_moe:
             moe_output = self.moe(x)
-            # Combine MLP and MoE outputs
-            # MoE gets a smaller weight to keep stability
             return mlp_output + 0.5 * moe_output
 
         return mlp_output
@@ -474,7 +472,6 @@ class MoEExperts(nn.Module):
         self.top_k = top_k
         self.intermediate_size = config.intermediate_size
 
-        # Create experts - 4 specialized experts
         self.experts = nn.ModuleList([
             nn.Linear(self.hidden_size, self.intermediate_size, bias=False),
             nn.Linear(self.hidden_size, self.intermediate_size, bias=False),
@@ -482,7 +479,6 @@ class MoEExperts(nn.Module):
             nn.Linear(self.hidden_size, self.intermediate_size, bias=False),
         ])
 
-        # Router network - determines which experts to use
         self.router = nn.Linear(self.hidden_size, self.num_experts)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -496,42 +492,31 @@ class MoEExperts(nn.Module):
         """
         batch_size, seq_len, _ = x.shape
 
-        # Compute router logits
         router_logits = self.router(x).view(batch_size, seq_len, self.num_experts)
 
-        # Top-k routing
         top_k_weights, top_k_indices = torch.topk(
             router_logits, self.top_k, dim=-1
         )
 
-        # Softmax the selected expert weights
         top_k_weights = F.softmax(top_k_weights, dim=-1)
 
-        # Expand dimensions for broadcasting
         x_flat = x.view(-1, self.hidden_size)
         expanded_weights = top_k_weights.view(-1, self.top_k).unsqueeze(-1)
         expanded_indices = top_k_indices.view(-1, self.top_k).unsqueeze(-1)
 
-        # Compute expert outputs
         expert_outputs = torch.zeros(
             batch_size * seq_len, self.intermediate_size, device=x.device
         )
 
-        # Loop over experts and accumulate
         for expert_idx in range(self.num_experts):
-            # Mask for which tokens route to this expert
             mask = (expanded_indices == expert_idx).any(dim=1)
             if not mask.any():
                 continue
 
-            # Get the tokens routing to this expert
             expert_input = x_flat[mask]
-            # Apply the expert linear transformation
             expert_output = self.experts[expert_idx](expert_input)
-            # Scatter-add into output
             expert_outputs[mask] += expert_output * expanded_weights[mask]
 
-        # Reshape back to [batch, seq_len, intermediate_size]
         output = expert_outputs.view(batch_size, seq_len, self.intermediate_size)
 
         return output
@@ -755,16 +740,10 @@ class CodingAgentModel(nn.Module):
         seq_len = hidden_states.shape[1]
         device = hidden_states.device
 
-        # Simple positional bias that decays with distance
-        # This can be replaced with AST-distance-based bias in future
         bias = torch.arange(seq_len, device=device).unsqueeze(1) -                 torch.arange(seq_len, device=device).unsqueeze(0)
-        # Decay bias with distance (attend more to nearby tokens)
         bias = torch.exp(-0.1 * torch.abs(bias))
-        # Invert so that closer = higher bias (we want to attend to close tokens)
-        # Scale to be a soft attention bias
         bias = bias / (self.head_dim ** 0.5) / 8.0
 
-        # Return with head dimension: [1, 1, seq_len, seq_len] -> [1, num_heads, seq_len, seq_len]
         return bias.float().unsqueeze(0).unsqueeze(0).expand(
             self.config.num_heads, -1, -1, -1
         ).contiguous()

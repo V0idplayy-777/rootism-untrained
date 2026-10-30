@@ -530,9 +530,7 @@ def expand_query(task: str) -> list[str]:
 
         queries.append(synonyms)
 
-    # Multi-hop: add follow-up queries based on task type
     if max_hops > 0:
-        # Add code-specific follow-up queries
         task_lower = task.lower()
         if "fix" in task_lower or "bug" in task_lower:
             queries.append("error handling " + " ".join(idents[:3]) if idents else "")
@@ -1600,13 +1598,10 @@ class HierarchicalSummarizer:
         file_mtime = Path(path).stat().st_mtime
         
         if path in summaries and summaries[path].get("mtime") == file_mtime:
-            # Return cached summary
             return summaries[path]["summary"]
         
-        # Compute fresh summary
         summary = self.file_summary(path, max_chars=max_chars)
         
-        # Cache it
         summaries[path] = {"mtime": file_mtime, "summary": summary}
         self._save_cached_summaries(summaries)
         
@@ -1616,19 +1611,14 @@ class HierarchicalSummarizer:
         """Directory summary with caching - only recomputes when files change."""
         summaries = self._load_cached_summaries()
         
-        # Check if any files in this directory have changed
         dir_key = directory.rstrip("/")
         cached_dir_summary = summaries.get(dir_key, {}).get("dir_summary")
         
-        # Simple cache check: if the directory hasn't been modified since last cache
         if dir_key in summaries and summaries[dir_key].get("dir_mtime", 0) > 0:
-            # Return cached directory summary
             return cached_dir_summary if cached_dir_summary else self.directory_summary(directory, max_files=max_files)
         
-        # Compute fresh directory summary
         result = self.directory_summary(directory, max_files=max_files)
         
-        # Cache it
         if dir_key not in summaries:
             summaries[dir_key] = {}
         summaries[dir_key]["dir_mtime"] = Path(directory).parent.stat().st_mtime if Path(directory).exists() else 0

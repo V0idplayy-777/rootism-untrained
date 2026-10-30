@@ -153,11 +153,8 @@ def run(
         flat = recall_for(asm, t["task"], t["gold"], "flat", budget)
         hier = recall_for(asm, t["task"], t["gold"], "hierarchical", budget)
         
-        # Check if correct symbol is mentioned in the pack
         symbols_mentioned = hier["features"].get("symbols_in_pack", [])
         
-        # Enhanced fix rate check: if the task mentions a function and the
-        # retrieved context includes that function's file
         task_lower = t["task"].lower()
         function_mentioned = any(
             kw in task_lower
@@ -172,7 +169,6 @@ def run(
             "symbols_mentioned": symbols_mentioned,
         })
         
-        # Track fix rate for multi-file tasks
         total_fix_attempts += 1
         if t["gold"] in (hier["in_chunks"] or hier["in_text"] or []):
             fix_count += 1

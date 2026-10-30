@@ -948,9 +948,7 @@ class WorkingSet:
             if path in self.recent:
                 self.recent.remove(path)
             self.recent.append(path)
-            # Evict if over max
             if len(self.recent) > self.max_files // 2:
-                # Remove least recently used non-pinned file
                 for p in self.recent:
                     if p not in self.pinned:
                         self.recent.remove(p)
