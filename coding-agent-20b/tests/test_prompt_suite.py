@@ -23,7 +23,6 @@ def test_tuning_split_passes_all_routing_guards():
 def test_holdout_split_meets_its_recorded_regression_floor():
     report = evaluate_prompts(SPLITS["holdout"])
     metrics = report["metrics"]
-    # Recorded once with the frozen matcher: 15/23 catalogue, 11/11 refusals.
     assert metrics["catalogue_accepted"] >= 15
     assert metrics["out_refusal_rate"] == 1.0
     assert metrics["false_claims"] == 0

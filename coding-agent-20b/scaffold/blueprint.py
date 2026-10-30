@@ -306,9 +306,6 @@ def delete_row(table: str, row_id: str, scope_sql: str, scope_params: list[Any])
 '''
 
 
-# ---------------------------------------------------------------------------
-# Names, types and options
-# ---------------------------------------------------------------------------
 
 
 def pascal(name: str) -> str:
@@ -443,9 +440,6 @@ class AppProject:
         return "".join(parts)
 
 
-# ---------------------------------------------------------------------------
-# Schema
-# ---------------------------------------------------------------------------
 
 
 def _column(spec: FieldSpec) -> str:
@@ -545,9 +539,6 @@ def _index_statements(blueprint: AppBlueprint, auth: bool) -> list[str]:
     return [line.strip() for line in schema.splitlines() if line.strip().upper().startswith(("CREATE INDEX", "CREATE TABLE"))]
 
 
-# ---------------------------------------------------------------------------
-# Pydantic models
-# ---------------------------------------------------------------------------
 
 
 def _schema_module(blueprint: AppBlueprint, auth: bool) -> str:
@@ -652,7 +643,6 @@ def _schema_module(blueprint: AppBlueprint, auth: bool) -> str:
             lines.append('        """Reject values that are not ISO ' + spec.type + 's."""')
             lines.append("        return " + helper + "(value)")
             lines.append("")
-        # Cross-field time check for scheduling entities.
         if blueprint.feature == "schedule" and entity.name == _feature_entity(blueprint).name:
             lines.extend(
                 [
@@ -775,9 +765,6 @@ def _status_field(entity: EntitySpec) -> FieldSpec:
     return field_spec
 
 
-# ---------------------------------------------------------------------------
-# Store
-# ---------------------------------------------------------------------------
 
 
 def _feature_entity(blueprint: AppBlueprint) -> EntitySpec:
@@ -887,7 +874,6 @@ def _store_module(blueprint: AppBlueprint, auth: bool, options: BlueprintOptions
         lines.append("SORTABLE_" + upper(entity.name) + " = frozenset(" + repr(sorted(set(sortable))) + ")")
     lines.append("")
 
-    # Visibility predicate.
     lines.append("")
     lines.append("def _scope(viewer: dict[str, str], alias: str = \"t\") -> tuple[str, list[Any]]:")
     if team:
@@ -1277,9 +1263,6 @@ def _csv_function(entity: EntitySpec, blueprint: AppBlueprint) -> list[str]:
     return lines
 
 
-# ---------------------------------------------------------------------------
-# API, auth and app entry point
-# ---------------------------------------------------------------------------
 
 
 def _api_module(blueprint: AppBlueprint, auth: bool) -> str:
@@ -1606,9 +1589,6 @@ os.environ.setdefault("SQLITE_PATH", str(Path(tempfile.mkdtemp(prefix="app-test-
 '''
 
 
-# ---------------------------------------------------------------------------
-# Generated tests
-# ---------------------------------------------------------------------------
 
 
 FIELD_SAMPLES = {
@@ -1692,7 +1672,6 @@ def _tests_api_module(blueprint: AppBlueprint, auth: bool) -> str:
     ]
     lines.extend(_signin_helper(auth))
 
-    # Payload builders.
     for entity in blueprint.entities:
         lines.append("def payload_" + entity.name + "(**overrides) -> dict:")
         lines.append('    """A valid ' + entity.label.lower() + ' payload; tests override one field at a time."""')
@@ -1705,7 +1684,6 @@ def _tests_api_module(blueprint: AppBlueprint, auth: bool) -> str:
         lines.append("")
         lines.append("")
 
-    # Recursive creators.
     for entity in blueprint.entities:
         relation_args = "".join(", " + spec.name + "=None" for spec in entity.relations)
         lines.append("def make_" + entity.name + "(headers: dict[str, str]" + relation_args + ", **overrides) -> dict:")
@@ -1897,7 +1875,6 @@ def _tests_api_module(blueprint: AppBlueprint, auth: bool) -> str:
             "",
         ]
     )
-    # Relations: one test per parent/child pair.
     for parent in blueprint.entities:
         for child in blueprint.entities:
             relation = next((spec for spec in child.relations if spec.ref == parent.name), None)
@@ -2134,9 +2111,6 @@ def _tests_schema_module(blueprint: AppBlueprint, auth: bool) -> str:
     ).rstrip() + "\n"
 
 
-# ---------------------------------------------------------------------------
-# Docs, environment and project assembly
-# ---------------------------------------------------------------------------
 
 
 def _readme(blueprint: AppBlueprint, module: str, auth: bool, port: int) -> str:

@@ -250,7 +250,6 @@ def _task_entities() -> tuple[EntitySpec, ...]:
 
 
 BLUEPRINTS: tuple[AppBlueprint, ...] = (
-    # ---------------------------------------------------------------- CRUD
     BP(
         "personal-tasks",
         "a simple to-do app for myself with due dates and priorities",
@@ -484,7 +483,6 @@ BLUEPRINTS: tuple[AppBlueprint, ...] = (
         accent="#166534",
         tags=("crud", "home"),
     ),
-    # ----------------------------------------------------------- relations
     BP(
         "project-tasks",
         "a project tracker with projects and their tasks, with login",
@@ -1210,7 +1208,6 @@ BLUEPRINTS: tuple[AppBlueprint, ...] = (
         accent="#0e7490",
         tags=("relations", "deep"),
     ),
-    # ------------------------------------------------------------- features
     BP(
         "task-board",
         "a kanban board for my tasks with todo, doing and done columns",

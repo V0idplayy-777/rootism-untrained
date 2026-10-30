@@ -251,7 +251,7 @@ def evaluate_tasks(
         )
         try:
             result = synth.synthesise(task.instruction, constraints=task.constraints)
-        except Exception as exc:  # a backend crash is a task failure, not a suite crash
+        except Exception as exc:
             results.append(
                 TaskResult(task.id, False, False, 0, 0, time.time() - started, errors=[f"backend: {exc}"])
             )

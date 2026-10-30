@@ -190,7 +190,6 @@ def _legacy_index(index: str) -> str:
     index = index.replace('<meta name="theme-color" content="#4f46e5" />', "")
     index = index.replace('<a class="skip-link" href="#view">Skip to content</a>', "")
     index = re.sub(r"<noscript>.*?</noscript>", "", index, flags=re.S)
-    # The legacy layout used a fixed container instead of the app shell.
     index = index.replace('<div class="shell">', '<div class="shell"><div class="container">')
     index = index.replace("  </div>\n  <div class=\"toast\"", "  </div></div>\n  <div class=\"toast\"")
     return index

@@ -31,7 +31,7 @@ class PromptCase:
 
     prompt: str
     expected: tuple[str, ...] = ()
-    kind: str = "catalogue"  # catalogue | out-of-catalogue
+    kind: str = "catalogue"
     note: str = ""
 
     @property
@@ -87,9 +87,6 @@ OUT_OF_CATALOGUE_CASES: tuple[PromptCase, ...] = (
 
 TUNING_CASES: tuple[PromptCase, ...] = CATALOGUE_CASES + OUT_OF_CATALOGUE_CASES
 
-# Measured once, after the matcher was frozen. These prompts are intentionally
-# kept out of every tuning loop: report the number, do not "fix" the cases.
-# Catalogue accepted 15/23 (65%), out-of-catalogue refused 11/11 (100%).
 HOLDOUT_CASES: tuple[PromptCase, ...] = (
     PromptCase("a shared whiteboard of sticky notes for the team", ("shared-notes", "notes-app")),
     PromptCase("a list of suppliers and their phone numbers", ("contact-book",)),
@@ -233,8 +230,6 @@ def guards(report: dict) -> list[str]:
     metrics = report["metrics"]
     problems: list[str] = []
     if report.get("split") == "holdout":
-        # The holdout is a measurement, not a tuning target: these are the
-        # recorded floors from the frozen matcher, not aspirations.
         catalogue_floor, exact_floor = 0.60, 0.50
     else:
         catalogue_floor, exact_floor = 0.85, 0.60

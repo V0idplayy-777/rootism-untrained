@@ -106,7 +106,6 @@ class LocalProcessProvider(DeployProvider):
 
         port = _free_port()
         start = (ctx.profile.start_cmd or "").replace("${PORT}", str(port)).replace("$PORT", str(port))
-        # Detected commands often hard-code the project port; move it to ours.
         start = re.sub(r"--port\s+\d+", f"--port {port}", start)
         env = dict(os.environ)
         env.update(ctx.runtime_env)

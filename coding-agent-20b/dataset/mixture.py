@@ -33,10 +33,6 @@ DEFAULT_MIXTURE: list[SourceSpec] = [
     SourceSpec("recovery-sft", 0.02, 2.0, "instruction"),
     SourceSpec("project-scaffold-sft", 0.05, 2.0, "instruction"),
     SourceSpec("repair-trace-sft", 0.05, 2.5, "instruction"),
-    # Whole-product generation is the product: request -> running app, the
-    # near-misses that teach preference, the repair trail, and the design taste
-    # behind the default interface. 0.18 here plus 0.10 in the two sources above
-    # is the deliberate upsample (was 0.03 combined).
     SourceSpec("app-sft", 0.07, 3.0, "instruction"),
     SourceSpec("app-repair-sft", 0.05, 3.0, "instruction"),
     SourceSpec("app-taste-sft", 0.03, 2.5, "instruction"),
