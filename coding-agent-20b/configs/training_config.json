@@ -20,7 +20,8 @@
     "global_batch_size": 2048,
     "micro_batch_size_per_gpu": 2,
     "gradient_accumulation_steps": "auto",
-    "sequence_length": 8192
+    "sequence_length": 32768,
+    "long_sequence_length": 32768
   },
 
   "deepspeed": {

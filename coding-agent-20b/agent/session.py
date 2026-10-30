@@ -264,6 +264,7 @@ class SessionState:
     scratchpad: list[str] = field(default_factory=list)
 
     files_touched: list[str] = field(default_factory=list)
+    working_set: WorkingSet = field(default_factory=lambda: WorkingSet())
 
     tests_passed: list[str] = field(default_factory=list)
 
@@ -918,3 +919,60 @@ class ContextWindow:
             "steps": [s.to_dict() for s in self.steps],
             "state": self.state.to_dict(),
         }
+
+class WorkingSet:
+    """A pin-protected set of files that always survive compaction.
+
+    The working set contains files the agent is currently working on,
+    recently modified files, or files the user has explicitly pinned.
+    These files are preserved across observation compaction so the model
+    never loses track of the files it is actively modifying.
+    """
+
+    def __init__(self, max_files: int = 20):
+        self.max_files = max_files
+        self.pinned: set[str] = set()
+        self.recent: collections.deque = collections.deque(maxlen=max_files // 2)
+        self._file_access_counts: dict[str, int] = defaultdict(int)
+
+    def pin(self, path: str) -> None:
+        """Pin a file so it always survives compaction."""
+        self.pinned.add(path)
+        if path not in self._file_access_counts:
+            self._file_access_counts[path] = 0
+
+    def access(self, path: str) -> None:
+        """Record that a file was accessed."""
+        self._file_access_counts[path] += 1
+        if path not in self.pinned:
+            if path in self.recent:
+                self.recent.remove(path)
+            self.recent.append(path)
+            # Evict if over max
+            if len(self.recent) > self.max_files // 2:
+                # Remove least recently used non-pinned file
+                for p in self.recent:
+                    if p not in self.pinned:
+                        self.recent.remove(p)
+                        break
+
+    def get_surviving_files(self) -> list[str]:
+        """Get the list of files that should survive compaction."""
+        surviving = list(self.pinned)
+        surviving.extend(list(self.recent))
+        return surviving[:self.max_files]
+
+    def to_dict(self) -> dict:
+        return {
+            "pinned": list(self.pinned),
+            "recent": list(self.recent),
+            "access_counts": dict(self._file_access_counts),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict, max_files: int = 20) -> "WorkingSet":
+        ws = cls(max_files=max_files)
+        ws.pinned = set(data.get("pinned", []))
+        ws.recent = collections.deque(data.get("recent", []), maxlen=max_files // 2)
+        ws._file_access_counts = defaultdict(int, data.get("access_counts", {}))
+        return ws
