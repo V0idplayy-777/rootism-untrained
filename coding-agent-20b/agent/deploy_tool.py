@@ -354,7 +354,7 @@ def tool_schemas() -> dict[str, dict[str, Any]]:
                 "properties": {
                     "provider": {
                         "type": "string",
-                        "enum": ["auto", "local", "vercel", "github-pages", "fly", "render", "coolify", "archive"],
+                        "enum": ["auto", "process", "local", "vercel", "github-pages", "fly", "render", "coolify", "archive"],
                         "description": "Target host; 'auto' picks the best usable one",
                     },
                     "dry_run": {

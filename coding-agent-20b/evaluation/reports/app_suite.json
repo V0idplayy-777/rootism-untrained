@@ -37,7 +37,7 @@
       "total": 65
     }
   },
-  "duration": 140.82,
+  "duration": 121.02,
   "failures": [],
   "passed": 65,
   "results": [
@@ -52,42 +52,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 0.665,
+          "duration": 0.542,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.026,
+          "duration": 0.02,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.004,
+          "duration": 0.003,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1578 bytes",
-          "duration": 0.484,
+          "duration": 0.324,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 1.37,
+      "duration": 1.12,
       "failures": [],
       "files": 25,
       "id": "personal-tasks",
@@ -107,42 +107,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.572,
+          "duration": 1.169,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.028,
+          "duration": 0.027,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1560 bytes",
-          "duration": 0.485,
+          "duration": 0.326,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.32,
+      "duration": 1.7,
       "failures": [],
       "files": 28,
       "id": "notes-app",
@@ -162,42 +162,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.479,
+          "duration": 1.194,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.029,
+          "duration": 0.019,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1570 bytes",
-          "duration": 0.483,
+          "duration": 0.326,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.23,
+      "duration": 1.72,
       "failures": [],
       "files": 28,
       "id": "bookmark-vault",
@@ -217,42 +217,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 0.702,
+          "duration": 0.561,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.021,
+          "duration": 0.015,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.003,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1570 bytes",
-          "duration": 0.48,
+          "duration": 0.329,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 1.44,
+      "duration": 1.13,
       "failures": [],
       "files": 25,
       "id": "recipe-box",
@@ -272,42 +272,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.435,
+          "duration": 1.13,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.026,
+          "duration": 0.018,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.004,
+          "duration": 0.003,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1560 bytes",
-          "duration": 0.48,
+          "duration": 0.325,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.13,
+      "duration": 1.7,
       "failures": [],
       "files": 28,
       "id": "contact-book",
@@ -327,42 +327,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.389,
+          "duration": 1.167,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.027,
+          "duration": 0.018,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.003,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1557 bytes",
-          "duration": 0.483,
+          "duration": 0.326,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.13,
+      "duration": 1.69,
       "failures": [],
       "files": 28,
       "id": "expense-log",
@@ -382,21 +382,21 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.405,
+          "duration": 1.193,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.028,
+          "duration": 0.022,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
@@ -410,14 +410,14 @@
         },
         {
           "detail": "/healthz ok, / served 1559 bytes",
-          "duration": 0.481,
+          "duration": 0.328,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.1,
+      "duration": 1.73,
       "failures": [],
       "files": 28,
       "id": "habit-tracker",
@@ -437,42 +437,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.522,
+          "duration": 1.138,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.033,
+          "duration": 0.019,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1574 bytes",
-          "duration": 0.483,
+          "duration": 0.323,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.27,
+      "duration": 1.66,
       "failures": [],
       "files": 28,
       "id": "reading-list",
@@ -492,42 +492,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.348,
+          "duration": 1.161,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.026,
+          "duration": 0.019,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.004,
+          "duration": 0.003,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1565 bytes",
-          "duration": 0.478,
+          "duration": 0.327,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.03,
+      "duration": 1.68,
       "failures": [],
       "files": 28,
       "id": "inventory-simple",
@@ -547,42 +547,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.242,
+          "duration": 1.27,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.029,
+          "duration": 0.019,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1580 bytes",
-          "duration": 0.485,
+          "duration": 0.478,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 1.99,
+      "duration": 1.95,
       "failures": [],
       "files": 28,
       "id": "job-applications",
@@ -602,21 +602,21 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.385,
+          "duration": 1.191,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.028,
+          "duration": 0.022,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
@@ -630,14 +630,14 @@
         },
         {
           "detail": "/healthz ok, / served 1564 bytes",
-          "duration": 0.479,
+          "duration": 0.322,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.12,
+      "duration": 1.73,
       "failures": [],
       "files": 28,
       "id": "workout-log",
@@ -657,14 +657,14 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 0.653,
+          "duration": 0.549,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.023,
+          "duration": 0.019,
           "name": "critic",
           "ok": true,
           "skipped": false
@@ -685,14 +685,14 @@
         },
         {
           "detail": "/healthz ok, / served 1568 bytes",
-          "duration": 0.478,
+          "duration": 0.325,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 1.38,
+      "duration": 1.12,
       "failures": [],
       "files": 25,
       "id": "plant-care",
@@ -712,42 +712,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.479,
+          "duration": 1.399,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.04,
+          "duration": 0.031,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1576 bytes",
-          "duration": 0.486,
+          "duration": 0.485,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.19,
+      "duration": 2.1,
       "failures": [],
       "files": 28,
       "id": "project-tasks",
@@ -767,42 +767,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.499,
+          "duration": 1.327,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.033,
+          "duration": 0.028,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.004,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.006,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1569 bytes",
-          "duration": 0.489,
+          "duration": 0.482,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.16,
+      "duration": 2.02,
       "failures": [],
       "files": 28,
       "id": "client-invoices",
@@ -822,42 +822,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.484,
+          "duration": 1.275,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.034,
+          "duration": 0.024,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1568 bytes",
-          "duration": 0.488,
+          "duration": 0.476,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.24,
+      "duration": 1.95,
       "failures": [],
       "files": 28,
       "id": "course-lessons",
@@ -877,42 +877,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.455,
+          "duration": 1.286,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.034,
+          "duration": 0.03,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1571 bytes",
-          "duration": 0.488,
+          "duration": 0.482,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.21,
+      "duration": 1.98,
       "failures": [],
       "files": 28,
       "id": "trip-itinerary",
@@ -932,42 +932,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.454,
+          "duration": 1.384,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.034,
+          "duration": 0.029,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1571 bytes",
-          "duration": 0.486,
+          "duration": 0.478,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.21,
+      "duration": 2.07,
       "failures": [],
       "files": 28,
       "id": "warehouse-stock",
@@ -987,42 +987,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 0.723,
+          "duration": 0.654,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.028,
+          "duration": 0.02,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.004,
+          "duration": 0.003,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1560 bytes",
-          "duration": 0.482,
+          "duration": 0.327,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 1.46,
+      "duration": 1.18,
       "failures": [],
       "files": 25,
       "id": "pet-records",
@@ -1042,42 +1042,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.515,
+          "duration": 1.163,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.036,
+          "duration": 0.025,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1561 bytes",
-          "duration": 0.489,
+          "duration": 0.329,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.27,
+      "duration": 1.7,
       "failures": [],
       "files": 28,
       "id": "event-guests",
@@ -1097,21 +1097,21 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.479,
+          "duration": 1.262,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.033,
+          "duration": 0.027,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
@@ -1125,14 +1125,14 @@
         },
         {
           "detail": "/healthz ok, / served 1572 bytes",
-          "duration": 0.484,
+          "duration": 0.325,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.23,
+      "duration": 1.84,
       "failures": [],
       "files": 28,
       "id": "sprint-issues",
@@ -1152,14 +1152,14 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.422,
+          "duration": 1.247,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.031,
+          "duration": 0.023,
           "name": "critic",
           "ok": true,
           "skipped": false
@@ -1173,21 +1173,21 @@
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.004,
+          "duration": 0.003,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1556 bytes",
-          "duration": 0.484,
+          "duration": 0.329,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.17,
+      "duration": 1.78,
       "failures": [],
       "files": 28,
       "id": "blog-comments",
@@ -1207,42 +1207,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.461,
+          "duration": 1.243,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.042,
+          "duration": 0.024,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1586 bytes",
-          "duration": 0.489,
+          "duration": 0.479,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.23,
+      "duration": 1.93,
       "failures": [],
       "files": 28,
       "id": "property-maintenance",
@@ -1262,42 +1262,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 0.706,
+          "duration": 0.575,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.03,
+          "duration": 0.024,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1580 bytes",
-          "duration": 0.483,
+          "duration": 0.478,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 1.45,
+      "duration": 1.26,
       "failures": [],
       "files": 25,
       "id": "vehicle-service",
@@ -1317,1437 +1317,7 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.545,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.033,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1564 bytes",
-          "duration": 0.505,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.32,
-      "failures": [],
-      "files": 28,
-      "id": "class-roster",
-      "ok": true,
-      "prompt": "a class roster with classes and enrolled students",
-      "taste_score": 100,
-      "title": "Class Roster"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.52,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.04,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1570 bytes",
-          "duration": 0.487,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.28,
-      "failures": [],
-      "files": 28,
-      "id": "sales-pipeline",
-      "ok": true,
-      "prompt": "a sales pipeline with pipelines and deals in stages",
-      "taste_score": 100,
-      "title": "Sales Pipeline"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.516,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.033,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1557 bytes",
-          "duration": 0.487,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.22,
-      "failures": [],
-      "files": 28,
-      "id": "budget-categories",
-      "ok": true,
-      "prompt": "a monthly budget with categories and allocated amounts",
-      "taste_score": 100,
-      "title": "Budget"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.449,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.035,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1559 bytes",
-          "duration": 0.486,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.2,
-      "failures": [],
-      "files": 28,
-      "id": "team-roster",
-      "ok": true,
-      "prompt": "a team roster with teams and members and roles",
-      "taste_score": 100,
-      "title": "Team Roster"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.661,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.081,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.004,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.006,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1598 bytes",
-          "duration": 0.646,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.53,
-      "failures": [],
-      "files": 28,
-      "id": "project-milestones",
-      "ok": true,
-      "prompt": "a project plan with projects, milestones and tasks under each milestone",
-      "taste_score": 100,
-      "title": "Project Milestones"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.625,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.036,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1588 bytes",
-          "duration": 0.49,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.39,
-      "failures": [],
-      "files": 28,
-      "id": "recipe-ingredients",
-      "ok": true,
-      "prompt": "a recipe manager with recipes and structured ingredient lines",
-      "taste_score": 100,
-      "title": "Recipe Ingredients"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.63,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.037,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1566 bytes",
-          "duration": 0.491,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.39,
-      "failures": [],
-      "files": 28,
-      "id": "org-structure",
-      "ok": true,
-      "prompt": "an org chart with organisations, teams and people",
-      "taste_score": 100,
-      "title": "Org Structure"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.478,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.034,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1566 bytes",
-          "duration": 0.489,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.24,
-      "failures": [],
-      "files": 28,
-      "id": "support-queues",
-      "ok": true,
-      "prompt": "a support ticket system with queues and tickets",
-      "taste_score": 100,
-      "title": "Support Queues"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.591,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.038,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1569 bytes",
-          "duration": 0.497,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.36,
-      "failures": [],
-      "files": 28,
-      "id": "course-quizzes",
-      "ok": true,
-      "prompt": "a quiz builder with courses, quizzes and questions",
-      "taste_score": 100,
-      "title": "Course Quizzes"
-    },
-    {
-      "checks": [
-        {
-          "detail": "25 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 0.833,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.035,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.004,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1556 bytes",
-          "duration": 0.489,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 1.59,
-      "failures": [],
-      "files": 25,
-      "id": "farm-fields",
-      "ok": true,
-      "prompt": "a farm planner with farms, fields and crops",
-      "taste_score": 100,
-      "title": "Farm Fields"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.486,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.032,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1573 bytes",
-          "duration": 0.488,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.24,
-      "failures": [],
-      "files": 28,
-      "id": "restaurant-menu",
-      "ok": true,
-      "prompt": "a restaurant menu editor with restaurants and dishes",
-      "taste_score": 100,
-      "title": "Restaurant Menu"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.7,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.039,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1573 bytes",
-          "duration": 0.491,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.47,
-      "failures": [],
-      "files": 28,
-      "id": "agency-projects",
-      "ok": true,
-      "prompt": "an agency workspace with clients, projects and tasks",
-      "taste_score": 100,
-      "title": "Agency Projects"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.464,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.035,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.006,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1572 bytes",
-          "duration": 0.482,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.22,
-      "failures": [],
-      "files": 28,
-      "id": "task-board",
-      "ok": true,
-      "prompt": "a kanban board for my tasks with todo, doing and done columns",
-      "taste_score": 100,
-      "title": "Task Board"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.587,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.053,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.004,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.006,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1583 bytes",
-          "duration": 0.487,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.36,
-      "failures": [],
-      "files": 28,
-      "id": "sprint-board",
-      "ok": true,
-      "prompt": "a sprint board where each sprint has issues that move across columns",
-      "taste_score": 100,
-      "title": "Sprint Board"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.618,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.035,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1585 bytes",
-          "duration": 0.489,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.38,
-      "failures": [],
-      "files": 28,
-      "id": "hiring-pipeline",
-      "ok": true,
-      "prompt": "a hiring pipeline where candidates move through interview stages",
-      "taste_score": 100,
-      "title": "Hiring Pipeline"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.488,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.03,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1573 bytes",
-          "duration": 0.483,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.23,
-      "failures": [],
-      "files": 28,
-      "id": "support-board",
-      "ok": true,
-      "prompt": "a support board where tickets move from open to resolved",
-      "taste_score": 100,
-      "title": "Support Board"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.479,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.033,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1583 bytes",
-          "duration": 0.482,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.13,
-      "failures": [],
-      "files": 28,
-      "id": "content-calendar",
-      "ok": true,
-      "prompt": "a content calendar with posts moving from draft to published",
-      "taste_score": 100,
-      "title": "Content Calendar"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.577,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.027,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.004,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1562 bytes",
-          "duration": 0.484,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.32,
-      "failures": [],
-      "files": 28,
-      "id": "bug-triage",
-      "ok": true,
-      "prompt": "a bug triage board with severity and status columns",
-      "taste_score": 100,
-      "title": "Bug Triage"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.487,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.031,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1569 bytes",
-          "duration": 0.486,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.24,
-      "failures": [],
-      "files": 28,
-      "id": "order-fulfilment",
-      "ok": true,
-      "prompt": "an order fulfilment board from paid to shipped",
-      "taste_score": 100,
-      "title": "Order Fulfilment"
-    },
-    {
-      "checks": [
-        {
-          "detail": "25 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 0.705,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.023,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1582 bytes",
-          "duration": 0.476,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 1.43,
-      "failures": [],
-      "files": 25,
-      "id": "renovation-board",
-      "ok": true,
-      "prompt": "a renovation project board with rooms moving through stages",
-      "taste_score": 100,
-      "title": "Renovation Board"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.594,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.061,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.004,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.006,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1576 bytes",
-          "duration": 0.486,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.33,
-      "failures": [],
-      "files": 28,
-      "id": "meeting-rooms",
-      "ok": true,
-      "prompt": "book meeting rooms with conflict detection by room and time",
-      "taste_score": 100,
-      "title": "Meeting Rooms"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.585,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.034,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1581 bytes",
-          "duration": 0.487,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.34,
-      "failures": [],
-      "files": 28,
-      "id": "salon-appointments",
-      "ok": true,
-      "prompt": "a salon appointment book that prevents double bookings",
-      "taste_score": 100,
-      "title": "Salon Appointments"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.492,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.035,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.004,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1577 bytes",
-          "duration": 0.486,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.2,
-      "failures": [],
-      "files": 28,
-      "id": "tutoring-sessions",
-      "ok": true,
-      "prompt": "a tutoring scheduler that stops overlapping sessions",
-      "taste_score": 100,
-      "title": "Tutoring Sessions"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.596,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.039,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.006,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1583 bytes",
-          "duration": 0.483,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.35,
-      "failures": [],
-      "files": 28,
-      "id": "equipment-rentals",
-      "ok": true,
-      "prompt": "equipment rental bookings with no overlapping reservations",
-      "taste_score": 100,
-      "title": "Equipment Rentals"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.454,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.061,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.004,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.006,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1579 bytes",
-          "duration": 0.49,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.19,
-      "failures": [],
-      "files": 28,
-      "id": "clinic-slots",
-      "ok": true,
-      "prompt": "clinic appointments where a practitioner cannot be double booked",
-      "taste_score": 100,
-      "title": "Clinic Slots"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.542,
-          "name": "tests",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100, 0 findings",
-          "duration": 0.032,
-          "name": "critic",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "100/100",
-          "duration": 0.003,
-          "name": "taste",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
-          "name": "deploy",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "/healthz ok, / served 1570 bytes",
-          "duration": 0.492,
-          "name": "server",
-          "ok": true,
-          "skipped": false
-        }
-      ],
-      "critic_score": 100,
-      "duration": 2.3,
-      "failures": [],
-      "files": 28,
-      "id": "desk-bookings",
-      "ok": true,
-      "prompt": "coworking desk bookings with conflict checks per desk",
-      "taste_score": 100,
-      "title": "Desk Bookings"
-    },
-    {
-      "checks": [
-        {
-          "detail": "28 files",
-          "duration": 0.0,
-          "name": "render",
-          "ok": true,
-          "skipped": false
-        },
-        {
-          "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.573,
+          "duration": 1.167,
           "name": "tests",
           "ok": true,
           "skipped": false
@@ -2774,7 +1344,447 @@
           "skipped": false
         },
         {
+          "detail": "/healthz ok, / served 1564 bytes",
+          "duration": 0.329,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 1.75,
+      "failures": [],
+      "files": 28,
+      "id": "class-roster",
+      "ok": true,
+      "prompt": "a class roster with classes and enrolled students",
+      "taste_score": 100,
+      "title": "Class Roster"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.21,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.035,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
           "detail": "/healthz ok, / served 1570 bytes",
+          "duration": 0.33,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 1.75,
+      "failures": [],
+      "files": 28,
+      "id": "sales-pipeline",
+      "ok": true,
+      "prompt": "a sales pipeline with pipelines and deals in stages",
+      "taste_score": 100,
+      "title": "Sales Pipeline"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.311,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.024,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1557 bytes",
+          "duration": 0.329,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 1.84,
+      "failures": [],
+      "files": 28,
+      "id": "budget-categories",
+      "ok": true,
+      "prompt": "a monthly budget with categories and allocated amounts",
+      "taste_score": 100,
+      "title": "Budget"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.257,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.023,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1559 bytes",
+          "duration": 0.327,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 1.84,
+      "failures": [],
+      "files": 28,
+      "id": "team-roster",
+      "ok": true,
+      "prompt": "a team roster with teams and members and roles",
+      "taste_score": 100,
+      "title": "Team Roster"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.308,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.034,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1598 bytes",
+          "duration": 0.49,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 2.01,
+      "failures": [],
+      "files": 28,
+      "id": "project-milestones",
+      "ok": true,
+      "prompt": "a project plan with projects, milestones and tasks under each milestone",
+      "taste_score": 100,
+      "title": "Project Milestones"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.28,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.028,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1588 bytes",
+          "duration": 0.328,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 1.82,
+      "failures": [],
+      "files": 28,
+      "id": "recipe-ingredients",
+      "ok": true,
+      "prompt": "a recipe manager with recipes and structured ingredient lines",
+      "taste_score": 100,
+      "title": "Recipe Ingredients"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.406,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.032,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1566 bytes",
+          "duration": 0.331,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 1.95,
+      "failures": [],
+      "files": 28,
+      "id": "org-structure",
+      "ok": true,
+      "prompt": "an org chart with organisations, teams and people",
+      "taste_score": 100,
+      "title": "Org Structure"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.307,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.026,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1566 bytes",
+          "duration": 0.333,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 1.85,
+      "failures": [],
+      "files": 28,
+      "id": "support-queues",
+      "ok": true,
+      "prompt": "a support ticket system with queues and tickets",
+      "taste_score": 100,
+      "title": "Support Queues"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.319,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.029,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1569 bytes",
           "duration": 0.486,
           "name": "server",
           "ok": true,
@@ -2782,7 +1792,997 @@
         }
       ],
       "critic_score": 100,
-      "duration": 2.32,
+      "duration": 2.06,
+      "failures": [],
+      "files": 28,
+      "id": "course-quizzes",
+      "ok": true,
+      "prompt": "a quiz builder with courses, quizzes and questions",
+      "taste_score": 100,
+      "title": "Course Quizzes"
+    },
+    {
+      "checks": [
+        {
+          "detail": "25 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 0.699,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.03,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1556 bytes",
+          "duration": 0.326,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 1.23,
+      "failures": [],
+      "files": 25,
+      "id": "farm-fields",
+      "ok": true,
+      "prompt": "a farm planner with farms, fields and crops",
+      "taste_score": 100,
+      "title": "Farm Fields"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.214,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.026,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1573 bytes",
+          "duration": 0.48,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 1.9,
+      "failures": [],
+      "files": 28,
+      "id": "restaurant-menu",
+      "ok": true,
+      "prompt": "a restaurant menu editor with restaurants and dishes",
+      "taste_score": 100,
+      "title": "Restaurant Menu"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.329,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.028,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1573 bytes",
+          "duration": 0.484,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 2.02,
+      "failures": [],
+      "files": 28,
+      "id": "agency-projects",
+      "ok": true,
+      "prompt": "an agency workspace with clients, projects and tasks",
+      "taste_score": 100,
+      "title": "Agency Projects"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.265,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.029,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1572 bytes",
+          "duration": 0.332,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 1.8,
+      "failures": [],
+      "files": 28,
+      "id": "task-board",
+      "ok": true,
+      "prompt": "a kanban board for my tasks with todo, doing and done columns",
+      "taste_score": 100,
+      "title": "Task Board"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.423,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.03,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1583 bytes",
+          "duration": 0.327,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 2.01,
+      "failures": [],
+      "files": 28,
+      "id": "sprint-board",
+      "ok": true,
+      "prompt": "a sprint board where each sprint has issues that move across columns",
+      "taste_score": 100,
+      "title": "Sprint Board"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.31,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.024,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1585 bytes",
+          "duration": 0.329,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 1.89,
+      "failures": [],
+      "files": 28,
+      "id": "hiring-pipeline",
+      "ok": true,
+      "prompt": "a hiring pipeline where candidates move through interview stages",
+      "taste_score": 100,
+      "title": "Hiring Pipeline"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.231,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.032,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.003,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1573 bytes",
+          "duration": 0.481,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 1.92,
+      "failures": [],
+      "files": 28,
+      "id": "support-board",
+      "ok": true,
+      "prompt": "a support board where tickets move from open to resolved",
+      "taste_score": 100,
+      "title": "Support Board"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.439,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.025,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1583 bytes",
+          "duration": 0.479,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 2.12,
+      "failures": [],
+      "files": 28,
+      "id": "content-calendar",
+      "ok": true,
+      "prompt": "a content calendar with posts moving from draft to published",
+      "taste_score": 100,
+      "title": "Content Calendar"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.348,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.019,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1562 bytes",
+          "duration": 0.481,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 2.03,
+      "failures": [],
+      "files": 28,
+      "id": "bug-triage",
+      "ok": true,
+      "prompt": "a bug triage board with severity and status columns",
+      "taste_score": 100,
+      "title": "Bug Triage"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.755,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.019,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1569 bytes",
+          "duration": 0.48,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 2.43,
+      "failures": [],
+      "files": 28,
+      "id": "order-fulfilment",
+      "ok": true,
+      "prompt": "an order fulfilment board from paid to shipped",
+      "taste_score": 100,
+      "title": "Order Fulfilment"
+    },
+    {
+      "checks": [
+        {
+          "detail": "25 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 0.672,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.015,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.003,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1582 bytes",
+          "duration": 0.322,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 1.24,
+      "failures": [],
+      "files": 25,
+      "id": "renovation-board",
+      "ok": true,
+      "prompt": "a renovation project board with rooms moving through stages",
+      "taste_score": 100,
+      "title": "Renovation Board"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.432,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.035,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.005,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1576 bytes",
+          "duration": 0.485,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 2.13,
+      "failures": [],
+      "files": 28,
+      "id": "meeting-rooms",
+      "ok": true,
+      "prompt": "book meeting rooms with conflict detection by room and time",
+      "taste_score": 100,
+      "title": "Meeting Rooms"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.427,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.029,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1581 bytes",
+          "duration": 0.485,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 2.12,
+      "failures": [],
+      "files": 28,
+      "id": "salon-appointments",
+      "ok": true,
+      "prompt": "a salon appointment book that prevents double bookings",
+      "taste_score": 100,
+      "title": "Salon Appointments"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.369,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.032,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1577 bytes",
+          "duration": 0.486,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 2.07,
+      "failures": [],
+      "files": 28,
+      "id": "tutoring-sessions",
+      "ok": true,
+      "prompt": "a tutoring scheduler that stops overlapping sessions",
+      "taste_score": 100,
+      "title": "Tutoring Sessions"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.449,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.025,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1583 bytes",
+          "duration": 0.329,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 1.98,
+      "failures": [],
+      "files": 28,
+      "id": "equipment-rentals",
+      "ok": true,
+      "prompt": "equipment rental bookings with no overlapping reservations",
+      "taste_score": 100,
+      "title": "Equipment Rentals"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.587,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.052,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.003,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.006,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1579 bytes",
+          "duration": 0.507,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 2.39,
+      "failures": [],
+      "files": 28,
+      "id": "clinic-slots",
+      "ok": true,
+      "prompt": "clinic appointments where a practitioner cannot be double booked",
+      "taste_score": 100,
+      "title": "Clinic Slots"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.649,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.032,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.002,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.004,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1570 bytes",
+          "duration": 0.485,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 2.4,
+      "failures": [],
+      "files": 28,
+      "id": "desk-bookings",
+      "ok": true,
+      "prompt": "coworking desk bookings with conflict checks per desk",
+      "taste_score": 100,
+      "title": "Desk Bookings"
+    },
+    {
+      "checks": [
+        {
+          "detail": "28 files",
+          "duration": 0.0,
+          "name": "render",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "python -m pytest -q: 1 passed, 0 failed",
+          "duration": 1.581,
+          "name": "tests",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100, 0 findings",
+          "duration": 0.032,
+          "name": "critic",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "100/100",
+          "duration": 0.003,
+          "name": "taste",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "archive (5 steps, 4 warnings)",
+          "duration": 0.005,
+          "name": "deploy",
+          "ok": true,
+          "skipped": false
+        },
+        {
+          "detail": "/healthz ok, / served 1570 bytes",
+          "duration": 0.484,
+          "name": "server",
+          "ok": true,
+          "skipped": false
+        }
+      ],
+      "critic_score": 100,
+      "duration": 2.28,
       "failures": [],
       "files": 28,
       "id": "shared-tasks",
@@ -2802,42 +2802,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.56,
+          "duration": 1.559,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.039,
+          "duration": 0.031,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.007,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1582 bytes",
-          "duration": 0.485,
+          "duration": 0.477,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.27,
+      "duration": 2.24,
       "failures": [],
       "files": 28,
       "id": "shared-notes",
@@ -2857,42 +2857,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.625,
+          "duration": 1.712,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.028,
+          "duration": 0.026,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1583 bytes",
-          "duration": 0.493,
+          "duration": 0.327,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.38,
+      "duration": 2.24,
       "failures": [],
       "files": 28,
       "id": "family-groceries",
@@ -2912,42 +2912,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.709,
+          "duration": 1.403,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.039,
+          "duration": 0.03,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1575 bytes",
-          "duration": 0.494,
+          "duration": 0.33,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.47,
+      "duration": 1.95,
       "failures": [],
       "files": 28,
       "id": "shared-goals",
@@ -2967,42 +2967,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.646,
+          "duration": 1.481,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.026,
+          "duration": 0.021,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1572 bytes",
-          "duration": 0.482,
+          "duration": 0.33,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.39,
+      "duration": 2.01,
       "failures": [],
       "files": 28,
       "id": "shared-clients",
@@ -3022,42 +3022,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.495,
+          "duration": 1.39,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.027,
+          "duration": 0.025,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1573 bytes",
-          "duration": 0.482,
+          "duration": 0.479,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.19,
+      "duration": 2.07,
       "failures": [],
       "files": 28,
       "id": "shared-inbox",
@@ -3077,21 +3077,21 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.501,
+          "duration": 1.439,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.026,
+          "duration": 0.02,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
@@ -3105,14 +3105,14 @@
         },
         {
           "detail": "/healthz ok, / served 1564 bytes",
-          "duration": 0.484,
+          "duration": 0.328,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.19,
+      "duration": 1.96,
       "failures": [],
       "files": 28,
       "id": "book-club",
@@ -3132,21 +3132,21 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.681,
+          "duration": 1.386,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.026,
+          "duration": 0.021,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
@@ -3160,14 +3160,14 @@
         },
         {
           "detail": "/healthz ok, / served 1585 bytes",
-          "duration": 0.482,
+          "duration": 0.475,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.42,
+      "duration": 2.01,
       "failures": [],
       "files": 28,
       "id": "volunteer-roster",
@@ -3187,42 +3187,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.547,
+          "duration": 1.55,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.039,
+          "duration": 0.026,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1589 bytes",
-          "duration": 0.492,
+          "duration": 0.329,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.26,
+      "duration": 2.09,
       "failures": [],
       "files": 28,
       "id": "expense-dashboard",
@@ -3242,42 +3242,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.631,
+          "duration": 1.221,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.027,
+          "duration": 0.02,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1580 bytes",
-          "duration": 0.482,
+          "duration": 0.476,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.37,
+      "duration": 1.9,
       "failures": [],
       "files": 28,
       "id": "habit-dashboard",
@@ -3297,42 +3297,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.659,
+          "duration": 1.302,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.031,
+          "duration": 0.025,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1577 bytes",
-          "duration": 0.496,
+          "duration": 0.477,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.32,
+      "duration": 1.99,
       "failures": [],
       "files": 28,
       "id": "sales-dashboard",
@@ -3352,42 +3352,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.517,
+          "duration": 1.391,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.037,
+          "duration": 0.025,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.006,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1566 bytes",
-          "duration": 0.483,
+          "duration": 0.482,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.22,
+      "duration": 2.08,
       "failures": [],
       "files": 28,
       "id": "survey-results",
@@ -3407,42 +3407,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 0.848,
+          "duration": 0.78,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.028,
+          "duration": 0.021,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.003,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.006,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1573 bytes",
-          "duration": 0.488,
+          "duration": 0.484,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 1.6,
+      "duration": 1.46,
       "failures": [],
       "files": 25,
       "id": "gym-tracker",
@@ -3462,14 +3462,14 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.839,
+          "duration": 1.575,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.028,
+          "duration": 0.034,
           "name": "critic",
           "ok": true,
           "skipped": false
@@ -3483,21 +3483,21 @@
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1560 bytes",
-          "duration": 0.487,
+          "duration": 0.338,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.59,
+      "duration": 2.13,
       "failures": [],
       "files": 28,
       "id": "reading-stats",
@@ -3517,42 +3517,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 1.963,
+          "duration": 1.478,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.054,
+          "duration": 0.025,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.004,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.008,
+          "duration": 0.005,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1570 bytes",
-          "duration": 0.67,
+          "duration": 0.477,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 2.83,
+      "duration": 2.21,
       "failures": [],
       "files": 28,
       "id": "job-search-stats",
@@ -3572,42 +3572,42 @@
         },
         {
           "detail": "python -m pytest -q: 1 passed, 0 failed",
-          "duration": 0.763,
+          "duration": 0.605,
           "name": "tests",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100, 0 findings",
-          "duration": 0.025,
+          "duration": 0.019,
           "name": "critic",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "100/100",
-          "duration": 0.004,
+          "duration": 0.002,
           "name": "taste",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "archive (5 steps, 4 warnings)",
-          "duration": 0.005,
+          "duration": 0.004,
           "name": "deploy",
           "ok": true,
           "skipped": false
         },
         {
           "detail": "/healthz ok, / served 1579 bytes",
-          "duration": 0.487,
+          "duration": 0.322,
           "name": "server",
           "ok": true,
           "skipped": false
         }
       ],
       "critic_score": 100,
-      "duration": 1.41,
+      "duration": 1.12,
       "failures": [],
       "files": 25,
       "id": "energy-usage",

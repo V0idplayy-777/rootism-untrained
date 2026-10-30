@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "backend": "none",
+  "tasks": 8,
+  "metrics": {
+    "tasks": 8,
+    "compile_rate": 0.0,
+    "test_pass_rate": 0.0
+  },
+  "note": "No trained checkpoint is present in this checkout; training requires a GPU. Pass --backend command --command '<stdin/stdout model>' to evaluate a real model."
+}

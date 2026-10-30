@@ -342,7 +342,7 @@ deployment and a surface a non-engineer can use. This section tracks that work.
 
 | # | Gap | Mechanism | Verify |
 |---|-----|-----------|--------|
-| 7.1 | No end-to-end deploy | `deploy/`: detection → Dockerfile/compose → provider → health check → landing/README/report | `tests/test_deploy.py` |
+| 7.1 | No end-to-end deploy | `deploy/`: detection → Dockerfile/compose → provider → health check → landing/README/report; `process` provider runs the app without Docker or accounts | `tests/test_deploy.py`, `tests/test_process_provider.py` |
 | 7.2 | Only ad-hoc single files | `scaffold/`: six starters, optional auth/DB, managed Postgres, intent routing | `tests/test_scaffold.py` |
 | 7.3 | No review/test loop | `quality/`: critic, test runner + failure parsing, generated tests, humanised errors | `tests/test_quality.py` |
 | 7.4 | No project memory | `agent/project_map.py`, `agent/semantic_index.py`, `agent/checkpoint.py`, `agent/plan_approval.py` | `tests/test_project_memory.py` |
@@ -432,8 +432,25 @@ python -m dataset.app_corpus --out data/app-corpus --verify
 agent app "a team task list where I can share tasks with teammates"
 ```
 
-Last runs: **284 passed, 6 skipped**; suite **65/65**; guards reject each variant
-for the intended reason; verified corpus rows carry real pytest output.
+Last runs: **305 passed, 6 skipped**; suite **65/65 in 121s**; guards reject
+each variant for the intended reason; the full `--verify` corpus run completed
+with **47/47 blueprints** carrying observed pytest evidence (11 MB).
+
+Routing is measured separately on wording the blueprints were not authored from
+(`evaluation/prompt_suite.py`): the 40-prompt tuning split is 100%, but the
+then-frozen **34-prompt holdout is 15/23 (65%) on catalogue prompts and 11/11
+(100%) on refusal**. That gap is the honest generalisation number, and the next
+fix is a learned router, not more keyword aliases.
+
+The learned path has a real harness (`evaluation/model_suite.py`, eight held-out
+tasks with pre-written tests, any stdin/stdout model) but **no checkpoint**, so a
+real run is not possible in this checkout. `model_suite` reports that explicitly
+and exits 2 instead of pretending a stub is a model.
+
+A live local deploy now exists: the `process` provider booted a generated
+28-file FastAPI app, passed the green gate, answered `/healthz` with 200 and
+returned a URL. It is localhost-only; a public URL still requires a hosted
+provider account.
 
 **Still not solved.**
 
@@ -441,4 +458,8 @@ for the intended reason; verified corpus rows carry real pytest output.
 - The catalogue is small-product shaped; long-tail domains fall back to starters.
 - Repair is restoration of generated modules, not general program synthesis.
 - Hosted deploys are planned and locally booted, not exercised against live
-  provider APIs in CI.
+  provider APIs in CI; the `process` provider is a real but localhost-only run.
+- Unseen-wording routing is 65% on the frozen holdout; out-of-catalogue refusal
+  is 100%, so the failure mode is "fall back/refuse", not "confidently wrong".
+- No model checkpoint exists in this repository; the model-path harness is ready
+  but its quality is unmeasured.

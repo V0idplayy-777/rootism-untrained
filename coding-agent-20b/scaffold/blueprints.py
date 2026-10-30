@@ -21,6 +21,7 @@ as a foreign key with ``ON DELETE`` behaviour.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import re
 
 
 def pluralize(name: str) -> str:
@@ -1992,16 +1993,16 @@ def stats() -> dict:
 
 MATCH_HINTS: dict[str, tuple[str, ...]] = {
     "personal-tasks": ("todo", "to-do", "task list", "to do"),
-    "notes-app": ("note", "notes"),
-    "bookmark-vault": ("bookmark", "link saver"),
+    "notes-app": ("note", "notes", "jot", "idea", "ideas", "scratchpad"),
+    "bookmark-vault": ("bookmark", "link saver", "save link", "read later", "link"),
     "recipe-box": ("recipe box", "cookbook"),
-    "contact-book": ("contact", "address book"),
-    "expense-log": ("expense log", "expenses"),
-    "habit-tracker": ("habit",),
-    "reading-list": ("reading list", "books"),
-    "inventory-simple": ("inventory", "stock"),
+    "contact-book": ("contact", "address book", "phone number", "people"),
+    "expense-log": ("expense log", "expenses", "earn", "income", "spend"),
+    "habit-tracker": ("habit", "streak"),
+    "reading-list": ("reading list", "book", "read", "reading"),
+    "inventory-simple": ("inventory", "stock", "part", "shelf", "reorder", "restock"),
     "job-applications": ("job application", "job search"),
-    "workout-log": ("workout", "exercise"),
+    "workout-log": ("workout", "exercise", "swim", "swimming", "training log", "training session"),
     "plant-care": ("plant",),
     "project-tasks": ("project", "tasks"),
     "client-invoices": ("invoice", "billing"),
@@ -2009,91 +2010,214 @@ MATCH_HINTS: dict[str, tuple[str, ...]] = {
     "trip-itinerary": ("trip", "itinerary", "travel"),
     "warehouse-stock": ("warehouse",),
     "pet-records": ("pet", "vet"),
-    "event-guests": ("guest list", "rsvp", "event"),
+    "event-guests": ("guest list", "rsvp", "event", "birthday", "party", "who is coming"),
     "sprint-issues": ("sprint", "issue"),
     "blog-comments": ("blog", "post", "comment"),
-    "property-maintenance": ("property", "maintenance", "landlord"),
-    "vehicle-service": ("vehicle", "car service"),
+    "property-maintenance": ("property", "properties", "maintenance", "landlord", "repair", "repairs", "rental propert", "tenant"),
+    "vehicle-service": ("vehicle", "car service", "vehicle maintenance", "car maintenance", "mileage", "oil change", "van", "truck", "mot", "service log"),
     "class-roster": ("roster", "class", "student"),
     "sales-pipeline": ("sales pipeline", "deal"),
-    "budget-categories": ("budget",),
+    "budget-categories": ("budget", "spent", "spending", "expense", "cost", "categorised spending"),
     "team-roster": ("roster", "member"),
     "project-milestones": ("milestone",),
     "recipe-ingredients": ("ingredient",),
-    "org-structure": ("org chart", "organisation", "organization"),
+    "org-structure": ("org chart", "organisation", "organization", "reports to", "staff", "reporting line"),
     "support-queues": ("queue", "ticket"),
     "course-quizzes": ("quiz", "question"),
-    "farm-fields": ("farm", "field", "crop"),
+    "farm-fields": ("farm", "field", "crop", "harvest", "planted", "planting", "rotation"),
     "restaurant-menu": ("menu", "restaurant", "dish"),
     "agency-projects": ("agency", "client", "project"),
     "task-board": ("kanban", "board", "column"),
     "sprint-board": ("sprint board",),
     "hiring-pipeline": ("hiring", "candidate", "recruit"),
     "support-board": ("support board", "ticket board"),
-    "content-calendar": ("content calendar", "editorial"),
-    "bug-triage": ("bug", "triage"),
-    "order-fulfilment": ("order", "fulfilment", "fulfillment", "shipping"),
+    "content-calendar": ("content calendar", "editorial", "social post", "social media", "post schedule"),
+    "bug-triage": ("bug", "triage", "qa", "defect"),
+    "order-fulfilment": ("order", "fulfilment", "fulfillment", "shipping", "shipment", "delivery"),
     "renovation-board": ("renovation", "remodel"),
     "meeting-rooms": ("meeting room", "room booking"),
-    "salon-appointments": ("salon", "appointment"),
+    "salon-appointments": ("salon", "appointment", "hair", "hairdresser", "beauty", "barber"),
     "tutoring-sessions": ("tutor",),
-    "equipment-rentals": ("rental", "equipment"),
-    "clinic-slots": ("clinic", "patient", "doctor"),
-    "desk-bookings": ("desk", "coworking"),
-    "shared-tasks": ("share", "team task", "teammate"),
+    "equipment-rentals": ("rental", "equipment rental", "equipment", "rental gear", "lend", "borrow", "tool"),
+    "clinic-slots": ("clinic", "patient", "doctor", "physio", "physiotherapy", "therapist", "appointment"),
+    "desk-bookings": ("desk", "coworking", "hot desk", "hotdesk"),
+    "shared-tasks": ("share", "team task", "teammate", "shared task", "task list shared", "partner", "household", "chore", "housework", "odd job", "house job"),
     "shared-notes": ("shared note",),
-    "family-groceries": ("grocery", "shopping list", "family"),
-    "shared-goals": ("okr", "goal"),
-    "shared-clients": ("shared client", "account manager"),
+    "family-groceries": ("grocery", "groceries", "shopping list", "family", "meal plan", "meal", "supermarket", "food shop"),
+    "shared-goals": ("okr", "goal", "objective", "quarter goal"),
+    "shared-clients": ("shared client", "account manager", "crm"),
     "shared-inbox": ("shared inbox",),
-    "book-club": ("book club",),
+    "book-club": ("book club", "reading club", "reading schedule"),
     "volunteer-roster": ("volunteer", "shift"),
-    "expense-dashboard": ("expense dashboard", "spending"),
+    "expense-dashboard": ("expense dashboard", "spending", "spent", "cost"),
     "habit-dashboard": ("habit dashboard", "streak"),
     "sales-dashboard": ("sales dashboard", "revenue"),
     "survey-results": ("survey", "responses"),
-    "gym-tracker": ("gym", "fitness"),
+    "gym-tracker": ("gym", "fitness", "exercise session"),
     "reading-stats": ("reading stats", "genre"),
     "job-search-stats": ("job stats", "application stats"),
     "energy-usage": ("energy", "kwh"),
 }
 
 
-def match_blueprint(prompt: str, minimum: int = 2) -> AppBlueprint | None:
-    """Pick the closest blueprint for a prompt with a transparent score.
+STOPWORDS = frozenset(
+    """
+    a an the for with and or of to in on at by from into through up down out over
+    my our your their his her its this that these those i we you they he she it
+    is are was were be been being do does did have has had will would should can
+    could may might must just also so than then there here when where what which
+    who whom whose how why all any some more most other another such only own same
+    very too per via vs etc new using use used need needs want wants like make
+    makes get gets keep keeps add adds see show find finds build builds create
+    creates track tracks tracker tracking manage manages manager management
+    system systems tool tools app apps application applications simple small
+    workflow workflows platform service services solution solutions product
+    products project projects list lists thing things stuff ways way help helps
+    easy quick fast best good great nice modern clean internal online web mobile
+    each every plan plans planned planning around about across between within without
+    still yet again once before after while during since until both either neither
+    own lot lots bit much many few several enough okay ok please thanks thank
+    """.split()
+)
 
-    The matcher is deliberately simple and deterministic (keyword coverage plus
-    a feature-word bonus). When nothing scores well the caller should fall back
-    to the generic starters rather than pretending a data app fits.
+PHRASE_STOPWORDS = frozenset(
+    """
+    a an the for with and or of to in on at by from into through during while
+    when where what which who whom whose how why this that these those my our
+    your their his her its i we you they he she it is are was were be been
+    being do does did have has had will would should can could may might must
+    just also so than then there here each every around about across between
+    within without still yet again once before after since until both either
+    neither own lot lots bit much many few several enough okay ok please thanks
+    """.split()
+)
+
+
+GENERIC_HINTS = frozenset(
+    """
+    family project issue field post comment class member queue order share team
+    board event client note notes task tasks stock schedule calendar
+    """.split()
+)
+
+
+@dataclass(frozen=True)
+class BlueprintMatch:
+    """A matcher decision with the evidence a human can audit."""
+
+    blueprint: AppBlueprint
+    score: int
+    evidence: tuple[str, ...] = ()
+    strong: bool = False
+
+    def to_dict(self) -> dict:
+        """Serialise for eval reports."""
+        return {
+            "blueprint": self.blueprint.id,
+            "title": self.blueprint.title,
+            "score": self.score,
+            "evidence": list(self.evidence),
+            "strong": self.strong,
+        }
+
+
+def _stem(word: str) -> str:
+    """A deliberately small plural stemmer (we want recall, not linguistics)."""
+
+    if len(word) > 4 and word.endswith("ies"):
+        return word[:-3] + "y"
+    if len(word) > 4 and word.endswith(("sses", "shes", "ches", "xes", "zes")):
+        return word[:-2]
+    if len(word) > 3 and word.endswith("s") and not word.endswith(("ss", "us", "is")):
+        return word[:-1]
+    return word
+
+
+def _words(text: str) -> list[str]:
+    return [
+        _stem(word)
+        for word in re.findall(r"[a-z0-9]+", (text or "").lower().replace("-", " "))
+    ]
+
+
+def _tokens(text: str) -> list[str]:
+    return [word for word in _words(text) if word not in STOPWORDS and len(word) > 2]
+
+
+def match_blueprint_scored(prompt: str, minimum: int = 3) -> BlueprintMatch | None:
+    """Score every blueprint; refuse when there is no specific evidence.
+
+    Hints are weighted by specificity (multi-word 5, specific single 3, generic
+    single 1), prompt-word overlap contributes at most 5, and a match must have
+    at least one *strong* signal: a multi-word hint, a specific hint, or three
+    overlapping domain words. This is what stops "a stock trading bot" from
+    being answered with the warehouse inventory app.
     """
 
     text = " ".join((prompt or "").lower().replace("-", " ").split())
     if not text:
         return None
-    best: tuple[int, AppBlueprint] | None = None
+    words = set(_tokens(text))
+    word_list = _words(text)
+    phrase_stop = PHRASE_STOPWORDS
+    compact = " " + " ".join(word for word in word_list if word not in phrase_stop and len(word) > 2) + " "
+    best: BlueprintMatch | None = None
     for item in BLUEPRINTS:
+        evidence: list[str] = []
         score = 0
-        hints = MATCH_HINTS.get(item.id, ())
-        for hint in hints:
-            if hint in text:
-                score += 3 if " " in hint else 2
-        for word in item.prompt.lower().replace("-", " ").split():
-            if len(word) > 4 and word in text:
-                score += 1
-        if item.feature != "none" and item.feature in text:
+        strong = False
+        for hint in MATCH_HINTS.get(item.id, ()):
+            hint_words = " ".join(_words(hint))
+            if not hint_words:
+                continue
+            if " " in hint_words:
+                if " " + hint_words + " " not in compact:
+                    continue
+                score += 5
+                strong = True
+                evidence.append("hint:" + hint)
+            else:
+                if hint_words not in words:
+                    continue
+                if hint_words in GENERIC_HINTS:
+                    score += 1
+                    evidence.append("weak:" + hint)
+                else:
+                    score += 3
+                    strong = True
+                    evidence.append("hint:" + hint)
+        overlap = [word for word in _tokens(item.prompt) if word in words]
+        if overlap:
+            score += min(5, len(overlap))
+            if len(overlap) >= 3:
+                strong = True
+            evidence.extend("word:" + word for word in overlap[:4])
+        if item.feature != "none" and item.feature in words:
             score += 2
-        if item.feature == "team" and any(word in text for word in ("invite", "share", "team", "together")):
+        if item.feature == "team" and any(word in words for word in ("invite", "share", "team", "together")):
             score += 2
-        if item.feature == "board" and any(word in text for word in ("kanban", "column", "stage", "board")):
+        if item.feature == "board" and any(word in words for word in ("kanban", "column", "stage", "board")):
             score += 2
-        if item.feature == "schedule" and any(word in text for word in ("book", "booking", "appointment", "calendar", "conflict")):
+        if item.feature == "schedule" and any(word in words for word in ("book", "booking", "appointment", "calendar", "conflict", "slot")):
             score += 2
-        if item.feature == "stats" and any(word in text for word in ("dashboard", "stats", "report", "chart", "trend")):
+        if item.feature == "stats" and any(word in words for word in ("dashboard", "stat", "report", "chart", "trend")):
             score += 2
-        if item.auth and any(word in text for word in ("login", "sign up", "signup", "account", "user", "teammate")):
+        if item.auth and any(word in words for word in ("login", "sign", "signup", "account", "user", "teammate")):
             score += 1
-        if best is None or score > best[0] or (score == best[0] and item.id < best[1].id):
-            best = (score, item)
-    if best is None or best[0] < minimum:
+        if not strong:
+            continue
+        candidate = BlueprintMatch(item, score, tuple(evidence), True)
+        if best is None or candidate.score > best.score:
+            best = candidate
+        elif candidate.score == best.score and candidate.blueprint.id < best.blueprint.id:
+            best = candidate
+
+    if best is None or best.score < minimum or not best.strong:
         return None
-    return best[1]
+    return best
+
+
+def match_blueprint(prompt: str, minimum: int = 3) -> AppBlueprint | None:
+    """Pick the closest blueprint for a prompt, or ``None`` when nothing fits."""
+    match = match_blueprint_scored(prompt, minimum=minimum)
+    return match.blueprint if match else None

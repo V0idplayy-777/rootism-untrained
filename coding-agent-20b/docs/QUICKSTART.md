@@ -73,6 +73,7 @@ each finding with a file, a line and a fix.
 
 ```bash
 agent deploy --dry-run                # the plan: what will be created, in order
+agent deploy --provider process       # no Docker: runs the app on this machine
 agent deploy --provider local         # Docker container on this machine
 agent deploy --provider vercel        # or fly / render / coolify / github-pages
 agent deploy                          # no host configured? portable .tar.gz

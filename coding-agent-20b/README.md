@@ -29,7 +29,7 @@ agent app "an appointment book for a salon" --repair      # restore generated mo
 agent init --request "a web app where users sign up and save tasks" tasks-app   # generic starter
 agent verify                                              # run the tests, explain failures
 agent review                                              # score + findings before shipping
-agent deploy --provider local                             # or vercel/fly/render/coolify
+agent deploy --provider process                           # or local/vercel/fly/render/coolify
 agent preview                                             # chat UI at :7860
 ```
 
@@ -39,7 +39,7 @@ Nothing above needs a GPU or a hosted service. The pieces:
 | --- | --- |
 | `scaffold/` | 65 product blueprints + a full-project renderer (schema, auth, store, API, SPA, tests, deploy), six generic starters (`fastapi-react`, `nextjs-fullstack`, `flask-htmx`, `cli-tool`, `discord-bot`, `static-site`), optional JWT auth + SQLite→Postgres. `agent app` = build → test → critic → taste → plan, with a deterministic repair |
 | `quality/` | deterministic critic (score, findings, fix prompt), test runner with parsed failure signals, generated starter tests, plain-English error humaniser |
-| `deploy/` | detection, Dockerfile/compose generation, seven providers, verified health check, landing page + README link + `DEPLOY.md`/`HOSTING.md`, redacted logs |
+| `deploy/` | detection, Dockerfile/compose generation, eight providers (including a no-Docker local process), verified health check, landing page + README link + `DEPLOY.md`/`HOSTING.md`, redacted logs |
 | `agent/project_map.py`, `agent/semantic_index.py` | persistent project map (tree, summaries, symbols) and local hybrid retrieval |
 | `agent/checkpoint.py`, `agent/plan_approval.py` | byte-exact snapshot/rollback; plans the user must approve before mass writes |
 | `agent/deploy_tool.py` | `deploy` / `scaffold_project` / `project_map` / `search_project` / `checkpoint` as model tools, sharing the CLI code path |

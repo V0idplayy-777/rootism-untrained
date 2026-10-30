@@ -1,7 +1,7 @@
 """``agent`` - one command for the whole idea -> live app loop.
 
     agent init --request "a web app where users sign up and save tasks" my-app
-    agent deploy --provider local          # or vercel/fly/render/coolify
+    agent deploy --provider local          # or process/vercel/fly/render/coolify
     agent preview                          # chat UI at :7860
     agent verify                           # run the tests, show the real failures
     agent review                           # static review before shipping
@@ -947,7 +947,7 @@ def build_parser() -> argparse.ArgumentParser:
     backend.set_defaults(func=cmd_backend)
 
     deploy = subparsers.add_parser("deploy", help="build, push and verify a live URL")
-    deploy.add_argument("--provider", help="local | vercel | fly | render | coolify | github-pages | archive")
+    deploy.add_argument("--provider", help="process | local | vercel | fly | render | coolify | github-pages | archive")
     deploy.add_argument("--dry-run", action="store_true", help="show the plan, create nothing")
     deploy.add_argument("--timeout", type=float, default=900)
     deploy.add_argument("--no-publish", action="store_true", help="do not write landing page/README/DEPLOY.md")

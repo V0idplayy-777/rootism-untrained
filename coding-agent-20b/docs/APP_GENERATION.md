@@ -122,7 +122,7 @@ Each prompt must pass **six** gates; there is no partial credit:
 6. running app: uvicorn boots, `/healthz` returns `{"status": "ok"}`, `/` serves
    the SPA.
 
-Current result: **65/65 prompts, 100% success**, 132s wall clock on CPU, with
+Current result: **65/65 prompts, 100% success**, 121s wall clock on CPU, with
 every gate green. The report is reproducible:
 
 ```text
@@ -135,6 +135,72 @@ every gate green. The report is reproducible:
 | taste   |     65 |      0 |       0 |
 | tests   |     65 |      0 |       0 |
 ```
+
+### 4b. Prompt routing (`evaluation/prompt_suite.py`)
+
+The app suite uses the prompts the blueprints were authored from. Routing needs
+its own, disjoint measure: can the resolver handle wording it has never seen,
+and does it refuse requests no shipped app can satisfy?
+
+```bash
+python -m evaluation.prompt_suite --split tuning            # 40 prompts
+python -m evaluation.prompt_suite --split holdout           # 34 prompts, measured once
+python -m evaluation.prompt_suite --split tuning --guards   # CI gate
+```
+
+Results with the frozen matcher:
+
+| Split | Catalogue accepted | Exact top-1 | Out-of-catalogue refused | Overall |
+| --- | ---: | ---: | ---: | ---: |
+| tuning (40) | 30/30 (100%) | 30/30 (100%) | 10/10 (100%) | 40/40 |
+| **holdout (34, never tuned)** | **15/23 (65%)** | **13/23 (57%)** | **11/11 (100%)** | **26/34 (76%)** |
+
+The holdout is deliberately reported as-is. It finds real gaps in paraphrase
+coverage — seating plans, stockrooms, support inboxes — while never claiming an
+app it cannot build. Adding those words to the matcher would make the number
+look better and destroy the only honest generalisation measure; the next step is
+a learned/embedding router, not more keyword aliases.
+
+`match_blueprint_scored()` returns a `BlueprintMatch` with score, evidence and a
+`strong` flag. A match requires specific evidence (multi-word hint, specific
+single hint, or three overlapping domain words), which is why *"a stock trading
+bot with live market data"* is refused instead of being answered with warehouse
+inventory.
+
+### 4c. The learned path (`evaluation/model_suite.py`)
+
+Eight held-out instructions with tests written before generation drive any
+stdin/stdout model through `LongFormSynthesizer` (plan → skeleton → per-unit
+fill → compile → repair → test):
+
+```bash
+python -m evaluation.model_suite --backend command \
+  --command "python tools/serve_model.py --stdin" \
+  --json evaluation/reports/model_suite.json
+```
+
+This checkout contains **no trained checkpoint** (training requires a GPU), so
+the default run exits `2` and writes that fact to the report rather than
+pretending a stub is a model. The harness itself is covered by
+`tests/test_model_suite.py` with a test double that compiles and passes the
+held-out tests.
+
+### 4d. A live deploy without accounts
+
+`deploy/providers/process.py` starts a `python-web` project's detected start
+command on a free port, waits for the health endpoint, and only reports `ok`
+after a 2xx. It needs no Docker and no token, so the whole loop is demonstrable
+here:
+
+```bash
+agent app "a shared task list for my team" /tmp/process-app --force
+agent deploy --workspace /tmp/process-app --provider process --json
+# {"ok": true, "url": "http://127.0.0.1:40837", "health_url": ".../healthz"}
+```
+
+Verified on a generated 28-file app: green gate passed, uvicorn booted, health
+200. The URL is localhost — a public URL still needs a host account (or a
+tunnel), and that is stated in the result rather than faked.
 
 ## 5. What "taste" means here
 
@@ -157,14 +223,20 @@ as future work rather than pretended.
 
 ## 6. Honest limits
 
-- The corpus is **synthetic and template-derived** with real test evidence. It
-  teaches shape, wiring, state handling and repair behaviour; it does not invent
-  novel product logic.
+- The corpus is **synthetic and template-derived** with real test evidence. The
+  full 47-blueprint verified run completed (47/47, 11 MB), but it was generated
+  by this repository's renderer, not by a model; it teaches shape, wiring, state
+  handling and repair behaviour, not novel product logic.
+- No model has been trained or evaluated: there is no checkpoint, no GPU, and
+  the learned-path suite therefore reports "no backend" by default.
 - The blueprint catalogue covers small CRUD/SaaS-shaped apps. Requests outside
   it fall back to the six generic starters or are refused with suggestions.
+  Routing on genuinely unseen wording is measured at **65% catalogue accuracy /
+  100% refusal accuracy** (`--split holdout`); that is the honest current bar.
 - `--repair` restores generated modules; it does not debug arbitrary user code.
   Unfixable failures are reported as such.
 - No hosted-provider deploy is exercised in CI (no tokens); the suite proves the
-  plan, the artifact path and the running app locally.
+  plan, the artifact path and the running app locally. The new `process`
+  provider is a real local deployment, not a public one.
 - The success rate is a statement about **this stack**, measured on this suite,
   not a comparison against any other product's private benchmark.

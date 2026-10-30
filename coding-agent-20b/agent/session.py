@@ -848,11 +848,11 @@ class ContextWindow:
 
             path = result.get("path") or (arguments or {}).get("path")
 
-            if path and tool in {"write_file", "apply_patch", "edit_function"}:
+            if path and tool in {"write_file", "apply_patch", "edit_function", "synthesize_file"}:
 
                 self.state.pin_file(str(path))
 
-            elif path and tool == "read_file":
+            elif path and tool in {"read_file", "request_file"}:
 
                 self.state.pin_file(str(path), str(result.get("content") or "")[:2000])
 

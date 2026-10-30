@@ -94,6 +94,38 @@ TOOL_SCHEMAS = {
             "required": ["path"],
         },
     },
+    "request_file": {
+        "name": "request_file",
+        "description": (
+            "Ask for a specific file mid-task (path) or the files matching a symbol/query; "
+            "the returned excerpt is pinned in the working set so it survives compaction"
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "File path relative to the workspace"},
+                "query": {"type": "string", "description": "Symbol or phrase when the path is unknown"},
+                "max_chars": {"type": "integer", "default": 4000},
+            },
+        },
+    },
+    "synthesize_file": {
+        "name": "synthesize_file",
+        "description": (
+            "Generate a whole module with plan -> skeleton -> per-unit fill (bounded calls), "
+            "validate it, then write it. Use this instead of one huge write_file."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Destination path relative to the workspace"},
+                "instruction": {"type": "string", "description": "What the module must do"},
+                "constraints": {"type": "string", "description": "Extra constraints (stdlib, typing, ...)"},
+                "max_units": {"type": "integer", "default": 8},
+            },
+            "required": ["path", "instruction"],
+        },
+    },
     "write_file": {
         "name": "write_file",
         "description": "Write content to a file",
@@ -518,6 +550,9 @@ Example:
   evidence (test name, file, symbol) when you mark it.
 - If a call fails twice, change the approach (different file/selector/scope) or
   revert unverified edits — do not repeat the identical call.
+- For a new module longer than ~80 lines, call `synthesize_file` (plan -> skeleton -> fill)
+  instead of one giant `write_file`; it validates before writing.
+- Use `request_file` with a path or a symbol when you need a file that is not in context.
 - You may write intermediate reasoning in <|scratchpad|> blocks; keep them short.
 - When the task is complete, respond with FINAL ANSWER: followed by the answer.
 """
@@ -576,6 +611,66 @@ Example:
 
         return parse_tool_call(text, TOOL_SCHEMAS)
 
+    def _request_file(self, args: dict) -> dict:
+        """Return a file (or the best match for a query) for mid-task inspection."""
+        path = str(args.get("path") or "").strip()
+        query = str(args.get("query") or "").strip()
+        limit = int(args.get("max_chars") or 4000)
+        if not path and query:
+            from agent.semantic_index import SemanticIndex
+
+            hits = SemanticIndex.open(self.workspace_path).hybrid_search(query, k=3)
+            if not hits:
+                return {"success": False, "error": f"no file matches {query!r}"}
+            path = hits[0].document.path
+        if not path:
+            return {"success": False, "error": "path or query is required"}
+        result = self.executor.read_file(path)
+        if result.get("error"):
+            return {"success": False, "error": result["error"], "path": path}
+        content = str(result.get("content") or "")
+        return {
+            "success": True,
+            "path": path,
+            "content": content[:limit],
+            "truncated": len(content) > limit,
+            "lines": len(content.splitlines()),
+            "pinned": True,
+        }
+
+    def _synthesize_file(self, args: dict) -> dict:
+        """Plan -> skeleton -> fill a module, then write only if it validates."""
+        from model.longform import LongFormSynthesizer
+
+        path = str(args.get("path") or "").strip()
+        instruction = str(args.get("instruction") or "").strip()
+        if not path or not instruction:
+            return {"success": False, "error": "path and instruction are required"}
+        synthesiser = LongFormSynthesizer(
+            lambda prompt, _max_tokens: self._generate(prompt),
+            max_units=int(args.get("max_units") or 8),
+        )
+        result = synthesiser.synthesise(instruction, str(args.get("constraints") or ""))
+        if result.errors:
+            return {
+                "success": False,
+                "error": "generated module does not compile",
+                "errors": result.errors[:6],
+                "trace": result.trace,
+                "chars": len(result.code),
+            }
+        written = self.executor.write_file(path, result.code)
+        if written.get("error"):
+            return {"success": False, "error": written["error"], "path": path}
+        return {
+            "success": True,
+            "path": path,
+            "chars": len(result.code),
+            "units": result.plan.size,
+            "repairs": result.repairs,
+            "trace": result.trace,
+        }
+
     def _handle_control_tool(self, tool: str, args: dict, state: SessionState) -> dict | None:
         """Plan/notes/assumptions/scratch are state operations, not sandbox."""
 
@@ -584,6 +679,14 @@ Example:
         if project_result is not None:
 
             return project_result
+
+        if tool == "request_file":
+
+            return self._request_file(args)
+
+        if tool == "synthesize_file":
+
+            return self._synthesize_file(args)
 
         if tool == "update_plan":
 
