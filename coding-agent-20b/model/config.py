@@ -249,6 +249,96 @@ def get_20b_32k_config() -> CodingAgentConfig:
     )
 
 
+def get_20b_16k_config() -> CodingAgentConfig:
+    """20B with YaRN-scaled RoPE for 16k agent trajectories (train 8k, extend 2x)."""
+
+    return CodingAgentConfig(
+        vocab_size=128256,
+        hidden_size=6144,
+        intermediate_size=16384,
+        num_hidden_layers=60,
+        num_attention_heads=48,
+        num_kv_heads=8,
+        max_position_embeddings=16384,
+        sliding_window=4096,
+        rope_theta=500000.0,
+        rope_scaling_type="yarn",
+        rope_scaling_factor=2.0,
+        original_max_position_embeddings=8192,
+    )
+
+
+def get_20b_64k_config() -> CodingAgentConfig:
+    """20B with YaRN x8 for 64k windows (long files, multi-file diffs).
+
+    Honest caveat: 64k via YaRN is an extrapolation, not native long-context
+    training. Expect degradation on tasks needing precise recall across the
+    middle of the window; retrieval + repo maps (agent/repo_context.py) remain
+    the primary mechanism, with 64k as headroom for a few large files.
+    """
+
+    return CodingAgentConfig(
+        vocab_size=128256,
+        hidden_size=6144,
+        intermediate_size=16384,
+        num_hidden_layers=60,
+        num_attention_heads=48,
+        num_kv_heads=8,
+        max_position_embeddings=65536,
+        sliding_window=8192,
+        rope_theta=500000.0,
+        rope_scaling_type="yarn",
+        rope_scaling_factor=8.0,
+        original_max_position_embeddings=8192,
+        kv_cache_max_tokens=65536,
+    )
+
+
+def get_20b_16k_config() -> CodingAgentConfig:
+    """20B with YaRN-scaled RoPE for 16k agent trajectories (train 8k, extend 2x)."""
+
+    return CodingAgentConfig(
+        vocab_size=128256,
+        hidden_size=6144,
+        intermediate_size=16384,
+        num_hidden_layers=60,
+        num_attention_heads=48,
+        num_kv_heads=8,
+        max_position_embeddings=16384,
+        sliding_window=4096,
+        rope_theta=500000.0,
+        rope_scaling_type="yarn",
+        rope_scaling_factor=2.0,
+        original_max_position_embeddings=8192,
+    )
+
+
+def get_20b_64k_config() -> CodingAgentConfig:
+    """20B with YaRN x8 for 64k windows (long files, multi-file diffs).
+
+    Honest caveat: 64k via YaRN is an extrapolation, not native long-context
+    training. Expect degradation on tasks needing precise recall across the
+    middle of the window; retrieval + repo maps (agent/repo_context.py) remain
+    the primary mechanism, with 64k as headroom for a few large files.
+    """
+
+    return CodingAgentConfig(
+        vocab_size=128256,
+        hidden_size=6144,
+        intermediate_size=16384,
+        num_hidden_layers=60,
+        num_attention_heads=48,
+        num_kv_heads=8,
+        max_position_embeddings=65536,
+        sliding_window=8192,
+        rope_theta=500000.0,
+        rope_scaling_type="yarn",
+        rope_scaling_factor=8.0,
+        original_max_position_embeddings=8192,
+        kv_cache_max_tokens=65536,
+    )
+
+
 def get_20b_64k_config() -> CodingAgentConfig:
     """20B with YaRN x8 for 64k windows (long files, multi-file diffs).
 

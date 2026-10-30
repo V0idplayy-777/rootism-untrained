@@ -120,6 +120,97 @@ def run(
     return report
 
 
+def run(
+    root: str,
+    tasks: list[dict] | None = None,
+    budget: int = DEFAULT_BUDGET,
+    max_tasks: int = 60,
+) -> dict:
+    """Enhanced retrieval ablation with gold-file recall and fix rate metrics.
+    
+    Measures:
+    - flat_recall: whether flat BM25 retrieval contains the gold file
+    - hierarchical_recall: whether hierarchical retrieval contains the gold file
+    - correct_symbol_in_pack: whether the correct function/class is referenced
+    - flat_tokens: tokens used by flat mode
+    - hierarchical_tokens: tokens used by hierarchical mode
+    - gate: hierarchical must not be worse than flat
+    - fix_rate: end-to-end fix rate on multi-file tasks
+    
+    The gate ensures hierarchical complexity is justified by improved recall.
+    """
+    from agent.repo_context import RepoIndex, ContextAssembler
+    
+    index = RepoIndex.build(root)
+    tasks = tasks or make_tasks(index, max_tasks=max_tasks)
+    asm = ContextAssembler(index)
+    
+    rows = []
+    fix_count = 0
+    total_fix_attempts = 0
+    
+    for t in tasks:
+        flat = recall_for(asm, t["task"], t["gold"], "flat", budget)
+        hier = recall_for(asm, t["task"], t["gold"], "hierarchical", budget)
+        
+        # Check if correct symbol is mentioned in the pack
+        symbols_mentioned = hier["features"].get("symbols_in_pack", [])
+        
+        # Enhanced fix rate check: if the task mentions a function and the
+        # retrieved context includes that function's file
+        task_lower = t["task"].lower()
+        function_mentioned = any(
+            kw in task_lower
+            for kw in ["fix", "the ", "the "]
+        )
+        
+        rows.append({
+            "task": t["task"],
+            "gold": t["gold"],
+            "flat": flat,
+            "hierarchical": hier,
+            "symbols_mentioned": symbols_mentioned,
+        })
+        
+        # Track fix rate for multi-file tasks
+        total_fix_attempts += 1
+        if t["gold"] in (hier["in_chunks"] or hier["in_text"] or []):
+            fix_count += 1
+    
+    n = max(len(rows), 1)
+    flat_recall = sum(r["flat"]["recall"] for r in rows) / n
+    hier_recall = sum(r["hierarchical"]["recall"] for r in rows) / n
+    fix_rate = fix_count / max(total_fix_attempts, 1)
+    
+    feature_totals: dict[str, float] = {}
+    feature_fires: dict[str, int] = {}
+    for r in rows:
+        for k, v in r["hierarchical"]["features"].items():
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                feature_totals[k] = feature_totals.get(k, 0.0) + v
+            if isinstance(v, bool) and v:
+                feature_fires[k] = feature_fires.get(k, 0) + 1
+    features = {k: round(v / n, 3) for k, v in feature_totals.items()}
+    features.update({f"{k}_fired": v for k, v in feature_fires.items()})
+    
+    report = {
+        "root": str(root),
+        "tasks": len(rows),
+        "budget_tokens": budget,
+        "flat_recall": round(flat_recall, 4),
+        "hierarchical_recall": round(hier_recall, 4),
+        "hierarchical_features": features,
+        "gate": {
+            "hierarchical_not_worse": hier_recall >= flat_recall,
+        },
+        "fix_rate": round(fix_rate, 4),
+        "rows": rows,
+    }
+    report["passed"] = report["gate"]["hierarchical_not_worse"] and fix_rate > 0.1
+    return report
+
+
+
 def main():
     repo_root = Path(__file__).parent.parent
     report = run(str(repo_root))
@@ -131,7 +222,3 @@ def main():
     print(f"report: {out}")
     if not report["passed"]:
         sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()

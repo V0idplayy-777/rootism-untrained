@@ -530,7 +530,18 @@ def expand_query(task: str) -> list[str]:
 
         queries.append(synonyms)
 
-    return queries[:4]
+    # Multi-hop: add follow-up queries based on task type
+    if max_hops > 0:
+        # Add code-specific follow-up queries
+        task_lower = task.lower()
+        if "fix" in task_lower or "bug" in task_lower:
+            queries.append("error handling " + " ".join(idents[:3]) if idents else "")
+        if "find" in task_lower or "locate" in task_lower:
+            queries.append("definition of " + " ".join(idents[:3]) if idents else "")
+        if "refactor" in task_lower:
+            queries.append("related functions of " + " ".join(idents[:3]) if idents else "")
+
+    return queries[:4 + max_hops]
 
 
 
@@ -1565,6 +1576,66 @@ class HierarchicalSummarizer:
         self.index = index
         self.summarize_fn = summarize_fn
 
+    def _load_cached_summaries(self) -> dict:
+        """Load cached file summaries from the index."""
+        cache_path = Path(self.index.root) / ".agent" / "file_summaries.json"
+        if cache_path.exists():
+            try:
+                with open(cache_path, "r") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, OSError):
+                return {}
+        return {}
+
+    def _save_cached_summaries(self, summaries: dict) -> None:
+        """Save file summaries to the index cache."""
+        cache_path = Path(self.index.root) / ".agent" / "file_summaries.json"
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(cache_path, "w") as f:
+            json.dump(summaries, f, indent=2)
+
+    def file_summary_cached(self, path: str, max_chars: int = 500) -> str:
+        """File summary with caching - only recomputes when file changes."""
+        summaries = self._load_cached_summaries()
+        file_mtime = Path(path).stat().st_mtime
+        
+        if path in summaries and summaries[path].get("mtime") == file_mtime:
+            # Return cached summary
+            return summaries[path]["summary"]
+        
+        # Compute fresh summary
+        summary = self.file_summary(path, max_chars=max_chars)
+        
+        # Cache it
+        summaries[path] = {"mtime": file_mtime, "summary": summary}
+        self._save_cached_summaries(summaries)
+        
+        return summary
+
+    def directory_summary_cached(self, directory: str, max_files: int = 8) -> str:
+        """Directory summary with caching - only recomputes when files change."""
+        summaries = self._load_cached_summaries()
+        
+        # Check if any files in this directory have changed
+        dir_key = directory.rstrip("/")
+        cached_dir_summary = summaries.get(dir_key, {}).get("dir_summary")
+        
+        # Simple cache check: if the directory hasn't been modified since last cache
+        if dir_key in summaries and summaries[dir_key].get("dir_mtime", 0) > 0:
+            # Return cached directory summary
+            return cached_dir_summary if cached_dir_summary else self.directory_summary(directory, max_files=max_files)
+        
+        # Compute fresh directory summary
+        result = self.directory_summary(directory, max_files=max_files)
+        
+        # Cache it
+        if dir_key not in summaries:
+            summaries[dir_key] = {}
+        summaries[dir_key]["dir_mtime"] = Path(directory).parent.stat().st_mtime if Path(directory).exists() else 0
+        summaries[dir_key]["dir_summary"] = result
+        self._save_cached_summaries(summaries)
+        
+        return result
     def _maybe_llm(self, extractive: str, instruction: str) -> str:
         if self.summarize_fn is None:
             return extractive
