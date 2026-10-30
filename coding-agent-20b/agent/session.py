@@ -21,8 +21,10 @@ Design:
 
 from __future__ import annotations
 
+import collections
 import json
 import re
+from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -353,6 +355,17 @@ class SessionState:
 
             self.files_touched.append(path)
 
+        if path:
+
+            self.working_set.access(path)
+
+    def pin_file(self, path: str, excerpt: str = "") -> None:
+        """Keep a file's exact content in the prompt across compaction."""
+        if not path:
+            return
+        self.working_set.pin(path, excerpt)
+        self.note_file(path)
+
     def consecutive_failures(self, window: int = 5) -> int:
 
         count = 0
@@ -438,6 +451,7 @@ class SessionState:
             "failures": [f.to_dict() for f in self.failures],
             "scratchpad": self.scratchpad,
             "files_touched": self.files_touched,
+            "working_set": self.working_set.to_dict(),
             "tests_passed": self.tests_passed,
             "tests_failed": self.tests_failed,
             "replans": self.replans,
@@ -494,6 +508,8 @@ class SessionState:
         state.scratchpad = list(data.get("scratchpad", []))
 
         state.files_touched = list(data.get("files_touched", []))
+
+        state.working_set = WorkingSet.from_dict(data.get("working_set", {}))
 
         state.tests_passed = list(data.get("tests_passed", []))
 
@@ -554,15 +570,23 @@ class ObservationCompactor:
 
                 break
 
-        root_cause = ""
+        assertions: list[str] = []
 
-        for i, line in enumerate(out.splitlines()):
+        for line in out.splitlines():
 
-            if line.startswith("E   ") or "AssertionError" in line or "Error" in line:
+            if line.startswith("E   ") and len(assertions) < 3:
 
-                root_cause = "\n".join(out.splitlines()[i : i + 4])
+                assertions.append(line.strip())
 
-                break
+        if not assertions:
+
+            for line in out.splitlines():
+
+                if "AssertionError" in line or line.startswith("E   "):
+
+                    assertions.append(line.strip())
+
+                    break
 
         parts = [f"run_tests rc={result.get('returncode', '?')}"]
 
@@ -578,15 +602,40 @@ class ObservationCompactor:
 
             parts.append("failed: " + ", ".join(failed[:8]))
 
-        if root_cause:
+        if assertions:
 
-            parts.append("first error:\n" + self._clip(root_cause, 6))
+            parts.append("exact failures:\n" + "\n".join(assertions))
 
-        if not failed and not root_cause:
+        if not failed and not assertions:
 
             parts.append(self._clip(out, 6))
 
         return "\n".join(parts)
+
+    def summarise_deploy(self, result: dict) -> str:
+        """Keep the provider, the URL and the full deploy error, not the logs."""
+        lines = ["deploy ok=" + str(bool(result.get("ok") or result.get("success")))]
+        for key in ("provider", "url", "health"):
+            if result.get(key):
+                lines.append(f"{key}: {result[key]}")
+        error = result.get("error") or result.get("message")
+        if error:
+            lines.append("deploy error: " + str(error)[:900])
+        steps = result.get("steps") or []
+        if isinstance(steps, list) and steps:
+            lines.append(f"steps: {len(steps)}")
+        return "\n".join(lines)
+
+    def summarise_db(self, result: dict) -> str:
+        """Preserve the failing statement or schema diff verbatim."""
+        text = "db " + str(result.get("action") or result.get("command") or "")
+        error = result.get("error") or result.get("stderr")
+        if error:
+            text += "\nerror: " + self._clip(str(error), 6)
+        diff = result.get("diff") or result.get("sql") or ""
+        if diff:
+            text += "\nsql: " + self._clip(str(diff), 8)
+        return text
 
     def summarise(self, tool: str, arguments: dict, result: Any) -> str:
         """Dispatch to a per-tool summariser; always returns bounded text."""
@@ -602,6 +651,14 @@ class ObservationCompactor:
         if tool == "run_tests":
 
             text = self.summarise_tests(result)
+
+        elif tool == "deploy":
+
+            text = self.summarise_deploy(result)
+
+        elif tool in {"db", "migrate"}:
+
+            text = self.summarise_db(result)
 
         elif tool == "read_file":
 
@@ -793,7 +850,15 @@ class ContextWindow:
 
             if path and tool in {"write_file", "apply_patch", "edit_function"}:
 
-                self.state.note_file(str(path))
+                self.state.pin_file(str(path))
+
+            elif path and tool == "read_file":
+
+                self.state.pin_file(str(path), str(result.get("content") or "")[:2000])
+
+            elif path:
+
+                self.state.working_set.access(str(path))
 
         record = StepRecord(
             self.state.step, "tool", summary, tool=tool, summary=summary, failed=failed
@@ -891,6 +956,10 @@ class ContextWindow:
 
         parts = [pinned, "<|plan|>", digest, "<|endoftext|>"]
 
+        working = self.state.working_set.render(max_chars=max(400, int(budget * 0.25)))
+        if working:
+            parts.append(working)
+
         if kept:
 
             parts.append("Earlier steps (compacted):")
@@ -908,6 +977,7 @@ class ContextWindow:
             "steps_recent": len(recent),
             "steps_compacted": len(kept),
             "digest_tokens": self._count(digest),
+            "working_set_files": len(self.state.working_set.get_surviving_files()),
             "truncated": bool(older) and len(kept) < len(summarized),
         }
 
@@ -934,10 +1004,13 @@ class WorkingSet:
         self.pinned: set[str] = set()
         self.recent: collections.deque = collections.deque(maxlen=max_files // 2)
         self._file_access_counts: dict[str, int] = defaultdict(int)
+        self.excerpts: dict[str, str] = {}
 
-    def pin(self, path: str) -> None:
-        """Pin a file so it always survives compaction."""
+    def pin(self, path: str, excerpt: str = "") -> None:
+        """Pin a file (and optionally the exact lines that matter) across compaction."""
         self.pinned.add(path)
+        if excerpt:
+            self.excerpts[path] = excerpt[:4000]
         if path not in self._file_access_counts:
             self._file_access_counts[path] = 0
 
@@ -960,11 +1033,29 @@ class WorkingSet:
         surviving.extend(list(self.recent))
         return surviving[:self.max_files]
 
+    def render(self, max_chars: int = 2400) -> str:
+        """Exact excerpts for pinned files, one line per recently touched file."""
+        budget = max_chars
+        parts: list[str] = []
+        for path in self.get_surviving_files():
+            excerpt = self.excerpts.get(path, "")
+            if not excerpt:
+                continue
+            chunk = f"<|file_chunk|> {path}\n{excerpt[:2000]}\n<|endoftext|>"
+            if len(chunk) > budget:
+                break
+            parts.append(chunk)
+            budget -= len(chunk)
+        if not parts and self.pinned:
+            return "Working set: " + ", ".join(sorted(self.pinned)[:12])
+        return "\n".join(parts)
+
     def to_dict(self) -> dict:
         return {
             "pinned": list(self.pinned),
             "recent": list(self.recent),
             "access_counts": dict(self._file_access_counts),
+            "excerpts": dict(self.excerpts),
         }
 
     @classmethod
@@ -973,4 +1064,5 @@ class WorkingSet:
         ws.pinned = set(data.get("pinned", []))
         ws.recent = collections.deque(data.get("recent", []), maxlen=max_files // 2)
         ws._file_access_counts = defaultdict(int, data.get("access_counts", {}))
+        ws.excerpts = {str(k): str(v) for k, v in data.get("excerpts", {}).items()}
         return ws

@@ -717,7 +717,7 @@ Example:
         deploy are the same code path with the same guarantees.
         """
 
-        if tool not in {"deploy", "scaffold_project", "project_map", "search_project", "checkpoint"}:
+        if tool not in {"deploy", "build_app", "scaffold_project", "project_map", "search_project", "checkpoint"}:
 
             return None
 

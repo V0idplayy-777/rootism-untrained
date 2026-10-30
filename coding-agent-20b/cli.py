@@ -246,6 +246,88 @@ def cmd_ship(args) -> int:
     return 0 if deploy_result.ok else 1
 
 
+def cmd_app(args) -> int:
+    """Local product path: build from a sentence, verify, repair once, show preview."""
+    from scaffold.app_builder import (
+        NoBlueprint,
+        build_app,
+        preview_command,
+        repair_generated,
+        resolve_blueprint,
+    )
+
+    say = (lambda *_a, **_k: None) if getattr(args, "json", False) else _say
+    root = Path(getattr(args, "path", None) or getattr(args, "workspace", ".")).resolve()
+    request = args.request
+    if not request:
+        say('agent app needs a request: agent app "a team task list with sharing"')
+        return 2
+    say(f"→ Build: {request[:120]}")
+    say(f"  directory: {root}")
+    try:
+        report = build_app(
+            root,
+            request,
+            blueprint_id=getattr(args, "blueprint", None),
+            force=bool(getattr(args, "force", False)),
+            taste_threshold=getattr(args, "taste_threshold", 70) or 70,
+        )
+    except NoBlueprint as exc:
+        say(str(exc))
+        if getattr(args, "json", False):
+            _print_json({"ok": False, "stage": "resolve", "error": str(exc), "suggestions": exc.suggestions})
+        return 2
+
+    if not report.ok and getattr(args, "repair", False):
+        say("→ Gates failed; restoring generated modules and re-running...")
+        blueprint = resolve_blueprint(request, getattr(args, "blueprint", None))
+        repair = repair_generated(root, blueprint, taste_threshold=getattr(args, "taste_threshold", 70) or 70)
+        say(repair.summary())
+        report = build_app(
+            root,
+            request,
+            blueprint_id=blueprint.id,
+            force=True,
+            taste_threshold=getattr(args, "taste_threshold", 70) or 70,
+        )
+
+    if getattr(args, "json", False):
+        _print_json(report.to_dict())
+    else:
+        say(f"  files: {len(report.files)}")
+        if report.verify is not None:
+            say("  tests: " + ("passing (" + str(len(report.verify.passed)) + ")" if report.verify.ok else "FAILING"))
+        say(f"  critic: {report.critic_score}/100" + ("" if report.critic_ok else " (blocked)"))
+        if report.taste is not None:
+            say(f"  taste: {report.taste.score}/100" + ("" if report.taste.ok else " (below bar)"))
+        if report.deploy_provider:
+            say(f"  deploy plan: {report.deploy_provider} ({report.deploy_steps} steps)")
+        for warning in report.warnings[:3]:
+            say("  ! " + warning)
+
+    if not report.ok:
+        say("")
+        say("✗ Not shipping this: one or more gates failed.")
+        for failure in report.failures:
+            say("  - " + failure.replace("\n", " ")[:500])
+        say("  Next: `agent app ... --repair` restores generated modules; otherwise fix the files above.")
+        return 1
+
+    say("")
+    say(f"✓ {report.summary()}")
+    say(f"  Preview: {report.preview_command}")
+    say(f"  Eject check: agent eject --check  (the app has no runtime dependency on this tool)")
+    if getattr(args, "deploy", False):
+        from deploy import DeployEngine
+
+        result = DeployEngine(root, provider=getattr(args, "provider", None) or "auto").deploy()
+        say(result.render())
+        if not result.ok:
+            return 1
+        say("✓ Deployed" + (f": {result.url}" if getattr(result, "url", None) else " (artifact ready)"))
+    return 0
+
+
 def cmd_eject(args) -> int:
     """Eject guarantee: prove project runs with zero agent files (row 6)."""
     from pathlib import Path
@@ -903,6 +985,19 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.add_argument("--json", action="store_true")
     doctor.add_argument("--workspace", default=".")
     doctor.set_defaults(func=cmd_doctor)
+
+    app = subparsers.add_parser("app", help='build a running product from a sentence (blueprint path)')
+    app.add_argument("request", nargs="?", help="describe the app in plain English")
+    app.add_argument("path", nargs="?", help="target directory (default: workspace)")
+    app.add_argument("--blueprint", help="blueprint id (otherwise matched from the request)")
+    app.add_argument("--force", action="store_true", help="overwrite generated files in a non-empty directory")
+    app.add_argument("--repair", action="store_true", help="restore generated modules once, then re-verify")
+    app.add_argument("--deploy", action="store_true", help="deploy after every gate passes")
+    app.add_argument("--provider", help="deploy provider (default: auto)")
+    app.add_argument("--taste-threshold", type=int, default=70)
+    app.add_argument("--json", action="store_true")
+    app.add_argument("--workspace", default=".")
+    app.set_defaults(func=cmd_app)
 
     ship = subparsers.add_parser("ship", help='one-command idea → live app: agent ship "a task app with login"')
     ship.add_argument("request", nargs="?", help="describe the app in plain English")

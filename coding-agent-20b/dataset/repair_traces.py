@@ -159,7 +159,7 @@ CURATED: list[tuple[str, str, str, str, str, str, str]] = [
         "FAILED tests/test_stream.py::test_memory_bounded - MemoryError",
         "The whole response was materialised; iterating lines keeps memory bounded.",
         "def read_all(response):\n    return [line for line in response.text.splitlines() if line]\n",
-    )
+    ),
     (
         "memory-leak",
         "Fix `process_batch` that leaked file handles on exception.",
@@ -250,7 +250,6 @@ CURATED: list[tuple[str, str, str, str, str, str, str]] = [
         "No timeout means hangs forever on slow host; always set timeout.",
         "resp = httpx.get(url, timeout=5)\n",
     ),
-,
 ]
 
 

@@ -55,6 +55,7 @@ def _b64decode(text: str) -> bytes:
 
 
 def hash_password(password: str, *, salt: bytes | None = None) -> str:
+    """Return a salted scrypt hash; rejects passwords under 8 characters."""
     if not password or len(password) < 8:
         raise AuthError("password must be at least 8 characters")
     salt = salt or secrets.token_bytes(16)
@@ -63,6 +64,7 @@ def hash_password(password: str, *, salt: bytes | None = None) -> str:
 
 
 def verify_password(password: str, encoded: str) -> bool:
+    """Check a password against a stored hash in constant time."""
     try:
         scheme, n, r, p, salt_b64, digest_b64 = encoded.split("$")
     except ValueError:
@@ -91,6 +93,7 @@ def _secret() -> str:
 
 
 def create_token(subject: str, *, ttl: int = TOKEN_TTL_SECONDS, extra: dict[str, Any] | None = None) -> str:
+    """Sign an HS256 token for ``subject`` that expires after ``ttl`` seconds."""
     now = int(time.time())
     header = {"alg": "HS256", "typ": "JWT"}
     payload = {"sub": str(subject), "iat": now, "exp": now + ttl, **(extra or {})}
@@ -100,6 +103,7 @@ def create_token(subject: str, *, ttl: int = TOKEN_TTL_SECONDS, extra: dict[str,
 
 
 def decode_token(token: str) -> dict[str, Any]:
+    """Verify a token's signature and expiry, returning its claims."""
     try:
         header_b64, payload_b64, signature_b64 = (token or "").split(".")
     except ValueError as exc:

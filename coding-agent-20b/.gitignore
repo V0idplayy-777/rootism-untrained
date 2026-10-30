@@ -1,0 +1,6 @@
+# Local environment and generated evidence
+.env
+.env.*
+!.env.example
+data/
+.repair-backup/

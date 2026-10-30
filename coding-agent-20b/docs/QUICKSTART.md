@@ -9,6 +9,28 @@ pip install -e ".[app]"        # agent CLI + chat UI extras
 agent doctor                   # what is available here, and what is optional
 ```
 
+## 0. One command: a complete product
+
+```bash
+agent app "a team task list where I can share tasks with teammates"
+```
+
+This resolves the sentence to one of 65 product blueprints, renders the whole
+repository (FastAPI + SQLite/Postgres, scrypt auth with row isolation, a
+dependency-free SPA with a real design system, pytest suites, Docker/compose,
+`agentdeploy.toml`), runs the tests, the code critic and the taste gate, and
+prints the preview command. It exits non-zero and names the failing assertion if
+anything is not green.
+
+```bash
+agent app "a board for sprint issues" --repair        # restore generated modules once
+agent app "a clinic appointment book" --deploy        # deploy only after all gates pass
+python -m evaluation.app_suite --split all            # 65-prompt scoreboard
+python -m dataset.app_corpus --out data/app-corpus    # training rows
+```
+
+Details and limits: `docs/APP_GENERATION.md`.
+
 ## 1. Create the project
 
 ```bash
