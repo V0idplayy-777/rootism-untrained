@@ -138,16 +138,16 @@ class LocalAccumulatingEngine:
 
 
 def test_3b_budget_and_accumulation_use_all_ranks(recipe):
-    for world_size, accumulation in [(1, 256), (2, 128), (8, 32), (16, 16), (256, 1)]:
+    for world_size, accumulation in [(1, 512), (2, 256), (8, 64), (16, 32), (128, 4), (256, 2)]:
         plan = build_training_plan(recipe, world_size)
         assert plan.gradient_accumulation_steps == accumulation
-        assert plan.tokens_per_step == 8_388_608
-        assert plan.total_steps == 2_145
-        assert plan.warmup_steps == 119
-        assert plan.planned_tokens == 17_993_564_160
+        assert plan.tokens_per_step == 2_097_152
+        assert plan.total_steps == 8_583
+        assert plan.warmup_steps == 476
+        assert plan.planned_tokens == 17_999_855_616
         assert plan.planned_tokens <= recipe["training"]["total_tokens"]
     assert build_training_plan(recipe, 8, max_steps=3).run_steps == 3
-    assert build_training_plan(recipe, 8, max_steps=100_000).run_steps == 2_145
+    assert build_training_plan(recipe, 8, max_steps=100_000).run_steps == 8_583
 
 
 def test_3b_plan_rejects_bad_topology_and_budget(recipe):
@@ -175,16 +175,21 @@ def test_deepspeed_config_resolves_3b_without_changing_template(recipe, tmp_path
     original = copy.deepcopy(template)
     plan = build_training_plan(recipe, 8)
     model_config = build_3b_model_config(recipe)
-    assert model_config.num_hidden_layers == 23
+    assert model_config.num_hidden_layers == 20
+    assert model_config.intermediate_size == 7168
     assert model_config.hidden_size == 3072
+    assert build_training_plan(recipe, 8).sequence_length == 4096
     config = build_deepspeed_config(template, recipe, plan, model_config.hidden_size)
     assert template == original
-    assert config["train_batch_size"] == 1024
-    assert config["train_micro_batch_size_per_gpu"] == 4
-    assert config["gradient_accumulation_steps"] == 32
+    assert config["train_batch_size"] == 512
+    assert config["train_micro_batch_size_per_gpu"] == 1
+    assert config["gradient_accumulation_steps"] == 64
     assert config["bf16"]["enabled"] and not config["fp16"]["enabled"]
-    assert config["zero_optimization"]["offload_optimizer"]["device"] == "cpu"
-    assert "offload_param" not in config["zero_optimization"]
+    for offload in ("offload_optimizer", "offload_param"):
+        assert config["zero_optimization"][offload]["device"] == "cpu"
+        assert config["zero_optimization"][offload]["pin_memory"] is True
+    assert config["zero_optimization"]["stage3_max_live_parameters"] == 500_000_000
+    assert config["zero_optimization"]["stage3_max_reuse_distance"] == 500_000_000
     assert "auto" not in json.dumps(config)
     assert "scheduler" not in config
     assert config["optimizer"]["params"]["betas"] == [0.9, 0.95]

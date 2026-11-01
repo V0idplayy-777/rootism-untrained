@@ -1,11 +1,13 @@
 # CodingAgent-3B — Model Card
 
 ## Summary
-Decoder-only transformer (23 layers, hidden 3072, GQA 24Q/4KV, SwiGLU, RMSNorm,
-RoPE theta=500k) with a 128,256-token byte-level BPE vocabulary, designed for
-code generation and multi-step tool-using agent work. Context: 8k native,
-32k via YaRN RoPE scaling (`get_3b_32k_config`), 64k YaRN ×8 as headroom
+Decoder-only transformer (20 layers, hidden 3072, GQA 24Q/4KV, SwiGLU 7168,
+RMSNorm, RoPE theta=500k) with a 128,256-token byte-level BPE vocabulary,
+designed for code generation and multi-step tool-using agent work. Context: 8k
+native, 32k via YaRN RoPE scaling (`get_3b_32k_config`), 64k YaRN ×8 as headroom
 (`get_3b_64k_config`, extrapolation — see `docs/CAPABILITY_GAPS.md`).
+Pretraining runs at 4096 tokens per sequence; the 8k native window and the YaRN
+configs are unchanged and remain the inference targets.
 
 **This is the EXACT same architecture family as CodingAgent-20B, scaled to ~3B.**
 The underlying model code, tokenizer, data components and agent harness are
@@ -14,13 +16,13 @@ shared; 3B pretraining has its own budget-aware execution path.
 | Dimension | 20B | 3B (primary) | Scaling | 3B deep variant |
 | --- | --- | --- | --- | --- |
 | hidden_size | 6144 | 3072 | 0.5× | 3072 |
-| intermediate_size | 16384 | 8192 | 0.5× | 8192 |
-| num_hidden_layers | 60 | 23 | 0.38× | 26 (~3.33B) |
+| intermediate_size | 16384 | 7168 | 0.44× | 7168 |
+| num_hidden_layers | 60 | 20 | 0.33× | 26 (~3.08B) |
 | num_attention_heads | 48 | 24 | 0.5× | 24 |
 | num_kv_heads (GQA) | 8 | 4 | 0.5× | 4 |
 | head_dim | 128 | 128 | 1× | 128 |
 | GQA ratio (Q/KV) | 6 | 6 | 1× | 6 |
-| inter/hidden | 2.666 | 2.666 | 1× | 2.666 |
+| inter/hidden | 2.666 | 2.333 | 0.88× | 2.333 |
 | vocab_size | 128256 | 128256 | 1× | 128256 |
 | sliding_window | 4096 | 4096 | 1× | 4096 |
 | rope_theta | 500k | 500k | 1× | 500k |
@@ -29,9 +31,13 @@ shared; 3B pretraining has its own budget-aware execution path.
 | YaRN 64k | yarn×8 | yarn×8 | same | yarn×8 |
 
 Parameter count (via `CodingAgentConfig.total_parameters()`):
-- 3B primary (23L): **3,031,053,312 (3.03B)** -- embeddings 0.79B + 23×97.5M
-- 3B deep (26L): 3,323,624,448 (3.32B)
+- 3B primary (20L): **2,549,738,496 (2.55B)** -- embeddings 0.79B + 20×88.1M
+- 3B deep (26L): 3,078,257,664 (3.08B)
 - 20B: 24,980,969,472 (24.98B)
+
+The 3B class point trades depth (60 → 20) and MLP width (2.666× → 2.333× hidden)
+for memory and compute, while hidden size (3072), head_dim (128), the GQA ratio
+(6), RoPE theta, sliding window, vocab and the 79 control tokens are unchanged.
 
 Same 79 hand-written control tokens (ids frozen; `|tool_call|`=48,
 `|tool_result|`=49) plus task tokens for scratchpad/plan/repo-map/retrieval/
@@ -45,14 +51,35 @@ with warmup from a peak learning rate of 3e-4. It needs CUDA GPUs, DeepSpeed,
 and pre-tokenized `train_manifest.json` and `val_manifest.json` shards. For
 multi-node runs, the dataset and checkpoint directory must be shared by all ranks.
 
+The recipe is tuned for small GPUs (a single or dual T4): **4096 tokens per
+sequence**, `micro_batch_size_per_gpu: 1`, `global_batch_size: 512`, with
+gradient accumulation resolved from the total number of ranks. Activation memory
+scales with sequence length and micro-batch, so this is the biggest single
+memory win; the effective batch is unchanged in kind, only its composition.
+Prepare 3B shards with `--seq_length 4096` when the shard generator packs
+documents (`scripts/generate_dataset.py`); the trainer re-windows the flat token
+stream using its own `sequence_length`, so existing 8192-packed shards still work.
+
+DeepSpeed stays on ZeRO-3 with **both** parameter and optimizer offload to CPU
+(`pin_memory: true`, unchanged in `configs/ds_config_zero3.json`). The 3B path
+activates activation checkpointing through the model's own
+`torch.utils.checkpoint` switch (`deepspeed.activation_checkpointing` in the
+recipe), which is why `training/train_3b.py` drops the shared template's
+`activation_checkpointing` block instead of double-checkpointing; the template
+keeps `partition_activations` and `cpu_checkpointing` for the 20B path. The 3B
+recipe additionally lowers `stage3_max_live_parameters` /
+`stage3_max_reuse_distance` to 5e8 (from the shared template's 1e9) to cap the
+16-bit parameter working set held on the GPU. Those two knobs are read from the
+3B recipe only, so the shared 20B template is unchanged.
+
 The **pretraining cap is 18B input tokens** (20B's separate recipe remains at
-300B). With global batch 1024 and 8192 tokens per sequence, this is 2,145 full
-optimizer steps, or 17,993,564,160 input tokens. The remainder is not processed,
-so the cap is never exceeded. Automatic accumulation uses the total number of
-ranks: for eight GPUs and micro-batch 4, it is 32 micro-batches per optimizer
-step. `--max_steps` can shorten a run but cannot raise the token cap. The 3B
-path logs to the console; the production entry point's W&B monitoring is not
-implemented for it.
+300B). With global batch 512 and 4096 tokens per sequence, this is 2,097,152
+input tokens per optimizer step and 8,583 full optimizer steps, or
+17,999,855,616 input tokens. The remainder is not processed, so the cap is never
+exceeded. Automatic accumulation uses the total number of ranks: for eight GPUs
+and micro-batch 1, it is 64 micro-batches per optimizer step. `--max_steps` can
+shorten a run but cannot raise the token cap. The 3B path logs to the console;
+the production entry point's W&B monitoring is not implemented for it.
 
 This entry point performs **pretraining only**. The shared `configs/pipeline.json`
 has an independent schedule and is not executed by it; mid-train, SFT and DPO
@@ -79,8 +106,8 @@ instruction 0.08 · security 0.03 (×3) · creative 0.03 (×2) · instruction-in
 The 3B pretrainer saves sharded DeepSpeed checkpoints in `checkpoints-3b/`
 (all ranks participate). Checkpoints record the global token count, data
 position, batch topology and training-manifest hash; `--resume` requires those
-to match. The recipe keeps the most recent five checkpoints and disables
-parameter offload while retaining optimizer offload. These sharded checkpoints
+to match. The recipe keeps the most recent five checkpoints with both parameter
+and optimizer state offloaded to CPU memory. These sharded checkpoints
 are not the atomic, SHA-256-verified single-file format used by
 `training/checkpoint.py`; consolidate them before inference.
 
@@ -127,7 +154,9 @@ Same as 20B (see MODEL_CARD.md). Highlights:
 - 3B-specific: expect lower pass@1 than 20B on LiveCodeBench/SWE-bench
   (knowledge capacity scales with params), but identical tool-use, retrieval,
   and session-state machinery. Use 3B for local dev, CI, and fast iteration;
-  20B for best quality.
+  20B for best quality. The memory-lean 3B point (20 layers, MLP 7168) gives up
+  ~16% of parameters versus the earlier 23-layer 8192-MLP variant; the 26-layer
+  `get_3b_26l_config` (3.08B) is the option if quality matters more than fit.
 
 ## Reproducibility
 Same as 20B: pinned deps (`requirements.txt`), fixed tokenizer tie-breaking,
@@ -140,11 +169,11 @@ corpus SHA-256) and validation/benchmark reports saved beside the vocab. See
 ```bash
 # verify 3B param count (no GPU/torch needed)
 python -c "from model.config_3b import get_3b_config; get_3b_config().print_summary()"
-# 3.03B
+# 2.55B
 
 # deep variant
 python -c "from model.config_3b import get_3b_26l_config; get_3b_26l_config().print_summary()"
-# 3.33B
+# 3.08B
 
 # From the coding-agent-20b directory, pretrain with 8 BF16-capable GPUs
 # (prepare the mixed, tokenized data/processed shards first).

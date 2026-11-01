@@ -156,6 +156,14 @@ def build_deepspeed_config(template: dict, config: dict, plan: TrainingPlan, hid
         if zero.get(key) == "auto":
             zero[key] = value
 
+    for key in ("stage3_max_live_parameters", "stage3_max_reuse_distance"):
+        value = ds.get(key)
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ValueError(f"deepspeed.{key} must be a positive integer when set")
+        zero[key] = value
+
     optimizer = result.setdefault("optimizer", {"type": "AdamW", "params": {}})
     optimizer["type"] = "AdamW"
     optimizer.setdefault("params", {}).update(
