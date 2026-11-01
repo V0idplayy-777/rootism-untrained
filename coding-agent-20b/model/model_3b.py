@@ -6,8 +6,8 @@ config (model/config_3b.py). The transformer itself is architecture-agnostic:
 Grouped Query Attention, SwiGLU, RMSNorm, RoPE, sliding window, etc. are
 identical to the 20B model -- only the config numbers change.
 
-- 20B: 60 layers, hidden 6144, 24Q? actually 48Q/8KV, intermediate 16384
-- 3B:  23 layers, hidden 3072, 24Q/4KV, intermediate 8192
+- 20B: 60 layers, hidden 6144, 48Q/8KV, intermediate 16384
+- 3B:  20 layers, hidden 3072, 24Q/4KV, intermediate 7168
 
 All other components (RotaryEmbedding, GroupedQueryAttention, SwiGLUMLP,
 TransformerBlock, PagedKVCache, CodingAgentModel) are re-exported from
@@ -22,7 +22,7 @@ Usage:
 
     model = CodingAgentModel(get_3b_config())
     out = model(input_ids)
-    print(model.num_parameters() / 1e9)  # ~3.03B
+    print(model.num_parameters() / 1e9)  # ~2.55B
 
 Or via convenience:
 
@@ -115,7 +115,7 @@ def __getattr__(name: str):
 
 
 def get_default_3b_model(*, device: str | None = None):
-    """Instantiate CodingAgentModel with the 3B config (23 layers, 3.03B).
+    """Instantiate CodingAgentModel with the 3B config (20 layers, 2.55B).
 
     This is the direct 3B equivalent of `CodingAgentModel(get_20b_config())`
     for the 20B model. All model code paths are shared; only the config
