@@ -509,9 +509,6 @@ class MoEExperts(nn.Module):
         )
 
         for expert_idx in range(self.num_experts):
-            # Each token is evaluated once per selected expert, then weighted by
-            # that expert's own router probability. Keep the token mask 1-D so
-            # it indexes rows of x_flat rather than its feature dimension.
             routing_mask = indices_flat == expert_idx
             token_mask = routing_mask.any(dim=-1)
             if not token_mask.any():
