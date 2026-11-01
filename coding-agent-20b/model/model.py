@@ -500,22 +500,29 @@ class MoEExperts(nn.Module):
 
         top_k_weights = F.softmax(top_k_weights, dim=-1)
 
-        x_flat = x.view(-1, self.hidden_size)
-        expanded_weights = top_k_weights.view(-1, self.top_k).unsqueeze(-1)
-        expanded_indices = top_k_indices.view(-1, self.top_k).unsqueeze(-1)
+        x_flat = x.reshape(-1, self.hidden_size)
+        weights_flat = top_k_weights.reshape(-1, self.top_k)
+        indices_flat = top_k_indices.reshape(-1, self.top_k)
 
-        expert_outputs = torch.zeros(
-            batch_size * seq_len, self.intermediate_size, device=x.device
+        expert_outputs = x.new_zeros(
+            batch_size * seq_len, self.intermediate_size
         )
 
         for expert_idx in range(self.num_experts):
-            mask = (expanded_indices == expert_idx).any(dim=1)
-            if not mask.any():
+            # Each token is evaluated once per selected expert, then weighted by
+            # that expert's own router probability. Keep the token mask 1-D so
+            # it indexes rows of x_flat rather than its feature dimension.
+            routing_mask = indices_flat == expert_idx
+            token_mask = routing_mask.any(dim=-1)
+            if not token_mask.any():
                 continue
 
-            expert_input = x_flat[mask]
+            expert_input = x_flat[token_mask]
             expert_output = self.experts[expert_idx](expert_input)
-            expert_outputs[mask] += expert_output * expanded_weights[mask]
+            expert_weights = (
+                weights_flat[token_mask] * routing_mask[token_mask]
+            ).sum(dim=-1, keepdim=True)
+            expert_outputs[token_mask] += expert_output * expert_weights
 
         output = expert_outputs.view(batch_size, seq_len, self.intermediate_size)
 
