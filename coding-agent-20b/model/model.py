@@ -450,8 +450,6 @@ class SwiGLUMLP(nn.Module):
         mlp_output = self.down_proj(gate * up)
 
         if self.use_moe:
-            # Experts produce intermediate_size activations; project them to
-            # hidden_size before combining with the residual MLP branch.
             moe_output = self.down_proj(self.moe(x))
             return mlp_output + 0.5 * moe_output
 
