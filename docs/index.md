@@ -21,3 +21,5 @@ pip install -r requirements.txt
 ## 📖 Code Reference
 
 To explore the automated Python API documentation generated straight from our source code docstrings, navigate to the **[Code Reference](reference.md)** tab in the top navigation bar.
+
+I like cereal
