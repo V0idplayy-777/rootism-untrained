@@ -7,12 +7,29 @@ torch = pytest.importorskip("torch")
 @requires_torch
 def test_moe_top_k_routing_shapes_and_backprop(tiny_model):
 
-    moe = tiny_model.layers[0].mlp.moe
+    from model.model import MoEExperts
+
+    moe = MoEExperts(tiny_model.config, num_experts=3, top_k=2)
     x = torch.randn(2, 4, moe.hidden_size, requires_grad=True)
 
     output = moe(x)
 
+    assert len(moe.experts) == 3
     assert output.shape == (2, 4, moe.intermediate_size)
+    assert torch.isfinite(output).all()
+    output.sum().backward()
+    assert x.grad is not None and torch.isfinite(x.grad).all()
+
+
+@requires_torch
+def test_mlp_projects_moe_output_to_hidden_size(tiny_model):
+
+    mlp = tiny_model.layers[0].mlp
+    x = torch.randn(2, 4, mlp.hidden_size, requires_grad=True)
+
+    output = mlp(x)
+
+    assert output.shape == (2, 4, mlp.hidden_size)
     assert torch.isfinite(output).all()
     output.sum().backward()
     assert x.grad is not None and torch.isfinite(x.grad).all()
