@@ -450,7 +450,9 @@ class SwiGLUMLP(nn.Module):
         mlp_output = self.down_proj(gate * up)
 
         if self.use_moe:
-            moe_output = self.moe(x)
+            # Experts produce intermediate_size activations; project them to
+            # hidden_size before combining with the residual MLP branch.
+            moe_output = self.down_proj(self.moe(x))
             return mlp_output + 0.5 * moe_output
 
         return mlp_output
@@ -467,17 +469,20 @@ class MoEExperts(nn.Module):
     def __init__(self, config: CodingAgentConfig, num_experts: int = 4, top_k: int = 2):
         super().__init__()
 
+        if num_experts < 1:
+            raise ValueError("num_experts must be at least 1")
+        if not 1 <= top_k <= num_experts:
+            raise ValueError("top_k must be between 1 and num_experts")
+
         self.hidden_size = config.hidden_size
         self.num_experts = num_experts
         self.top_k = top_k
         self.intermediate_size = config.intermediate_size
 
-        self.experts = nn.ModuleList([
-            nn.Linear(self.hidden_size, self.intermediate_size, bias=False),
-            nn.Linear(self.hidden_size, self.intermediate_size, bias=False),
-            nn.Linear(self.hidden_size, self.intermediate_size, bias=False),
-            nn.Linear(self.hidden_size, self.intermediate_size, bias=False),
-        ])
+        self.experts = nn.ModuleList(
+            nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+            for _ in range(self.num_experts)
+        )
 
         self.router = nn.Linear(self.hidden_size, self.num_experts)
 
