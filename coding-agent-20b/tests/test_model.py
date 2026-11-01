@@ -5,6 +5,20 @@ torch = pytest.importorskip("torch")
 
 
 @requires_torch
+def test_moe_top_k_routing_shapes_and_backprop(tiny_model):
+
+    moe = tiny_model.layers[0].mlp.moe
+    x = torch.randn(2, 4, moe.hidden_size, requires_grad=True)
+
+    output = moe(x)
+
+    assert output.shape == (2, 4, moe.intermediate_size)
+    assert torch.isfinite(output).all()
+    output.sum().backward()
+    assert x.grad is not None and torch.isfinite(x.grad).all()
+
+
+@requires_torch
 def test_forward_and_loss(tiny_model):
 
     ids = torch.randint(0, 320, (2, 16))
