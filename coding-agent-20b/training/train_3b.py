@@ -321,6 +321,16 @@ def verify_corpus_manifest_for_3b(data_dir: Path, seq_length: int) -> dict | Non
         raise ValueError("Corpus manifest reports non-zero held-out contamination; refusing to train")
     if isolation.get("train_val_overlap_documents", 0) != 0:
         raise ValueError("Corpus manifest reports train/val document overlap; refusing to train")
+
+    # Pre-training gates: coverage, mixture, license, diversity, isolation,
+    # synthetic budget. A build that fails any gate must not start a run.
+    from dataset.quality_gates import evaluate_manifest
+
+    report = evaluate_manifest(manifest)
+    manifest["quality_gates"] = report.to_dict()
+    if not report.ok:
+        failures = ", ".join(result.name for result in report.failures())
+        raise ValueError(f"corpus_manifest.json fails quality gates: {failures}")
     return manifest
 
 
