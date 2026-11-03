@@ -30,3 +30,25 @@ def test_data_block_records_the_synthetic_token_cap():
 
         assert set(budget["synthetic_token_slices"]) == set(SYNTHETIC_TOKEN_SLICES)
         assert budget["synthetic_document_share"] == synthetic_share()
+
+
+def test_pipeline_stages_declare_the_synthetic_budget_and_gates():
+    import json
+    from pathlib import Path
+
+    config = json.loads(
+        (Path(__file__).resolve().parents[1] / "configs" / "pipeline.json").read_text()
+    )
+    stages = {stage["name"]: stage for stage in config["stages"]}
+    assert {"pretrain", "midtrain", "sft", "dpo"} <= set(stages)
+
+    from dataset.mixture import SYNTHETIC_TOKEN_SLICES
+
+    for name, stage in stages.items():
+        budget = stage["data"]["synthetic_budget"]
+        assert budget["synthetic_token_cap"] == 0.05, name
+        assert set(budget["synthetic_token_slices"]) == set(SYNTHETIC_TOKEN_SLICES)
+        assert budget["enforced_by"] == "dataset.quality_gates.check_synthetic_budget"
+
+    for name in ("pretrain", "midtrain"):
+        assert stages[name]["data"]["gates"] == "dataset.quality_gates.evaluate_manifest"

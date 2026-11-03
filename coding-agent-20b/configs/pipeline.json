@@ -40,7 +40,22 @@
             6000,
             8192
           ]
-        ]
+        ],
+        "synthetic_budget": {
+          "synthetic_token_cap": 0.05,
+          "synthetic_token_slices": [
+            "security-sft",
+            "repair-trace-sft",
+            "app-sft",
+            "app-repair-sft",
+            "app-preference-dpo",
+            "recovery-sft",
+            "project-scaffold-sft"
+          ],
+          "enforced_by": "dataset.quality_gates.check_synthetic_budget",
+          "drop_policy": "downsample synthetic slices deterministically (seed 42) before shards"
+        },
+        "gates": "dataset.quality_gates.evaluate_manifest"
       }
     },
     {
@@ -59,7 +74,22 @@
           "repair-trace-sft": 2.5,
           "app-sft": 2.5,
           "app-repair-sft": 2.5
-        }
+        },
+        "synthetic_budget": {
+          "synthetic_token_cap": 0.05,
+          "synthetic_token_slices": [
+            "security-sft",
+            "repair-trace-sft",
+            "app-sft",
+            "app-repair-sft",
+            "app-preference-dpo",
+            "recovery-sft",
+            "project-scaffold-sft"
+          ],
+          "enforced_by": "dataset.quality_gates.check_synthetic_budget",
+          "drop_policy": "downsample synthetic slices deterministically (seed 42) before shards"
+        },
+        "gates": "dataset.quality_gates.evaluate_manifest"
       }
     },
     {
@@ -90,7 +120,21 @@
           "recovery-sft": 1.5,
           "project-scaffold-sft": 1.5
         },
-        "security_examples_per_batch": 8
+        "security_examples_per_batch": 8,
+        "synthetic_budget": {
+          "synthetic_token_cap": 0.05,
+          "synthetic_token_slices": [
+            "security-sft",
+            "repair-trace-sft",
+            "app-sft",
+            "app-repair-sft",
+            "app-preference-dpo",
+            "recovery-sft",
+            "project-scaffold-sft"
+          ],
+          "enforced_by": "dataset.quality_gates.check_synthetic_budget",
+          "drop_policy": "downsample synthetic slices deterministically (seed 42) before shards"
+        }
       }
     },
     {
@@ -117,7 +161,21 @@
           "security-dpo": 2.0,
           "repair-trace-dpo": 2.0
         },
-        "beta": 0.1
+        "beta": 0.1,
+        "synthetic_budget": {
+          "synthetic_token_cap": 0.05,
+          "synthetic_token_slices": [
+            "security-sft",
+            "repair-trace-sft",
+            "app-sft",
+            "app-repair-sft",
+            "app-preference-dpo",
+            "recovery-sft",
+            "project-scaffold-sft"
+          ],
+          "enforced_by": "dataset.quality_gates.check_synthetic_budget",
+          "drop_policy": "downsample synthetic slices deterministically (seed 42) before shards"
+        }
       }
     }
   ],
