@@ -148,9 +148,6 @@ class CorpusSampler:
 
             return False, "language", {}
 
-        # Peek only: ``accept``/``accept_detailed`` are validators, so they must
-        # not consume dedup state. Otherwise probing a document and then calling
-        # ``add`` marks it as already-seen and silently drops it.
         if self.dedup.is_duplicate(  # noqa: SIM102
             str(item.get("path") or content[:64]), content, remember=False
         ):
@@ -181,7 +178,6 @@ class CorpusSampler:
 
             return False
 
-        # Claim the document now: this is the only place dedup state advances.
         key = str(item.get("path") or (item.get("content") or "")[:64])
         if self.dedup.is_duplicate(key, item.get("content") or ""):
 

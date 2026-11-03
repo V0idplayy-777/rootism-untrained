@@ -105,7 +105,6 @@ def security_report() -> dict:
             if sample.id not in STATIC_UNDETECTABLE:
                 missed_undocumented.append(sample.id)
         elif sample.id in STATIC_UNDETECTABLE:
-            # a documented gap that is now caught: the set must shrink
             detected_now.append(sample.id)
 
         if not _has_required(sample, sample.safe):

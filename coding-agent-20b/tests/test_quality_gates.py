@@ -88,7 +88,7 @@ def test_coverage_catches_a_thin_stack_slice():
 
 def test_mixture_flags_share_drift():
     broken = manifest()
-    broken["slice_tokens"]["github-prs"] = 900_000  # far past its planned share
+    broken["slice_tokens"]["github-prs"] = 900_000
     result = check_mixture(broken)
     assert not result.ok
     assert "github-prs" in result.detail
@@ -96,7 +96,7 @@ def test_mixture_flags_share_drift():
 
 def test_mixture_ignores_synthetic_slices_which_are_capped_by_token_budget():
     capped = manifest()
-    capped["slice_tokens"]["security-sft"] = 1  # nothing admitted yet
+    capped["slice_tokens"]["security-sft"] = 1
     assert check_mixture(capped).ok
 
 
@@ -207,16 +207,11 @@ def test_built_corpus_passes_the_gates_we_can_meet_at_this_size(tmp_path):
     assert by_name["isolation"].ok
     assert by_name["synthetic_budget"].ok
 
-    # diversity is size-bound at 150 files (one structural pattern per shape and
-    # no app row admitted under the tiny allowance) — it must fail, not pass.
     assert not by_name["diversity"].ok
 
-    # github-issues / github-prs / instruction-sft need the real fetch, and a
-    # 150-file demo cannot reach a 20% the-stack-code share: those must FAIL,
-    # not be silently waved through.
     assert not by_name["coverage"].ok
     assert "github-issues" in by_name["coverage"].detail
-    assert not by_name["mixture"].ok  # a 150-file demo cannot match the plan
+    assert not by_name["mixture"].ok
     assert not report.ok
 
 

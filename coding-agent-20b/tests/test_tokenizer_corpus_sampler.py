@@ -220,8 +220,6 @@ def test_flush_writes_atomic_shards_and_manifest(tmp_path):
     sampler.flush()
 
     shards = sorted(tmp_path.glob("python-*.jsonl"))
-    # shard_size=2 => the third add auto-flushes the first pair, explicit flushes
-    # emit the rest; every document lands exactly once, before or after a flush
     assert len(shards) >= 2
     assert not list(tmp_path.glob("*.tmp")), "shard writes must be atomic"
 

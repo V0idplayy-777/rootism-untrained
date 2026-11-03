@@ -323,7 +323,6 @@ def verify_corpus_manifest_for_3b(data_dir: Path, seq_length: int) -> dict | Non
         raise ValueError("Corpus manifest reports train/val document overlap; refusing to train")
 
     # Pre-training gates: coverage, mixture, license, diversity, isolation,
-    # synthetic budget. A build that fails any gate must not start a run.
     from dataset.quality_gates import evaluate_manifest
 
     report = evaluate_manifest(manifest)

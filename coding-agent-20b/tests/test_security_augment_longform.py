@@ -615,7 +615,6 @@ def test_new_static_rules_catch_the_classes_they_claim():
     for sample_id, rule_id in expected.items():
         sample = samples[sample_id]
         assert rule_id in severe(sample.vulnerable, sample.language), sample_id
-        # the safe twin must not carry the rule that fires on the vulnerable one
         assert rule_id not in severe(sample.safe, sample.language), sample_id
         assert not severe(sample.safe, sample.language), sample_id
 

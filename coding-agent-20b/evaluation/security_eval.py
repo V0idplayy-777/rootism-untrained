@@ -56,12 +56,7 @@ class Rule:
     flags: int = re.IGNORECASE
 
 
-# ---------------------------------------------------------------------------
-# AST rules. Some classes are structural, not lexical: a hard-coded /tmp path is
 # only a bug because it is a *literal* shared between runs, and a nested
-# quantifier is only catastrophic because of the parsed regex body. These rules
-# parse python and inspect the tree; they never fire on other languages.
-# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -132,7 +127,6 @@ def _check_hardcoded_tmp(tree: ast.AST, code: str) -> list[tuple[int, str]]:
                 literal, line = bound[arg.id]
                 hits.append((line, literal))
 
-    # dedupe by line: the same literal can be reported by both hops
     seen: set[tuple[int, str]] = set()
 
     unique: list[tuple[int, str]] = []
@@ -211,7 +205,6 @@ REGEX_RULES: list[Rule] = [
     Rule("http-plaintext-url", "CWE-319", "medium", r"[\"']http://(?!localhost|127\.|0\.0\.0\.0|example\.|test)", "Plaintext http:// URL for service traffic"),
     Rule("fail-open", "CWE-287", "high", r"except[^\n:]*:\s*\n\s*return\s+True", "Exception handler that grants access (fail-open security decision)"),
     Rule("sandbox-escape", "CWE-250", "critical", r"/var/run/docker\.sock|/proc/self/mem|seccomp\s*=\s*(?:None|False)|prctl\(", "Attempt to reach the container/sandbox boundary from inside"),
-    # Non-Python sinks: the same failure classes show up in JS/TS/Go/Rust/Java/SQL/shell.
     Rule("js-dom-innerhtml", "CWE-79", "high", r"\.innerHTML\s*=|document\.write\s*\(|dangerouslySetInnerHTML", "Untrusted value assigned to an HTML sink"),
     Rule("js-eval-call", "CWE-95", "critical", r"(?<![\w.])eval\s*\(|new\s+Function\s*\(", "Dynamic code evaluation executes arbitrary script"),
     Rule("js-child-process-shell", "CWE-78", "critical", r"execSync\s*\(|exec\s*\(\s*[`'\"][^`'\"]*\$\{|child_process[\s\S]{0,40}shell\s*:\s*true", "Child process invoked through a shell with interpolation"),
@@ -490,7 +483,6 @@ REQUIRED_PATTERNS: dict[str, tuple[str, ...]] = {
 
 
 REQUIRED_OVERRIDES: dict[str, tuple[str, ...]] = {
-    # Corpus v1 additions (multi-language + design-level classes)
     "sql-string-concat-dynamic": (r":email|bind",),
     "sql-role-superuser": (r"NOSUPERUSER|GRANT",),
     "shell-word-splitting": (r"ARCHIVE|SRC_DIR",),
@@ -593,13 +585,6 @@ REQUIRED_OVERRIDES: dict[str, tuple[str, ...]] = {
 
 
 
-# ---------------------------------------------------------------------------
-# Cross-language sink rules.
-#
-# ``Rule`` refuses to run outside its ``languages`` tuple, so each non-Python
-# family gets an explicit language list instead of widening a Python rule into
-# false positives (e.g. ``$1`` in Go SQL is a placeholder, not a redos).
-# ---------------------------------------------------------------------------
 _ALL = ("python", "javascript", "typescript", "text", "go", "rust", "java", "sql", "shell")
 _NON_PY = ("javascript", "typescript", "go", "rust", "java", "shell", "ruby", "php", "csharp", "yaml", "dockerfile", "sql")
 
@@ -956,7 +941,7 @@ class SecurityScanner:
 
                 hits = rule.check(tree, code)
 
-            except Exception:  # a malformed snippet must never break the scanner
+            except Exception:
 
                 continue
 

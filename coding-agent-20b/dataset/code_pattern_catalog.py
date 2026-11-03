@@ -66,7 +66,6 @@ def normalize_domain(domain: str) -> str:
 def _build_algorithms_patterns() -> list[PatternSpec]:
     out: list[PatternSpec] = []
 
-    # Beginner algorithms (9 distinct patterns)
     beginner = [
         (
             "alg-beg-two-sum-sorted",
@@ -245,7 +244,6 @@ def insertion_sort_by(items: list[T], key: Callable[[T], object]) -> list[T]:
         ),
     ]
 
-    # Intermediate algorithms (9 distinct patterns)
     intermediate = [
         (
             "alg-int-merge-intervals",
@@ -473,7 +471,6 @@ def two_color_partition(adj: dict[int, list[int]]) -> tuple[set[int], set[int]] 
         ),
     ]
 
-    # Advanced algorithms (9 distinct patterns)
     advanced = [
         (
             "alg-adv-kmp-matcher",
@@ -804,7 +801,6 @@ class StrictLRUCache:
         ),
     ]
 
-    # Expert algorithms (9 distinct patterns)
     expert = [
         (
             "alg-exp-dinic-maxflow",
@@ -1294,7 +1290,6 @@ class PersistentTreap:
     return out
 
 
-# Concise, structurally rich domain builders for the remaining 9 domains (9 per tier * 4 tiers * 9 = 324)
 def _domain_specs(domain: str, tiers: dict[str, list[tuple[str, str, tuple[str, ...], str]]]) -> list[PatternSpec]:
     out: list[PatternSpec] = []
     for comp, entries in tiers.items():

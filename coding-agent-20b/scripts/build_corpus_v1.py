@@ -61,9 +61,6 @@ from dataset.repair_traces import generate_repair_rows  # noqa: E402
 from dataset.security_data import SecurityDataGenerator  # noqa: E402
 
 
-# ---------------------------------------------------------------------------
-# Real backbone
-# ---------------------------------------------------------------------------
 
 REAL_SLICES = ("the-stack-code", "tests", "github-prs", "github-issues", "docs-and-comments")
 
@@ -113,9 +110,6 @@ def real_documents(real_dir: Path, license_filter: LicenseFilter) -> Iterator[Do
         )
 
 
-# ---------------------------------------------------------------------------
-# Synthetic, verified slices
-# ---------------------------------------------------------------------------
 
 
 def _row_text(row: dict) -> str:
@@ -134,7 +128,7 @@ def _as_document(row: dict, slice_name: str, source: str) -> Document:
         content=_row_text(row),
         language=row.get("language") or "text",
         source=source,
-        license="CC0-1.0",  # generated in-repo; no third-party text is copied
+        license="CC0-1.0",
         path=f"{slice_name}:{row.get('id') or row.get('bug_id') or row.get('case_id') or 'row'}",
         slice_name=slice_name,
         is_multi_file=slice_name in {"app-sft", "app-repair-sft", "project-scaffold-sft"},
@@ -155,7 +149,6 @@ def induced_documents(real_dir: Path | None, *, limit: int = 60) -> Iterator[Doc
 
     induction = InstructionInduction(real_dir, language="python", max_files=400)
 
-    # A missing/empty corpus yields no induced rows rather than an exception.
     try:
         rows = induction.generate(count=limit)
     except (FileNotFoundError, OSError):
@@ -187,12 +180,10 @@ def synthetic_documents(
     for row in repair["dpo"]:
         yield _as_document(row, "app-preference-dpo", "repair_traces")
 
-    # project-scaffold-sft: generic starters rendered from the scaffold registry
     projects = ProjectDatasetGenerator()
     for row in projects.to_sft_rows():
         yield _as_document(row, "project-scaffold-sft", "project_data")
 
-    # recovery-sft: the offline twin of agent/recovery.py
     for row in RecoveryInstructionGenerator().generate(6):
         yield _as_document(row, "recovery-sft", "augmentation")
 
@@ -226,9 +217,6 @@ def iter_mixture_documents(
     yield from synthetic_documents(apps=apps, include_apps=include_apps)
 
 
-# ---------------------------------------------------------------------------
-# Builder
-# ---------------------------------------------------------------------------
 
 
 def build(
@@ -269,9 +257,6 @@ def build(
     doc_counts: Counter[str] = Counter()
     dropped: Counter[str] = Counter()
 
-    # Pass 1: real backbone. Its token total defines the synthetic allowance, so
-    # the 5% cap is enforced against the corpus that actually exists rather than
-    # against a hoped-for size.
     for doc in (
         ()
         if synthetic_only
@@ -284,8 +269,6 @@ def build(
     real_tokens = sum(token_counts.values())
 
     if synthetic_only:
-        # Demo path: no real backbone to derive an allowance from, so take a
-        # fixed allowance and report the share instead of pretending it passed.
         allowance = int(real_tokens * synthetic_cap_share / (1.0 - synthetic_cap_share))
     else:
         allowance = int(real_tokens * synthetic_cap_share / (1.0 - synthetic_cap_share))
@@ -293,18 +276,11 @@ def build(
     used = 0
     rows_over_budget = 0
 
-    # Pass 2a: hybrid slice — real code with induced instructions. Not capped by
-    # the synthetic budget because the tokens are real source files.
     for doc in induced_documents(None if synthetic_only else real_dir, limit=limit_induced):
         tokens = builder.add_document(doc)
         token_counts[doc.slice_name] += tokens
         doc_counts[doc.slice_name] += 1
 
-    # Pass 2b: verified synthetic slices.
-    #
-    # The allowance is split across slices in *rounds*, proportional to their
-    # planned mixture weight: every slice admits its share of round 1 before any
-    # slice starts round 2. First-come-first-served ordering would let one
     # high-volume slice (security has ~300 rows) eat the whole budget and
     # silently starve the rest — a composition bug, not a size constraint.
     pending: dict[str, list[Document]] = {}
@@ -321,7 +297,7 @@ def build(
     def _cost(doc: Document) -> int:
         try:
             return len(builder.tokenizer.encode(doc.content, add_special_tokens=True))
-        except TypeError:  # tokenizer without the kwarg
+        except TypeError:
             return len(builder.tokenizer.encode(doc.content))
 
     cursors = {name: 0 for name in pending}
@@ -345,9 +321,6 @@ def build(
                 share = planned.get(name, 0.0) / planned_total
                 row_allowance = max(1, int(round(allowance * share)))
 
-                # Presence beats perfect proportions: a slice that is entirely
-                # absent is a coverage failure, so every slice may admit one
-                # document if the *global* allowance can still afford it.
                 if cursors[name] == 0 and slice_used[name] == 0:
                     row_allowance = max(row_allowance, _cost(rows[0]))
 
@@ -359,8 +332,6 @@ def build(
             doc = rows[cursors[name]]
             cost = _cost(doc)
 
-            # Hard caps: the slice's own share and the global allowance. A row
-            # that would cross either is dropped and counted, never admitted.
             over_slice = row_allowance is not None and slice_used[name] + cost > row_allowance
             over_global = not synthetic_only and used + cost > allowance
 

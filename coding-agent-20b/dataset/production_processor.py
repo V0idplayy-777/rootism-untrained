@@ -106,10 +106,7 @@ CANONICAL_PERMISSIVE_SPDX: dict[str, str] = {
     "python-2.0": "PSF-2.0",
 }
 
-# Canonical SPDX identifiers only. ``CANONICAL_PERMISSIVE_SPDX`` maps *input
 # spellings* ("mit license", "apache 2.0", ...) to canonical ids; membership is
-# always tested against a canonicalised id, so this set must hold the values,
-# not the keys (holding keys rejected every real "MIT"/"Apache-2.0" document).
 PERMISSIVE_LICENSES: frozenset[str] = frozenset(CANONICAL_PERMISSIVE_SPDX.values())
 
 NON_PERMISSIVE_MARKERS: tuple[str, ...] = (
@@ -958,7 +955,6 @@ class ProductionShardBuilder:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.tokenizer = tokenizer
         self.seq_length = seq_length
-        # Keep shards an exact multiple of seq_length so every sequence is aligned.
         aligned = max(seq_length, (shard_size_tokens // seq_length) * seq_length)
         self.shard_size_tokens = aligned
         self.val_fraction = val_fraction
@@ -1011,9 +1007,6 @@ class ProductionShardBuilder:
 
         doc_sha = doc.sha256()
 
-        # Never let one document land in both splits: a synthesized slice can
-        # legitimately repeat content across ids, and a train/val hash overlap is
-        # leakage regardless of intent.
         if doc_sha in self._doc_hashes["train"]:
             split = "train"
         elif doc_sha in self._doc_hashes["val"]:
@@ -1049,7 +1042,6 @@ class ProductionShardBuilder:
 
     def finalize(self, extra_metadata: dict[str, Any] | None = None) -> dict[str, Any]:
         pad_id = int(getattr(self.tokenizer, "eos_token_id", getattr(self.tokenizer, "pad_token_id", 2)))
-        # Ensure val has at least one full sequence if any val tokens exist or borrow last sequence if empty
         if not self._buffers["val"] and not self._shards["val"] and len(self._buffers["train"]) >= 2 * self.seq_length:
             borrowed = self._buffers["train"][-self.seq_length :]
             del self._buffers["train"][-self.seq_length :]
@@ -1061,7 +1053,6 @@ class ProductionShardBuilder:
                 continue
             rem = len(buf) % self.seq_length
             if rem != 0:
-                # Pad final partial window with EOS/PAD so total_tokens is an exact multiple of seq_length
                 buf.extend([pad_id] * (self.seq_length - rem))
             self._write_shard(split, buf)
             buf.clear()

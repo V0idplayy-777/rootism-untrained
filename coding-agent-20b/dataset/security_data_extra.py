@@ -19,9 +19,6 @@ from __future__ import annotations
 from .security_data import SecuritySample
 
 ADDITIONAL_SECURITY_SAMPLES: list[SecuritySample] = [
-    # ------------------------------------------------------------------
-    # Mandatory CWE coverage gaps: 89, 78, 22, 502, 295, 338, 79, 918
-    # ------------------------------------------------------------------
     SecuritySample(
         "sql-injection-orm-raw",
         "CWE-89",
@@ -167,10 +164,6 @@ ADDITIONAL_SECURITY_SAMPLES: list[SecuritySample] = [
         "and DNS-rebound internal targets; only allow-listed hosts are ever resolved.",
         ("ssrf", "allowlist", "metadata"),
     ),
-    # ------------------------------------------------------------------
-    # Multi-language coverage (python / javascript / typescript / go /
-    # rust / java / sql / shell)
-    # ------------------------------------------------------------------
     SecuritySample(
         "js-dom-innerhtml",
         "CWE-79",
@@ -367,9 +360,6 @@ ADDITIONAL_SECURITY_SAMPLES: list[SecuritySample] = [
         "digest makes tampering detectable before any byte is executed.",
         ("shell", "supply_chain", "verify"),
     ),
-    # ------------------------------------------------------------------
-    # Further high-value pairs inside existing categories
-    # ------------------------------------------------------------------
     SecuritySample(
         "password-reset-token-rotation",
         "CWE-384",

@@ -481,17 +481,10 @@ SECURITY_SAMPLES: list[SecuritySample] = [
 from .security_data_extra import ADDITIONAL_SECURITY_SAMPLES  # noqa: E402  (import cycle guard)
 from .security_data_extra_v2 import ADDITIONAL_SECURITY_SAMPLES_V2  # noqa: E402
 
-#: Corpus v1 expands the curated set to 100+ paired samples covering 20+ CWE
-#: classes across Python, JavaScript, TypeScript, Go, Rust, Java, SQL, Shell,
-#: PHP, C#, Ruby, Kubernetes YAML, and Dockerfiles.
 SECURITY_SAMPLES = [*SECURITY_SAMPLES, *ADDITIONAL_SECURITY_SAMPLES, *ADDITIONAL_SECURITY_SAMPLES_V2]
 
-#: Samples whose defect is design-level (trust boundary, missing control) rather
-#: than a recognisable sink. The regex/AST scanner cannot see them; the
-#: benchmark still scores them through the required-safe-pattern check.
 STATIC_UNDETECTABLE: frozenset[str] = frozenset(
     {
-        # Needs data-flow: a sink is only unsafe when attacker input reaches it.
         "ssrf",
         "ssrf-allowlist",
         "csrf-state-change",
@@ -505,8 +498,6 @@ STATIC_UNDETECTABLE: frozenset[str] = frozenset(
         "go-goroutine-unbounded",
         "rust-path-traversal",
         "ts-unsafe-any-cast",
-        # Semantics, not shape: `assert` as an auth check, CSV formula escaping,
-        # timeout absence, cookie flags.
         "python-assert-authorization",
         "python-csv-formula-injection",
         "python-request-timeout",

@@ -16,7 +16,6 @@ from __future__ import annotations
 
 #: (id, language, task, buggy, fixed, failure, diagnosis, rejected)
 EXTRA_CURATED: list[tuple[str, str, str, str, str, str, str, str]] = [
-    # ------------------------------------------------------------- JavaScript
     (
         "js-async-foreach",
         "javascript",
@@ -155,7 +154,6 @@ EXTRA_CURATED: list[tuple[str, str, str, str, str, str, str, str]] = [
         "changed by the first call. Spreading into a new object removes the aliasing.",
         "function withTimeout(options, ms) {\n  options.timeout = ms;\n  return { ...options };\n}\n",
     ),
-    # ------------------------------------------------------------- TypeScript
     (
         "ts-optional-chain-crash",
         "typescript",
@@ -289,7 +287,6 @@ EXTRA_CURATED: list[tuple[str, str, str, str, str, str, str, str]] = [
         "  return results;\n"
         "}\n",
     ),
-    # --------------------------------------------------------------------- Go
     (
         "go-loop-variable-capture",
         "go",
@@ -479,7 +476,6 @@ EXTRA_CURATED: list[tuple[str, str, str, str, str, str, str, str]] = [
         "type Job struct {\n\tID       int    `json:\"id\"`\n"
         "\tRetryMax int    `json:\"retryMax\"`\n}\n",
     ),
-    # ------------------------------------------------------------------- Rust
     (
         "rust-index-out-of-bounds",
         "rust",
@@ -614,7 +610,6 @@ EXTRA_CURATED: list[tuple[str, str, str, str, str, str, str, str]] = [
         "    items.collect::<Vec<_>>().iter().sum()\n"
         "}\n",
     ),
-    # ------------------------------------------------------------------- Java
     (
         "java-integer-equality",
         "java",
@@ -741,7 +736,6 @@ EXTRA_CURATED: list[tuple[str, str, str, str, str, str, str, str]] = [
         "    conn.setAutoCommit(true);\n"
         "}\n",
     ),
-    # -------------------------------------------------------------------- SQL
     (
         "sql-left-join-filter",
         "sql",
@@ -835,7 +829,6 @@ EXTRA_CURATED: list[tuple[str, str, str, str, str, str, str, str]] = [
         "the fractional part the metric is about.",
         "SELECT CAST(AVG(latency_ms) AS INTEGER) AS avg_latency FROM requests;\n",
     ),
-    # --------------------------------------------------------------- mixed/other
     (
         "js-dto-extra-field",
         "javascript",

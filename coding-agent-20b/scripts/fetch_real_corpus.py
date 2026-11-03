@@ -116,8 +116,6 @@ SKIP_NAME_PATTERNS = (
 )
 
 MIN_LINES = 8
-# Prose and diffs are legitimately short (a 4-line README section is real
-# content); the code floor would drop them before the quality gate ever ran.
 MIN_LINES_BY_LANGUAGE = {"markdown": 5, "diff": 5, "yaml": 5, "toml": 5}
 MAX_LINES = 5000
 MAX_FILE_BYTES = 450_000
@@ -155,7 +153,6 @@ PER_SOURCE_FRACTION = 0.25
 # 310+ curated permissively licensed repositories across 17+ languages.
 # Every archive is still verified fail-closed from its actual LICENSE file.
 GITHUB_REPOS: list[tuple[str, str]] = [
-    # Python (55)
     ("psf/requests", "python"), ("psf/black", "python"),
     ("encode/httpx", "python"), ("encode/starlette", "python"),
     ("encode/uvicorn", "python"), ("encode/databases", "python"),
@@ -184,7 +181,6 @@ GITHUB_REPOS: list[tuple[str, str]] = [
     ("pypa/pip", "python"), ("pypa/virtualenv", "python"),
     ("arrow-py/arrow", "python"), ("hynek/structlog", "python"),
     ("Delgan/loguru", "python"),
-    # TypeScript (42)
     ("microsoft/TypeScript", "typescript"), ("rollup/rollup", "typescript"),
     ("evanw/esbuild", "typescript"), ("vitejs/vite", "typescript"),
     ("vercel/swr", "typescript"), ("TanStack/query", "typescript"),
@@ -206,7 +202,6 @@ GITHUB_REPOS: list[tuple[str, str]] = [
     ("oxc-project/oxc", "rust"), ("denoland/deno", "rust"),
     ("sveltejs/kit", "typescript"), ("vuejs/core", "typescript"),
     ("solidjs/solid", "typescript"), ("remix-run/react-router", "typescript"),
-    # JavaScript (28)
     ("jquery/jquery", "javascript"), ("d3/d3", "javascript"),
     ("axios/axios", "javascript"), ("facebook/react", "javascript"),
     ("moment/moment", "javascript"), ("iamkun/dayjs", "javascript"),
@@ -221,7 +216,6 @@ GITHUB_REPOS: list[tuple[str, str]] = [
     ("tj/commander.js", "javascript"), ("yargs/yargs", "javascript"),
     ("chalk/chalk", "javascript"), ("debug-js/debug", "javascript"),
     ("websockets/ws", "javascript"), ("nodejs/undici", "javascript"),
-    # Go (34)
     ("spf13/cobra", "go"), ("spf13/viper", "go"), ("spf13/pflag", "go"),
     ("gin-gonic/gin", "go"), ("gorilla/mux", "go"), ("gorilla/websocket", "go"),
     ("go-chi/chi", "go"), ("gofiber/fiber", "go"), ("labstack/echo", "go"),
@@ -235,7 +229,6 @@ GITHUB_REPOS: list[tuple[str, str]] = [
     ("dgraph-io/badger", "go"), ("charmbracelet/bubbletea", "go"),
     ("charmbracelet/lipgloss", "go"), ("urfave/cli", "go"),
     ("tidwall/gjson", "go"), ("valyala/fasthttp", "go"),
-    # Rust (34)
     ("serde-rs/serde", "rust"), ("serde-rs/json", "rust"),
     ("tokio-rs/tokio", "rust"), ("tokio-rs/axum", "rust"),
     ("tokio-rs/tracing", "rust"), ("tokio-rs/bytes", "rust"),
@@ -253,7 +246,6 @@ GITHUB_REPOS: list[tuple[str, str]] = [
     ("sharkdp/bat", "rust"), ("BurntSushi/memchr", "rust"),
     ("indexmap-rs/indexmap", "rust"), ("once_cell/once_cell", "rust"),
     ("itertools/itertools", "rust"), ("uuid-rs/uuid", "rust"),
-    # Java (22)
     ("google/guava", "java"), ("google/auto", "java"),
     ("google/gson", "java"), ("google/dagger", "java"),
     ("brettwooldridge/HikariCP", "java"), ("redis/jedis", "java"),
@@ -265,7 +257,6 @@ GITHUB_REPOS: list[tuple[str, str]] = [
     ("FasterXML/jackson-databind", "java"), ("junit-team/junit5", "java"),
     ("assertj/assertj", "java"), ("netty/netty", "java"),
     ("ben-manes/caffeine", "java"), ("resilience4j/resilience4j", "java"),
-    # C & C++ (30)
     ("redis/redis@7.4.1", "c"), ("libuv/libuv", "c"), ("lua/lua@v5.4.7", "c"),
     ("jqlang/jq", "c"), ("antirez/sds", "c"), ("memcached/memcached", "c"),
     ("redis/hiredis", "c"), ("nginx/nginx", "c"), ("tmux/tmux", "c"),
@@ -278,7 +269,6 @@ GITHUB_REPOS: list[tuple[str, str]] = [
     ("protocolbuffers/protobuf", "cpp"), ("abseil/abseil-cpp", "cpp"),
     ("gabime/spdlog", "cpp"), ("catchorg/Catch2", "cpp"),
     ("pybind/pybind11", "cpp"), ("CLIUtils/CLI11", "cpp"),
-    # C#, Kotlin, Swift, Scala, Ruby, PHP, SQL, Shell (55)
     ("JamesNK/Newtonsoft.Json", "csharp"), ("dotnet/efcore", "csharp"),
     ("dotnet/orleans", "csharp"), ("autofac/Autofac", "csharp"),
     ("serilog/serilog", "csharp"), ("dotnet/command-line-api", "csharp"),
@@ -387,7 +377,6 @@ def classify_license_text(text: str) -> str | None:
     lowered = normalized.lower()
     if any(bad in lowered for bad in ("gnu general public license", "gnu lesser general public", "affero general public", "server side public license", "business source license")):
         # Dual-licensed Rust/Python crates often concatenate Apache-2.0 + MIT;
-        # reject if GPL/AGPL/LGPL/SSPL/BSL-1.1 appears without explicit MIT/Apache dual header.
         if not ("apache license" in lowered and "permission is hereby granted" in lowered):
             return None
     for name, pattern in _LICENSE_SIGNATURES:

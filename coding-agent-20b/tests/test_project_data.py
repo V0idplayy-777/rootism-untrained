@@ -214,7 +214,6 @@ def test_synthetic_slices_stay_under_the_five_percent_token_cap():
 
     audit = validate_synthetic_budget()
     assert audit["max_share"] == MAX_SYNTHETIC_TOKEN_SHARE == 0.05
-    # synthetic sampling share is bounded, real backbone still dominates
     assert synthetic_share() <= 0.21
     assert hybrid_share() <= 0.10
 

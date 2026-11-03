@@ -389,7 +389,6 @@ class RepairTraceGenerator:
 
         rows = self.to_sft_rows()
         rows.sort(key=lambda row: hashlib.sha256(row["id"].encode()).hexdigest())
-        # ceil, so a 15% request never silently rounds down below the contract
         cut = (
             max(1, math.ceil(len(rows) * heldout_ratio))
             if len(rows) > 3

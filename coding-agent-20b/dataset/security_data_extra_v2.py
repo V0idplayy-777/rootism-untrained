@@ -11,7 +11,6 @@ from __future__ import annotations
 from .security_data import SecuritySample
 
 ADDITIONAL_SECURITY_SAMPLES_V2: list[SecuritySample] = [
-    # ---------------------------------------------------------------- SQL
     SecuritySample(
         "sql-string-concat-dynamic",
         "CWE-89",
@@ -41,7 +40,6 @@ ADDITIONAL_SECURITY_SAMPLES_V2: list[SecuritySample] = [
         "NOSUPERUSER role with explicit table grants bounds what a bug can reach.",
         ("sql", "least_privilege", "roles"),
     ),
-    # -------------------------------------------------------------- shell
     SecuritySample(
         "shell-word-splitting",
         "CWE-78",
@@ -81,7 +79,6 @@ ADDITIONAL_SECURITY_SAMPLES_V2: list[SecuritySample] = [
         "usable credential forever. Reading the token from a file and redacting output avoids that.",
         ("shell", "secrets", "ci"),
     ),
-    # --------------------------------------------------------------- PHP
     SecuritySample(
         "php-md5-password",
         "CWE-916",
@@ -139,7 +136,6 @@ ADDITIONAL_SECURITY_SAMPLES_V2: list[SecuritySample] = [
         "JSON parsing can only produce data, and the shape is validated.",
         ("php", "eval", "rce"),
     ),
-    # ---------------------------------------------------------------- C#
     SecuritySample(
         "csharp-sql-concat",
         "CWE-89",
@@ -213,7 +209,6 @@ ADDITIONAL_SECURITY_SAMPLES_V2: list[SecuritySample] = [
         "Logging it server-side and returning a stable code keeps diagnostics without disclosure.",
         ("csharp", "errors", "leak"),
     ),
-    # -------------------------------------------------------------- Ruby
     SecuritySample(
         "ruby-shell-interpolation",
         "CWE-78",
@@ -261,7 +256,6 @@ ADDITIONAL_SECURITY_SAMPLES_V2: list[SecuritySample] = [
         "permit lists exactly the writable attributes.",
         ("ruby", "mass_assignment", "params"),
     ),
-    # -------------------------------------------------------- Kubernetes
     SecuritySample(
         "k8s-privileged-pod",
         "CWE-250",
@@ -300,7 +294,6 @@ ADDITIONAL_SECURITY_SAMPLES_V2: list[SecuritySample] = [
         "secretKeyRef keeps the value in the secret store, where it can be rotated and audited.",
         ("k8s", "secrets", "secretKeyRef"),
     ),
-    # ------------------------------------------------------------ Docker
     SecuritySample(
         "docker-unpinned-base",
         "CWE-829",
@@ -333,7 +326,6 @@ ADDITIONAL_SECURITY_SAMPLES_V2: list[SecuritySample] = [
         "have root execute the replacement. root ownership with 0755 keeps it read-only for others.",
         ("docker", "permissions", "chmod"),
     ),
-    # ------------------------------------------------------------- Java
     SecuritySample(
         "java-object-deserialization",
         "CWE-502",
@@ -407,7 +399,6 @@ ADDITIONAL_SECURITY_SAMPLES_V2: list[SecuritySample] = [
         "secret the browser never exposes.",
         ("java", "oauth", "pkce"),
     ),
-    # --------------------------------------------------------------- Go
     SecuritySample(
         "go-tls-skip-verify",
         "CWE-295",
@@ -500,7 +491,6 @@ ADDITIONAL_SECURITY_SAMPLES_V2: list[SecuritySample] = [
         "Invoking the binary directly passes the path as one opaque argument.",
         ("go", "command", "injection"),
     ),
-    # ------------------------------------------------------------- Rust
     SecuritySample(
         "rust-unsafe-transmute",
         "CWE-704",
@@ -591,7 +581,6 @@ ADDITIONAL_SECURITY_SAMPLES_V2: list[SecuritySample] = [
         "minimum length.",
         ("rust", "secrets", "environment"),
     ),
-    # --------------------------------------------------------- TypeScript
     SecuritySample(
         "ts-unsafe-any-cast",
         "CWE-20",
@@ -684,7 +673,6 @@ ADDITIONAL_SECURITY_SAMPLES_V2: list[SecuritySample] = [
         "the process. Iterating ALLOWED_KEYS with an own-property check bounds the write surface.",
         ("typescript", "prototype", "merge"),
     ),
-    # ------------------------------------------------------------ Python
     SecuritySample(
         "python-assert-authorization",
         "CWE-617",

@@ -93,7 +93,6 @@ def test_synthetic_share_is_capped_at_five_percent():
         {"instruction": f"write a retry helper number {i}", "output": "def f(): pass"}
         for i in range(40)
     ]
-    # 4000 tokens total -> 200 synthetic tokens, far below what the generators emit
     out = augment_rows(rows, per_row=2, total_tokens=4000)
     report = out[0]["metadata"]["budget"]
     assert MAX_SYNTHETIC_SHARE == 0.05
@@ -103,7 +102,6 @@ def test_synthetic_share_is_capped_at_five_percent():
     assert report["dropped"] > 0
     synthetic = [r for r in out if (r.get("metadata") or {}).get("synthetic")]
     assert sum(row_tokens(r) for r in synthetic) <= 200
-    # every original instruction survives untouched
     kept_instructions = {r["instruction"] for r in out}
     assert all(r["instruction"] in kept_instructions for r in rows)
 

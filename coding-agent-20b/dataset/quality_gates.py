@@ -34,8 +34,6 @@ from .mixture import (
 )
 from .production_processor import NON_PERMISSIVE_MARKERS
 
-# A slice may be absent only if the build explicitly reports it as missing for a
-# documented reason (e.g. no app rows requested in a smoke build).
 REQUIRED_SLICES: tuple[str, ...] = (
     "the-stack-code",
     "tests",
@@ -51,11 +49,8 @@ MIN_SLICE_SHARE: dict[str, float] = {
     "docs-and-comments": 0.01,
 }
 
-MIN_REALIZED_RATIO = 0.5   # realized share >= 50% of the planned weight
-MAX_REALIZED_RATIO = 2.5   # and <= 250% of it
-# Near-duplicate files intentionally collapse to one structural pattern, so a
-# healthy corpus sits well above this; the floor only catches "everything is the
-# same file".
+MIN_REALIZED_RATIO = 0.5
+MAX_REALIZED_RATIO = 2.5
 MIN_UNIQUE_PATTERN_RATIO = 0.01
 MIN_MULTI_FILE_RATIO = 0.01
 
@@ -105,7 +100,6 @@ def _slice_tokens(manifest: dict) -> dict[str, int]:
     tokens = {name: int(value) for name, value in (manifest.get("slice_tokens") or {}).items()}
     if tokens:
         return tokens
-    # older manifests only carry per-source token counts
     return {
         name: int(payload.get("tokens", 0))
         for name, payload in (manifest.get("sources") or {}).items()
@@ -158,7 +152,7 @@ def check_mixture(manifest: dict) -> GateResult:
         planned = spec.weight
         realized = shares.get(spec.name, 0.0)
         if realized == 0.0:
-            continue  # absence is coverage's job, not drift
+            continue
         ratio = realized / planned if planned else 0.0
         if ratio < MIN_REALIZED_RATIO or ratio > MAX_REALIZED_RATIO:
             drift.append(f"{spec.name} {realized:.3f} vs planned {planned:.3f} (x{ratio:.2f})")

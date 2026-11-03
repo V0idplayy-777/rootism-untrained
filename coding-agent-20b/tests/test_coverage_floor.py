@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import pytest
 
-# Module -> minimum branch-relevant statement coverage.
 FLOORS: dict[str, float] = {
     "scripts/fetch_real_corpus.py": 70.0,
     "scripts/build_real_dataset.py": 70.0,
@@ -37,7 +36,7 @@ def _coverage_data():
     try:
         data = coverage.CoverageData()
         data.read()
-    except Exception:  # no data file collected
+    except Exception:
         return None
     return data if data.measured_files() else None
 

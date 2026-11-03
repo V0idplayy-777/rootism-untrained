@@ -100,7 +100,6 @@ def test_format_instruction_renders_the_chat_contract():
     rendered = format_instruction({"instruction": "Task", "input": "ctx", "output": "ans"})
     assert "<|user|>" in rendered and "Task" in rendered
     assert "ctx" in rendered and "<|assistant|>" in rendered and "ans" in rendered
-    # no instruction => no user turn (nothing is invented)
     assert format_instruction({"prompt": "P"}) == ""
     assert format_instruction({}) == ""
 
@@ -146,7 +145,7 @@ def test_stream_huggingface_dataset_filters_language_and_respects_max_samples(mo
     rows = list(stream_huggingface_dataset(spec, languages=["python"], max_samples=10))
     assert len(rows) == 2, "the rust row and the empty row are filtered"
     assert all(row["language"] == "python" for row in rows)
-    assert all(row["license"] for row in rows)      # GPL is passed through, gated later
+    assert all(row["license"] for row in rows)
     assert all(row["slice"] == spec.slice_hint for row in rows)
     assert all(row["source"].startswith("hf:") for row in rows)
 
@@ -173,17 +172,14 @@ def test_builder_emits_shards_manifest_and_isolated_heldout(tmp_path):
     assert manifest["isolation"]["train_val_overlap_documents"] == 0
     assert manifest["ingested_sources"]["local_jsonl"] > 0
 
-    # GPL never reaches a shard
     assert "GPL-3.0" not in manifest["licenses"]
 
-    # held-out documents are written to their own directory, with a hash manifest
     held_manifest = tmp_path / "heldout" / "heldout_manifest.json"
     assert held_manifest.exists()
     heldout = json.loads(held_manifest.read_text())
     assert heldout["documents"] > 0
     assert heldout["heldout_sha256"]
 
-    # explicit shard files + manifests exist
     assert (out / "corpus_manifest.json").exists()
     assert (out / "train_manifest.json").exists()
 
@@ -225,7 +221,6 @@ def test_builder_stops_at_the_token_target(tmp_path):
     builder = DatasetBuilder(tmp_path / "shards", CodeTokenizer(), seq_length=128, heldout_dir=tmp_path / "h")
     manifest = builder.build(local_jsonl_dir=real, target_tokens=2_000)
 
-    # the token target is a stop condition, not a suggestion
     assert manifest["total_stream_tokens"] < 2_000 + 4_000
 
 

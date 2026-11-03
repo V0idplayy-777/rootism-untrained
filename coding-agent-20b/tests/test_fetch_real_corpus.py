@@ -24,9 +24,6 @@ import pytest
 from dataset.production_processor import PERMISSIVE_LICENSES
 from scripts import fetch_real_corpus as frc
 
-# ---------------------------------------------------------------------------
-# Archive fixtures (real gzip tarballs, no network)
-# ---------------------------------------------------------------------------
 
 PY_CODE = '''"""Bounded retry helper with linear backoff.
 
@@ -141,10 +138,10 @@ def github_archive() -> bytes:
             "pkg/retry.py": PY_CODE,
             "tests/test_retry.py": TEST_CODE,
             "docs/retry.md": DOC_MD,
-            "node_modules/vendored/index.js": JS_CODE,  # skipped dir
-            "pkg/binary.py": b"\x00\x01\x02not text",     # binary, skipped
-            "pkg/short.py": "x = 1\n",                    # too few lines
-            "README.txt": "tiny",                         # wrong extension/too small
+            "node_modules/vendored/index.js": JS_CODE,
+            "pkg/binary.py": b"\x00\x01\x02not text",
+            "pkg/short.py": "x = 1\n",
+            "README.txt": "tiny",
         }
     )
 
@@ -173,9 +170,6 @@ def transport(monkeypatch):
     return install
 
 
-# ---------------------------------------------------------------------------
-# Licence classification
-# ---------------------------------------------------------------------------
 
 
 def test_license_text_classification_is_permissive_only():
@@ -200,9 +194,6 @@ def test_pypi_metadata_classification():
     assert frc.classify_pypi_metadata("Metadata-Version: 2.1\n") is None
 
 
-# ---------------------------------------------------------------------------
-# Archive extraction
-# ---------------------------------------------------------------------------
 
 
 def test_tar_extraction_keeps_code_docs_and_tests_and_skips_junk():
@@ -213,9 +204,9 @@ def test_tar_extraction_keeps_code_docs_and_tests_and_skips_junk():
     assert "github:demo:pkg/retry.py" in paths
     assert "github:demo:tests/test_retry.py" in paths
     assert "github:demo:docs/retry.md" in paths
-    assert not any("node_modules" in path for path in paths)   # SKIP_DIRS
-    assert "github:demo:pkg/binary.py" not in paths             # NUL bytes
-    assert "github:demo:pkg/short.py" not in paths              # below MIN_LINES
+    assert not any("node_modules" in path for path in paths)
+    assert "github:demo:pkg/binary.py" not in paths
+    assert "github:demo:pkg/short.py" not in paths
     assert {"python", "markdown"} <= languages
 
 
@@ -227,7 +218,6 @@ def test_tar_extraction_reports_license_files():
 
 def test_tar_extraction_handles_a_corrupt_archive():
     assert frc._extract_docs_from_tar(b"not a tarball", "github:broken", on_license_file=lambda t: None) == []
-    # truncated gzip
     good = github_archive()
     assert frc._extract_docs_from_tar(good[: len(good) // 3], "github:trunc", on_license_file=lambda t: None) == []
 
@@ -285,9 +275,6 @@ def test_npm_tarball_recovers_license_from_license_file():
     assert license_id == "MIT"
 
 
-# ---------------------------------------------------------------------------
-# Gates: quality, dedup, held-out split
-# ---------------------------------------------------------------------------
 
 
 def test_quality_gate_rejects_gpl_and_short_documents():
@@ -324,7 +311,7 @@ def test_writer_dedups_and_shards(tmp_path):
     doc = {"content": PY_CODE, "path": "a.py", "slice": "the-stack-code", "license": "MIT"}
     assert writer.duplicate(PY_CODE, "a.py") is False
     assert writer.add("python", doc) is True
-    assert writer.duplicate(PY_CODE, "a.py") is True          # same id
+    assert writer.duplicate(PY_CODE, "a.py") is True
     assert writer.duplicate(PY_CODE + "\n# same body", "a.py") is True
     writer.add("python", {**doc, "path": "b.py"})
     writer.flush()
@@ -339,13 +326,9 @@ def test_writer_dedups_and_shards(tmp_path):
     assert manifest["corpus_version"] == "corpus-v1-real"
 
 
-# ---------------------------------------------------------------------------
-# run_fetch, end to end over the mocked transport
-# ---------------------------------------------------------------------------
 
 
 def test_run_fetch_end_to_end_keeps_permissive_and_writes_manifest(tmp_path, transport, monkeypatch):
-    # one permissive github repo + one GPL repo
     monkeypatch.setattr(frc, "GITHUB_REPOS", [("demo/permissive", "python"), ("demo/gpl", "python")])
     monkeypatch.setattr(frc, "PYPI_PACKAGES", [])
     monkeypatch.setattr(frc, "NPM_PACKAGES", [])
@@ -375,7 +358,6 @@ def test_run_fetch_end_to_end_keeps_permissive_and_writes_manifest(tmp_path, tra
         scale=1.0,
     )
 
-    # permissive repo contributed real documents with real licences
     assert manifest["documents"] > 0
     assert manifest["chars"] > 0
     assert "MIT" in manifest["per_license"]
@@ -392,13 +374,11 @@ def test_run_fetch_end_to_end_keeps_permissive_and_writes_manifest(tmp_path, tra
     assert all(row["license"] in PERMISSIVE_LICENSES for row in rows)
     assert all(row["slice"] in {"the-stack-code", "tests", "docs-and-comments", "github-prs", "github-issues"} for row in rows)
 
-    # the GPL repo is logged as rejected, never written
     log = [json.loads(line) for line in (out / "sources.jsonl").read_text().splitlines()]
     statuses = {entry["source"]: entry["status"] for entry in log}
     assert statuses["github:demo/permissive"] == "ok"
     assert statuses["github:demo/gpl"] == "license-rejected"
 
-    # manifest is on disk and the held-out corpus is isolated
     assert (out / "manifest.json").exists()
     heldout_manifest = json.loads((held / "heldout_manifest.json").read_text())
     assert heldout_manifest["documents"] == manifest["heldout"]["documents"]
@@ -430,7 +410,7 @@ def test_run_fetch_survives_a_dead_transport(tmp_path, transport, monkeypatch):
     monkeypatch.setattr(frc, "GITHUB_REPOS", [("demo/dead", "python")])
     monkeypatch.setattr(frc, "PYPI_PACKAGES", [])
     monkeypatch.setattr(frc, "NPM_PACKAGES", [])
-    transport({})  # every download returns None
+    transport({})
 
     manifest = frc.run_fetch(output_dir=tmp_path / "o", heldout_dir=tmp_path / "h", skip_pypi=True, skip_npm=True, workers=1)
     assert manifest["documents"] == 0
@@ -517,7 +497,7 @@ def test_pypi_and_npm_fetchers_read_their_metadata(monkeypatch):
         {"info": {"version": "1.0"}, "urls": [{"packagetype": "sdist", "url": "https://files.invalid/demo.tar.gz"}]}
     ).encode()
     blob, version = frc.fetch_pypi_sdist.__wrapped__("demo") if hasattr(frc.fetch_pypi_sdist, "__wrapped__") else (None, "")
-    assert blob is None  # no __wrapped__; the real path is exercised below
+    assert blob is None
     responses = {
         "https://pypi.org/pypi/demo/json": index,
         "https://files.invalid/demo.tar.gz": sdist,

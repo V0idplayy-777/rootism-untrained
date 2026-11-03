@@ -303,7 +303,6 @@ def _docstring_contract(doc: str) -> list[str]:
         if not stripped:
             capturing = False
             continue
-        # an indented detail line belongs to the promise above it
         if kept and line.startswith((" ", "\t")):
             kept[-1] = kept[-1] + " " + stripped
         else:

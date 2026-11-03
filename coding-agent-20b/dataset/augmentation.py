@@ -873,12 +873,6 @@ class RecoveryInstructionGenerator:
         ]
 
 
-# ---------------------------------------------------------------------------
-# Token budget: synthetic augmentation never exceeds a fixed share of the
-# mixture. The share is a *hard* cap, not a target: if the augmented set would
-# cross it, rows are trimmed deterministically (seeded shuffle order) rather
-# than allowed through.
-# ---------------------------------------------------------------------------
 
 MAX_SYNTHETIC_SHARE = 0.05
 
@@ -971,7 +965,6 @@ def cap_rows(
 
         used += cost
 
-    # restore a deterministic but readable ordering
     kept.sort(key=lambda row: row.get("category", ""))
 
     synthetic_used = sum(row_tokens(row) for row in kept)
@@ -1055,7 +1048,6 @@ def augment_rows(
 
     synthetic = [r for r in out[len(rows):]]
 
-    # tag before measuring: the marker itself costs tokens in the mixture
     for row in synthetic:
 
         metadata = row.get("metadata")

@@ -82,7 +82,7 @@ def test_real_documents_route_into_slices_and_drop_bad_licenses(tmp_path):
     slices = {doc.slice_name for doc in docs}
     paths = {doc.path for doc in docs}
     assert slices == {"the-stack-code", "tests", "docs-and-comments", "github-prs"}
-    assert "pkg/vendored.py" not in paths       # GPL is fail-closed
+    assert "pkg/vendored.py" not in paths
     assert "pkg/nolicense.py" not in paths      # no license is fail-closed
     assert all(doc.license for doc in docs)
 
@@ -137,23 +137,20 @@ def test_real_build_caps_synthetic_share(tmp_path):
     assert manifest["total_packed_tokens"] > 0
     assert manifest["total_packed_tokens"] % 256 == 0, "shards pack whole sequences"
 
-    # isolation invariants
     isolation = manifest["isolation"]
     assert isolation["heldout_overlap_documents"] == 0
     assert isolation["train_val_overlap_documents"] == 0
 
-    # provenance survives into the manifest
     assert manifest["sources"]["the-stack-code"]["documents"] >= 1
     assert "tests" in manifest["sources"]
     assert manifest["licenses"]
     assert "GPL-3.0" not in manifest["licenses"]
 
-    # files on disk match the manifest
     for split in ("train", "val"):
         for shard in manifest["splits"][split]["shards"]:
             path = out / shard["path"]
             assert path.exists()
-            assert path.stat().st_size == shard["tokens"] * 4  # uint32
+            assert path.stat().st_size == shard["tokens"] * 4
     corpus_manifest = json.loads((out / "corpus_manifest.json").read_text())
     assert corpus_manifest["corpus_version"] == "corpus-v1"
     assert corpus_manifest["builder"] == "scripts/build_corpus_v1.py"
@@ -171,9 +168,9 @@ def test_a_real_backbone_too_small_for_one_row_is_reported_not_hidden(tmp_path):
         shard_size_tokens=4096,
     )
     synthetic = manifest["synthetic"]
-    assert synthetic["within_cap"] is True          # nothing was admitted
+    assert synthetic["within_cap"] is True
     assert synthetic["tokens"] == 0
-    assert synthetic["allowance_starved"] is True   # and the run says so
+    assert synthetic["allowance_starved"] is True
     assert synthetic["note"]
 
 
@@ -208,9 +205,6 @@ def test_manifest_reports_missing_slices(tmp_path):
     assert "the-stack-code" not in manifest["missing_slices"]
 
 
-# ---------------------------------------------------------------------------
-# Full chain: fetch -> build -> gate
-# ---------------------------------------------------------------------------
 
 CHAIN_STATEMENTS = [
     "    total = 0\n    for item in items:\n        total += item\n    return total\n",
@@ -306,7 +300,6 @@ def test_fetch_build_gate_chain_runs_end_to_end(tmp_path, monkeypatch):
 
     real, held = tmp_path / "real", tmp_path / "heldout"
 
-    # 1. fetch
     fetched = frc.run_fetch(
         output_dir=real, heldout_dir=held, skip_pypi=True, skip_npm=True, workers=2, heldout_every=20
     )
@@ -314,7 +307,6 @@ def test_fetch_build_gate_chain_runs_end_to_end(tmp_path, monkeypatch):
     assert set(fetched["per_license"]) == {"MIT"}, "only the permissive repo may contribute"
     assert {"the-stack-code", "tests", "docs-and-comments"} <= set(fetched["per_slice"])
 
-    # 2. build
     built = build(
         tmp_path / "shards",
         CodeTokenizer(),
@@ -330,7 +322,6 @@ def test_fetch_build_gate_chain_runs_end_to_end(tmp_path, monkeypatch):
     assert built["synthetic"]["within_cap"] is True
     assert built["synthetic"]["share"] <= 0.05
 
-    # every synthetic mixture slice can actually be produced, not just declared
     from dataset.mixture import DEFAULT_MIXTURE
 
     declared_synthetic = {
@@ -341,19 +332,14 @@ def test_fetch_build_gate_chain_runs_end_to_end(tmp_path, monkeypatch):
     assert "instruction-sft" in emitted, "the hybrid slice must be emitted"
     assert "security-sft" in emitted
 
-    # 3. gate
     report = evaluate_path(tmp_path / "shards" / "corpus_manifest.json")
     by_name = {result.name: result for result in report.results}
 
-    # Gates that must pass at any scale
     assert by_name["license"].ok, by_name["license"].detail
     assert by_name["isolation"].ok, by_name["isolation"].detail
     assert by_name["synthetic_budget"].ok, by_name["synthetic_budget"].detail
     assert by_name["real_backbone"].ok, by_name["real_backbone"].detail
 
-    # Coverage/mixture legitimately fail here: the fixture has no PR diffs, no
-    # issues and a doc/code ratio that is not the planned one. They must FAIL
-    # loudly rather than be waved through.
     assert not by_name["coverage"].ok
     assert "github-prs" in by_name["coverage"].detail
     assert not report.ok
@@ -394,7 +380,7 @@ def test_induced_slice_comes_from_real_files(tmp_path):
     docs = list(induced_documents(real, limit=5))
     assert docs, "a real corpus must yield induced rows"
     assert all(doc.slice_name == "instruction-sft" for doc in docs)
-    assert all(doc.license == "CC0-1.0" for doc in docs)   # framing is generated
+    assert all(doc.license == "CC0-1.0" for doc in docs)
     assert all(doc.metadata["provenance"] == "synthetic" for doc in docs)
 
 

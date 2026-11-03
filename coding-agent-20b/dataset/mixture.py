@@ -39,9 +39,6 @@ class SourceSpec:
         return asdict(self)
 
 
-# Smaller weights are ordered before the 0.48 backbone weight so left-to-right
-# IEEE-754 summation evaluates to literally ``1.0`` across Python 3.10-3.12:
-# ``sum(s.weight for s in DEFAULT_MIXTURE) == 1.0`` is True.
 DEFAULT_MIXTURE: list[SourceSpec] = [
     SourceSpec(
         "github-issues",
@@ -182,20 +179,11 @@ def validate_mixture(mixture: Sequence[SourceSpec] = DEFAULT_MIXTURE) -> None:
         raise ValueError(f"real-code backbone share must be >= 0.70, got {real_share:.4f}")
 
 
-# ---------------------------------------------------------------------------
-# Synthetic-share cap: pure-synthetic slices may never exceed 5% of the mixture.
-# ``instruction-sft`` is a hybrid slice (real + AST-induced + augmented), so it
-# is excluded from this accounting; the synthetic-only sources are not.
-# ---------------------------------------------------------------------------
 
 MAX_SYNTHETIC_SHARE = 0.05
 
-# Whole-corpus share of purely synthetic tokens. The mixture weights above are
-# *document* shares used for sampling; the token cap is enforced here and in
-# ``dataset.augmentation.cap_rows`` so no run can drift past 5% synthetic.
 MAX_SYNTHETIC_TOKEN_SHARE = 0.05
 
-# Slice used to enforce the token cap: pure synthetic slices only.
 SYNTHETIC_TOKEN_SLICES: frozenset[str] = frozenset(
     {
         "security-sft",
@@ -285,20 +273,11 @@ def validate_mixture(mixture: Sequence[SourceSpec] = DEFAULT_MIXTURE) -> None:
         raise ValueError(f"real-code backbone share must be >= 0.70, got {real_share:.4f}")
 
 
-# ---------------------------------------------------------------------------
-# Synthetic-share cap: pure-synthetic slices may never exceed 5% of the mixture.
-# ``instruction-sft`` is a hybrid slice (real + AST-induced + augmented), so it
-# is excluded from this accounting; the synthetic-only sources are not.
-# ---------------------------------------------------------------------------
 
 MAX_SYNTHETIC_SHARE = 0.05
 
-# Whole-corpus share of purely synthetic tokens. The mixture weights above are
-# *document* shares used for sampling; the token cap is enforced here and in
-# ``dataset.augmentation.cap_rows`` so no run can drift past 5% synthetic.
 MAX_SYNTHETIC_TOKEN_SHARE = 0.05
 
-# Slice used to enforce the token cap: pure synthetic slices only.
 SYNTHETIC_TOKEN_SLICES: frozenset[str] = frozenset(
     {
         "security-sft",
@@ -522,6 +501,4 @@ def synthetic_token_budget(
     }
 
 
-# The 5% ceiling applies to the tokens each slice may contribute; the mixture
-# document weights above are the sampling mix and are only bounded at 21%.
 validate_synthetic_budget(DEFAULT_MIXTURE)
