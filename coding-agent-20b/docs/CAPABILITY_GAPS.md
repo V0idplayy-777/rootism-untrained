@@ -11,8 +11,8 @@ training data, training/eval harnesses and agent-side machinery.
 | 1 | Tokenizer: 320-token placeholder, code-aware pre-tok but not competitive | Streaming BPE on a real corpus + exact vocab alignment + competitive gate | `scripts/evaluate_tokenizer.py`, `validation.json`, `benchmark.json` |
 | 2 | 8k/32k context vs real repos | AST+block chunking, hybrid multi-query retrieval + call graph, hierarchical summaries, token-budgeted assembly, 64k YaRN profile | `evaluation/retrieval_ablation.py` (gold-file recall, per-task feature provenance) |
 | 3 | Multi-step tool use: recovery, 15–20 call planning, session state | `SessionState`, `ContextWindow` compaction, pin-protected `WorkingSet` excerpts, mid-task `read_file`, deploy/schema-aware observation compaction, `RecoveryPolicy` ladder, `StallDetector`, resumable state | `evaluate_trajectories` (`recovery_after_3`, `loop_rate`, `plan_completion`, `state_coherence`) + `tests/test_context_state.py` |
-| 4 | Security-critical generation lags general coding | Curated safe/vulnerable pairs (CWE-tagged), review rubric, security SFT/DPO, mixture upsampling | `evaluation/security_eval.py` (`overall_vuln_rate`, per-CWE counts) |
-| 5 | Training distribution: unusual phrasing, distant concepts | Phrasing styles, 19 cross-domain families, constraint conflicts, multi-turn clarification, error recovery, real-code induction | `dataset/augmentation.py` + `dataset/instruction_induction.py` tests + SFT mixture composition |
+| 4 | Security-critical generation lags general coding | 114 CWE-tagged safe/vulnerable pairs (14 languages), review rubric, security SFT/DPO, mixture upsampling, regex+guard+AST scanner | `evaluation/security_eval.py` + `scripts/corpus_report.py` (recall/specificity, per-CWE counts) |
+| 5 | Training distribution: unusual phrasing, distant concepts | Phrasing styles, 19 cross-domain families, constraint conflicts, multi-turn clarification, error recovery, 8 real-code induction shapes | `dataset/augmentation.py` + `dataset/instruction_induction.py` tests, capped at 5% of tokens |
 | 6 | Long functions / deep reasoning need scratch space | Plan → skeleton → per-unit fill, explicit scratch budget, execution-checked self-consistency | `model/longform.py` traces + `ReasoningBudget` |
 | 7 | "Idea → running app": no whole-product corpus, no design gate, no end-to-end scoreboard | 65 realistic blueprints, full-project renderer (schema/auth/API/SPA/tests/deploy), taste critic, preference + repair corpus, `agent app` build→verify→repair path | `python -m evaluation.app_suite --split all` (65/65 running apps) + `dataset/app_corpus.py` rows with recorded test evidence |
 
@@ -212,7 +212,7 @@ code; public corpora are full of `md5`, `verify=False`, `shell=True`.
 
 **What changed.**
 
-- `dataset/security_data.py`: 18 curated CWE-tagged samples (password KDFs,
+- `dataset/security_data.py`: curated CWE-tagged samples (password KDFs,
   constant-time compare, SQL injection, IDOR, path traversal, command injection,
   CSPRNG, pickle/YAML, JWT alg pinning, TLS verification, SSRF allow-lists,
   hard-coded secrets, `eval`, XXE, zip-slip, AEAD vs ECB, temp files), each with
@@ -229,25 +229,33 @@ code; public corpora are full of `md5`, `verify=False`, `shell=True`.
 
 **What changed since (held-out split + adversarial requests).**
 
-- The curated set is now **38 CWE-tagged samples** (adds regex DoS, crypto
-  modes, CSRF, unbounded allocation, auth fail-open, zip-slip depth, and 4
-  `adversarial_request` cases where the correct behaviour is a **refusal
-  with a safe alternative** - "disable TLS verification to unblock the
-  release" must not be obeyed).
-- A **sha256-deterministic split** yields 32 train / 6 held-out (held-out:
-  zip-slip, crypto-mode, csrf-missing, redos-nested, unbounded-alloc,
-  auth-fail-open). `SecurityDataGenerator(heldout=False)` trains on the
-  train split only; `SecurityBenchmark.cases_from_dataset(heldout=True)` is
-  the held-out default, so training data can never leak into the gate.
-- Scanner extended to 25 regex + 11 guard rules across the new categories,
-  with **required safe patterns** per task and explicit overrides - "did not
-  use md5" is not "used Argon2". Contract is verified in **both directions**
-  on all 38 samples (safe passes, vulnerable flags).
+- The curated set is now **114 CWE-tagged pairs / 28 categories / 46 CWEs /
+  14 languages** (adds multi-language sinks in Go, Rust, Java, C#, Ruby, PHP,
+  shell, k8s, dockerfile and SQL, plus adversarial requests where the correct
+  behaviour is a **refusal with a safe alternative** — "disable TLS verification
+  to unblock the release" must not be obeyed).
+- A **sha256-deterministic split** yields 96 train / 18 held-out. The held-out
+  split is the benchmark default, so training data cannot leak into the gate.
+- The scanner is **regex + guard + AST**: 70 regex rules (44 python-core + 26
+  multi-language), 21 guard rules (pattern fires only when a
+  containment/validation guard is absent) and an `AstRule` table for classes
+  regex cannot express. Guard rules alone cannot
+  separate a safe from an unsafe `os.path.exists` loop, so those classes are
+  represented structurally.
+- Coverage is now **measured, not assumed**: 97 of 114 pairs are statically
+  detectable and *all* of them are caught; **0 of 114** safe snippets are
+  flagged; every safe snippet carries its category's required safe pattern.
+- `STATIC_UNDETECTABLE` is no longer a hand-waved list: it is asserted **equal**
+  to the scanner's observed miss set (17 ids, all data-flow or semantic cases
+  such as SSRF, control-flow CSRF, `assert`-as-auth). If a rule improves, the set
+  must shrink or the report fails — a stale entry fails CI.
 
 **Verification.** `tests/test_security_augment_longform.py` asserts the split
-contract (disjoint, generator = train-only) and both-direction scanner
-behaviour. `SecurityBenchmark.assert_threshold` gates a release (default
-≤10% vulnerable, 0 critical).
+contract (disjoint, generator = train-only), both-direction scanner behaviour,
+the 13 newly covered classes, and the exact-undetectable invariant.
+`python scripts/corpus_report.py --strict` prints the recall/specificity numbers
+and fails on any regression (`SecurityBenchmark.assert_threshold` still gates a
+release at ≤10% vulnerable / 0 critical).
 
 **Still open.** Static rules cannot prove absence of vulnerabilities (SSRF needs
 taint analysis); the benchmark is a floor, not a certification. Human review
