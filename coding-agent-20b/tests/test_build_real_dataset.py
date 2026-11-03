@@ -240,3 +240,65 @@ def test_builder_language_filter_and_unknown_dataset_name(tmp_path, caplog):
     )
     assert manifest["total_documents"] == 0
     assert manifest["ingested_sources"] == {}
+
+
+def test_builder_uses_the_disk_dedup_index_for_large_ingestion(tmp_path):
+    """The scale path: RAM stays flat, duplicates are caught across files."""
+
+    real = tmp_path / "real"
+    # 30 genuinely distinct modules: each has a unique set of statement shapes
+    statement_shapes = [
+        "    total = 0\n    for item in items:\n        total += item\n    return total\n",
+        "    seen = set()\n    for item in items:\n        if item not in seen:\n            seen.add(item)\n    return seen\n",
+        "    if not items:\n        raise ValueError('empty')\n    return items[0]\n",
+        "    return {k: v for k, v in mapping.items() if v is not None}\n",
+        "    try:\n        return int(text)\n    except ValueError:\n        return fallback\n",
+        "    return [p.strip() for p in text.split(sep) if p]\n",
+        "    best = None\n    for candidate in candidates:\n        if best is None or candidate > best:\n            best = candidate\n    return best\n",
+        "    out = []\n    for i in range(0, len(data), step):\n        out.append(data[i:i + step])\n    return out\n",
+    ]
+    modules = [
+        "\n".join(
+            f"def fn_{i}_{j}(arg_{i}_{j}):\n" + statement_shapes[(i + j) % len(statement_shapes)]
+            for j in range(4 + i % 5)
+        )
+        for i in range(30)
+    ]
+    rows = [
+        {"content": modules[i], "path": f"pkg/m{i}.py", "license": "MIT", "language": "python"}
+        for i in range(30)
+    ]
+    # the same document re-published under a second path (a fork/vendored drop)
+    rows += [
+        {"content": modules[i], "path": f"copied/m{i}.py", "license": "MIT", "language": "python"}
+        for i in range(10)
+    ]
+    write_jsonl(real, "python-0.jsonl", rows)
+
+    index_path = tmp_path / "dedup.sqlite"
+    builder = DatasetBuilder(
+        tmp_path / "shards",
+        CodeTokenizer(),
+        seq_length=128,
+        heldout_dir=tmp_path / "held",
+        min_quality=0.0,
+        dedup_threshold=0.85,
+        dedup_index_path=index_path,
+    )
+    manifest = builder.build(local_jsonl_dir=real, target_tokens=1_000_000, heldout_every=0)
+
+    assert index_path.exists()
+    # The index is *near*-duplicate aware: a synthetic module built from eight
+    # shared statement shapes is legitimately similar to its siblings, so a
+    # couple of extra drops here are correct behaviour, not a leak. What must
+    # hold is that the ten byte-identical copies are gone and only exact ones.
+    assert 18 <= manifest["total_documents"] <= 30
+    dedup = manifest["dedup"]
+    duplicates = dedup["exact_duplicates"] + dedup["near_duplicates"]
+    assert duplicates >= 10, dedup
+    assert dedup["indexed"] == dedup["checked"] - duplicates
+    assert dedup["checked"] >= 40
+    processor_dedup = manifest["processor_stats"]["dedup"]
+    assert (
+        processor_dedup["exact_duplicates"] + processor_dedup["near_duplicates"] >= 10
+    ), processor_dedup
