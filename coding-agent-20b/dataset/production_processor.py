@@ -106,7 +106,11 @@ CANONICAL_PERMISSIVE_SPDX: dict[str, str] = {
     "python-2.0": "PSF-2.0",
 }
 
-PERMISSIVE_LICENSES: set[str] = set(CANONICAL_PERMISSIVE_SPDX.keys())
+# Canonical SPDX identifiers only. ``CANONICAL_PERMISSIVE_SPDX`` maps *input
+# spellings* ("mit license", "apache 2.0", ...) to canonical ids; membership is
+# always tested against a canonicalised id, so this set must hold the values,
+# not the keys (holding keys rejected every real "MIT"/"Apache-2.0" document).
+PERMISSIVE_LICENSES: frozenset[str] = frozenset(CANONICAL_PERMISSIVE_SPDX.values())
 
 NON_PERMISSIVE_MARKERS: tuple[str, ...] = (
     "agpl",
@@ -597,7 +601,15 @@ class Deduplicator:
             m.update(shingle.encode("utf8", "ignore"))
         return m
 
-    def is_duplicate(self, doc_id: str, content: str) -> bool:
+    def is_duplicate(self, doc_id: str, content: str, *, remember: bool = True) -> bool:
+        """Is this document a duplicate?
+
+        ``remember=False`` is a pure query: it reports whether the document
+        *would* be a duplicate without adding it to the index. Validators must
+        use it, otherwise probing a document consumes its dedup slot and the
+        later real insert is silently rejected.
+        """
+
         self.total_checked += 1
         norm = self._normalized_text(content)
         content_hash = hashlib.sha256(norm.encode("utf8", "ignore")).hexdigest()
@@ -616,6 +628,8 @@ class Deduplicator:
                     if sim >= self.threshold:
                         self.near_duplicates += 1
                         return True
+            if not remember:
+                return False
             self._sigs[unique_key] = sig
             for b in range(bands):
                 key = (b, tuple(sig[b * rows : (b + 1) * rows].tolist()))
@@ -629,7 +643,11 @@ class Deduplicator:
             if self.lsh.query(minhash):
                 self.near_duplicates += 1
                 return True
-            self.lsh.insert(unique_key, minhash)
+            if remember:
+                self.lsh.insert(unique_key, minhash)
+
+        if not remember:
+            return False
 
         self._exact.add(content_hash)
         self.seen.add(doc_id)

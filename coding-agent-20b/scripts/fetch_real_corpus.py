@@ -116,6 +116,9 @@ SKIP_NAME_PATTERNS = (
 )
 
 MIN_LINES = 8
+# Prose and diffs are legitimately short (a 4-line README section is real
+# content); the code floor would drop them before the quality gate ever ran.
+MIN_LINES_BY_LANGUAGE = {"markdown": 5, "diff": 5, "yaml": 5, "toml": 5}
 MAX_LINES = 5000
 MAX_FILE_BYTES = 450_000
 
@@ -782,7 +785,8 @@ def _extract_docs_from_tar(blob: bytes, source_id: str, on_license_file) -> list
                 except UnicodeDecodeError:
                     continue
                 lines = content.count("\n") + 1
-                if not (MIN_LINES <= lines <= MAX_LINES):
+                floor = MIN_LINES_BY_LANGUAGE.get(language, MIN_LINES)
+                if not (floor <= lines <= MAX_LINES):
                     continue
                 rel = name.split("/", 1)[-1] if "/" in name else name
                 docs.append(
@@ -835,7 +839,8 @@ def _extract_pypi_sdist(blob: bytes, source_id: str) -> tuple[list[dict[str, Any
                 except UnicodeDecodeError:
                     continue
                 lines = content.count("\n") + 1
-                if not (MIN_LINES <= lines <= MAX_LINES):
+                floor = MIN_LINES_BY_LANGUAGE.get(language, MIN_LINES)
+                if not (floor <= lines <= MAX_LINES):
                     continue
                 rel = name.split("/", 1)[-1] if "/" in name else name
                 docs.append(
@@ -905,7 +910,8 @@ def _extract_npm_tarball(blob: bytes, source_id: str) -> tuple[list[dict[str, An
                 except UnicodeDecodeError:
                     continue
                 lines = content.count("\n") + 1
-                if not (MIN_LINES <= lines <= MAX_LINES):
+                floor = MIN_LINES_BY_LANGUAGE.get(language, MIN_LINES)
+                if not (floor <= lines <= MAX_LINES):
                     continue
                 rel = name.split("/", 1)[-1] if "/" in name else name
                 docs.append(
