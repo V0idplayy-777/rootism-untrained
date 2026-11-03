@@ -130,6 +130,7 @@ def estimate(
     chunked_loss: bool = True,
     loss_chunk_size: int = 1024,
     fused_attention: bool = True,
+    window_materialised: bool = False,
     gradient_checkpointing: bool = True,
 ) -> MemoryBreakdown:
     """Estimate per-rank memory for one training configuration.
@@ -151,7 +152,7 @@ def estimate(
 
     if offload_param:
 
-        host += 2 * params
+        host += 2 * params / shard
 
     else:
 
@@ -163,7 +164,7 @@ def estimate(
 
     if offload_optimizer:
 
-        host += optimizer_bytes
+        host += optimizer_bytes  # already divided by optimizer_shard
 
     else:
 
@@ -198,8 +199,14 @@ def estimate(
 
         breakdown.logits = 2 * micro_batch * seq_length * model.vocab_size
 
-    if not fused_attention and seq_length > 1:
+    # NOTE: the 20B recipe trains at 8192 tokens with a 4096-token sliding window,
+    # and the pre-existing model applies that window only inside its explicit
+    # softmax path (the fused path ignores it).  Until that is reconciled the
+    # windowed path is the reference, so the *new* peak includes the quadratic
+    # score matrix there.  ``window_materialised`` models exactly that.
+    if (window_materialised or not fused_attention) and seq_length > 1:
 
+        # fp32 scores + their softmax output, per head, per sequence
         breakdown.attention_scratch = (
             4 * micro_batch * model.num_attention_heads * seq_length * seq_length
         )
@@ -207,6 +214,10 @@ def estimate(
     # ZeRO-3 streams parameters in for the layer being computed.  The cap is
     # explicit on 20B+ (stage3_max_live_parameters) and defaults to two layers.
     live_cap = stage3_max_live_parameters or (2 * params / max(model.num_hidden_layers, 1))
+
+    if window_materialised:
+
+        breakdown.attention_scratch = 4 * micro_batch * model.num_attention_heads * seq_length * seq_length
 
     breakdown.communication = 2 * min(params, live_cap) / shard + 2 * (
         model.hidden_size * model.hidden_size * 8

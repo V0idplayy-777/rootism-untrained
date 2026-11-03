@@ -45,19 +45,24 @@ resident memory without touching anything that changes the model:
 
 | what | old default | now |
 | --- | --- | --- |
-| attention | explicit softmax, `[B, 48, S, S]` fp32 weights | fused SDPA, no score matrix |
-| LM loss | full `[B, S, 128256]` logits, then CE | chunked projection (1024 rows), loss only |
+| attention | fused SDPA for the simple cases, explicit softmax whenever a mask was present | fused SDPA for the simple cases *and* for padding/window masks |
+| LM loss | full `[B, S, 128256]` logits + fp32 CE scratch | chunked projection (1024 rows), loss only |
 | micro-batch | 2 | 1, with `gradient_accumulation_steps: "auto"` from the real world size |
-| ZeRO-3 state | optimizer + params offloaded to CPU | resident (`{"device": "none"}`) |
-| activation checkpointing | whole block, plus DeepSpeed's own block | 2 segments per block, model-side only |
+| ZeRO-3 state | optimizer + params offloaded to CPU | offloaded by default; residency is a per-host decision (~66 GiB/rank on 8 ranks) |
+| activation checkpointing | whole block, plus DeepSpeed's own block | 1 segment per block, model-side only |
 | data feeding | synchronous mmap read + `.to(device)` | threaded prefetch into pinned memory |
 | accumulation | loss pre-divided *and* DeepSpeed-divided | DeepSpeed's internal window used correctly |
 
+Measured effect on the shipped recipe (8 ranks, micro-batch 2, 8192 tokens):
+**58.7 → 56.3 GiB/rank** (the 3.9 GiB logits buffer becomes 1.5 GiB), plus the
+fixed optimizer step in §6 of `docs/TRAINING_PERFORMANCE.md`. It is a
+few-GiB-per-rank win, not an order of magnitude — see that document for the
+measured table and for the two things that are deliberately *not* lossless
+(sliding-window semantics and the old RoPE indexing bug).
+
 Loss, gradients, optimizer update, learning-rate schedule, global batch,
-sequence length and data order are unchanged; `tests/test_train_perf.py` proves
-bit-level agreement with the reference implementations. Enabling `bf16` mixed
-precision with `torch.autocast` is *not* required — the recipe stays in bf16
-parameter precision as before.
+sequence length and data order are otherwise unchanged; `tests/test_train_perf.py`
+proves agreement with the reference implementations.
 
 `python scripts/plan_training_memory.py --config configs/training_config.json
 --gpus 64 --budget_gb 80` reports the per-rank breakdown (weights, gradients,

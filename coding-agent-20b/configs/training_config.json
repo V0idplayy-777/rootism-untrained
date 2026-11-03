@@ -1,28 +1,25 @@
 {
   "model_name": "CodingAgent-20B",
   "model_size": "20B",
-  "notes": "Throughput + memory recipe. The wins here are all lossless: fused SDPA attention (no [B, head, S, S] matrix, no fp32 materialisation), chunked LM-head loss (no [B, S, 128256] logits buffer in the training step; only the scalar loss is kept), prefetched + pinned data feeding, and ZeRO-3 without CPU offload so the optimizer step never round-trips through PCIe. Precision, learning rate, betas, weight decay, clipping, global batch, sequence length and data order are untouched.",
-
+  "notes": "Throughput recipe for the 20B. The lossless wins here are: chunked LM-head loss (no [B, S, 128256] logits buffer in the training step), prefetched + pinned data feeding, one token buffer per batch instead of three int64 copies, fixed accumulation (the loop no longer scales the loss twice and steps per micro-batch), and the mask path no longer forcing the quadratic attention kernel. CPU offload of optimizer state and parameters stays ON by default: with ZeRO-3 on 8 ranks the fully resident recipe needs ~66 GiB/rank, and 24.98B means fp32 master weights + Adam moments alone are ~23 GiB/rank. Run scripts/plan_training_memory.py --budget_gb <your card> to see whether residency fits yours; if it does, set offload_* to false and expect the largest single speed win in this file.",
   "training": {
     "total_tokens": 300000000000,
-    "learning_rate": 3e-4,
-    "min_learning_rate": 3e-5,
+    "learning_rate": 0.0003,
+    "min_learning_rate": 3e-05,
     "warmup_tokens": 2000000000,
     "weight_decay": 0.1,
     "beta1": 0.9,
     "beta2": 0.95,
-    "eps": 1e-8,
+    "eps": 1e-08,
     "max_grad_norm": 1.0,
     "precision": "bf16",
     "seed": 42,
-
     "steps_per_print": 10,
     "attention_backend": "auto",
     "chunked_loss": true,
     "loss_chunk_size": 1024,
     "logit_softcap": null
   },
-
   "batching": {
     "global_batch_size": 2048,
     "micro_batch_size_per_gpu": 1,
@@ -30,21 +27,19 @@
     "sequence_length": 8192,
     "long_sequence_length": 32768
   },
-
   "deepspeed": {
     "stage": 3,
-    "offload_optimizer": false,
-    "offload_param": false,
+    "offload_optimizer": true,
+    "offload_param": true,
     "zero8bit_optimizer": false,
     "activation_checkpointing": true,
-    "activation_checkpointing_segments": 2,
+    "activation_checkpointing_segments": 1,
     "stage3_max_live_parameters": 1000000000,
     "stage3_max_reuse_distance": 1000000000,
     "stage3_param_persistence_threshold": 200000,
     "config_file": "configs/ds_config_zero3.json",
     "offload_config_file": "configs/ds_config_zero3_offload.json"
   },
-
   "data": {
     "data_dir": "data/processed",
     "num_workers": 4,
@@ -52,13 +47,11 @@
     "prefetch_depth": 3,
     "pin_memory": true
   },
-
   "compile": {
     "enabled": false,
     "mode": "reduce-overhead",
     "note": "torch.compile on the block stack; opt-in because it costs a few minutes of warmup on the first steps."
   },
-
   "checkpointing": {
     "save_dir": "checkpoints",
     "save_every_steps": 1000,
@@ -66,7 +59,6 @@
     "keep_last_n": 5,
     "save_optimizer_state": true
   },
-
   "logging": {
     "log_every_steps": 10,
     "eval_every_steps": 500,
@@ -74,10 +66,13 @@
     "wandb_entity": null,
     "tensorboard_dir": "logs/tensorboard"
   },
-
   "evaluation": {
     "eval_tokens": 10000000,
     "eval_batch_size": 8,
-    "metrics": ["loss", "perplexity", "token_accuracy"]
+    "metrics": [
+      "loss",
+      "perplexity",
+      "token_accuracy"
+    ]
   }
 }

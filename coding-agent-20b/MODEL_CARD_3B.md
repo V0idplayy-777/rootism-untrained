@@ -71,8 +71,11 @@ roughly 1.4-1.6x the step time.
 
 Activation checkpointing is done by the model itself
 (`deepspeed.activation_checkpointing` in the recipe, with
-`activation_checkpointing_segments: 2`): the attention and MLP sub-blocks are
-recomputed, the two cheap norms stay live. `training/train_3b.py` drops the
+`activation_checkpointing_segments: 1`): one checkpoint per block. Measured
+against `scripts/plan_training_memory.py` this is the setting whose peak is
+*below* the previous configuration (8.6 -> 8.3 GiB/rank on 8 ranks, micro-batch
+1, 4096 tokens); `2` splits the block into attention + MLP segments, trading
+~0.5 GiB of peak for a few percent of step time. `training/train_3b.py` drops the
 shared template's `activation_checkpointing` block so nothing is checkpointed
 twice, and the template's `partition_activations` / `cpu_checkpointing` are off
 because they only matter with offload. The recipe lowers
@@ -84,11 +87,13 @@ unchanged.
 Throughput features in this recipe (all lossless — see
 `docs/TRAINING_PERFORMANCE.md`):
 
-- fused SDPA attention (`training.attention_backend: "auto"`): no
-  `[B, heads, S, S]` score matrix and no fp32 copy of it,
+- fused SDPA attention for the masked cases too (`training.attention_backend:
+  "auto"`): the old code fell back to an explicit softmax whenever a mask was
+  present,
 - chunked LM-head loss (`training.chunked_loss`, `loss_chunk_size: 1024`): the
   `[B, S, 128256]` logits buffer never exists during training; the projection is
-  streamed and only the scalar loss is kept,
+  streamed and only the scalar loss is kept (0.98 -> 0.73 GiB/rank at 4096
+  tokens),
 - threaded + pinned prefetch (`data.prefetch_depth: 3`, `pin_memory: true`),
 - `torch.compile` on the block stack as an opt-in (`compile.enabled`).
 

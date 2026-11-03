@@ -582,12 +582,50 @@ def test_training_recipes_request_the_fast_paths():
         assert recipe["model_size"] == model_size
         assert recipe["training"]["chunked_loss"] is True
         assert recipe["training"]["attention_backend"] in {"auto", "flash"}
-        assert recipe["deepspeed"]["offload_optimizer"] is False
-        assert recipe["deepspeed"]["offload_param"] is False
         assert recipe["deepspeed"]["activation_checkpointing_segments"] >= 1
         assert recipe["data"]["prefetch_depth"] >= 1
         assert recipe["data"]["pin_memory"] is True
         assert recipe["batching"]["micro_batch_size_per_gpu"] >= 1
+
+
+def test_recipes_default_to_a_configuration_whose_peak_fits_a_real_card():
+    """Residency is a choice, but the shipped default has to be runnable.
+
+    20B cannot be fully resident on 8 ranks (~66 GiB/rank), so it keeps offload;
+    3B fits, so it is resident.  Both must land inside a 40 GiB-per-rank budget
+    on the hardware their docs claim, which is what this pins.
+    """
+
+    from model.config import get_20b_config
+    from model.config_3b import get_3b_config
+
+    from training.perf import estimate
+
+    def plan(path, model, ranks):
+        recipe = json.loads((ROOT / "configs" / path).read_text())
+        ds = recipe["deepspeed"]
+        return estimate(
+            model,
+            world_size=ranks,
+            micro_batch=recipe["batching"]["micro_batch_size_per_gpu"],
+            seq_length=recipe["batching"]["sequence_length"],
+            offload_optimizer=ds["offload_optimizer"],
+            offload_param=ds["offload_param"],
+            activation_segments=ds["activation_checkpointing_segments"],
+            chunked_loss=recipe["training"]["chunked_loss"],
+            loss_chunk_size=recipe["training"]["loss_chunk_size"],
+            window_materialised=True,
+        )
+
+    three_b = plan("training_config_3b.json", get_3b_config(), 8)
+    assert three_b.total / 1024**3 < 12, three_b.as_gib()
+
+    twenty_b = plan("training_config.json", get_20b_config(), 64)
+    assert twenty_b.total / 1024**3 < 40, twenty_b.as_gib()
+
+    recipe = json.loads((ROOT / "configs" / "training_config.json").read_text())
+    assert recipe["deepspeed"]["offload_optimizer"] is True
+    assert recipe["deepspeed"]["offload_param"] is True
 
 
 def test_20b_recipe_keeps_the_learning_recipe():

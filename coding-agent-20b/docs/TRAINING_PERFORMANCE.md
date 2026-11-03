@@ -1,10 +1,58 @@
-# Training performance: what changed, and why nothing got worse
+# Training performance: what changed, what it costs, and what it saves
 
 This document covers the throughput and memory work on the pretraining path for
-both models (`training/train.py` for 20B, `training/train_3b.py` for 3B). The
-rule for every change was the same: **if it can move the loss, it is not
-allowed**. Everything below either removes work that produced no gradient, or
-moves the same work into a faster kernel.
+both models (`training/train.py` for 20B, `training/train_3b.py` for 3B).
+
+The rule for every change was: **if it can move the loss, it is not allowed**.
+Everything below either removes work that produced no gradient or moves the same
+work into a faster kernel — with two exceptions, stated up front because they
+are the honest caveats.
+
+## Two things that are *not* lossless
+
+1. **Sliding-window attention is currently dead code in the fused path.** The
+   pre-existing model applied its `sliding_window` only inside the explicit
+   softmax branch; whenever fused SDPA ran (the common case, and always in the
+   old code) the window was silently ignored. This work does not change that,
+   because doing so would change the architecture the checkpoints were trained
+   under (see §9 below). Net effect: the 20B recipe
+   trains at 8k with a 4096-token window, so **every 8k step still pays for
+   full causal attention** — the fused kernel removes the memory, not the
+   compute, of that.
+2. **The old `RotaryEmbedding` mis-positioned tokens** (`shape[1]` is the head
+   axis once the tensor is `[B, heads, S, D]`). The fix is a behavioural change:
+   outputs are identical only when the head count equals the sequence length
+   (at 8k and 48 heads the old table only covered the first 48 positions). The
+   tests in `tests/test_train_perf.py` pin the *correct* behaviour, and
+   `tests/test_model.py` still passes, so nothing else in the repo depends on
+   the old bug. If a checkpoint was trained with the old code, its positional
+   handling differs from anything trained with this one.
+
+Everything else below is exact, and `tests/test_train_perf.py` proves it.
+
+## What the savings actually are
+
+Measured with `scripts/plan_training_memory.py` (bf16 weights, AdamW fp32
+master + moments, one segment of activation checkpointing, the window scratch
+budgeted because of caveat 1 above):
+
+| run | before | after | delta |
+| --- | --- | --- | --- |
+| 3B, 8 ranks, micro-batch 1, 4096 seq | 8.6 GiB/rank | 8.3 GiB/rank | **-0.3** |
+| 20B, 8 ranks, micro-batch 2, 8192 seq | 58.7 GiB/rank | 56.3 GiB/rank | **-2.4** |
+| 20B, 64 ranks, micro-batch 1, 8192 seq | 27.4 GiB/rank | 26.2 GiB/rank | **-1.2** |
+
+So the VRAM saving is **a few GiB per rank** (the LM-head logits buffer, ~0.7-3.9
+GiB depending on batch and sequence length) plus **ZeRO residency** on the 3B
+(`-2.1 GiB`, and the offload round-trip with it) — not an order of magnitude.
+The large numbers in earlier drafts of this file double-counted an attention
+matrix that the old code never actually allocated.
+
+The speed story is mostly the accumulated small wins (kernels per step, copies
+per batch, allocator churn) plus the fixed optimizer-step bug in §6, and it is
+hardware-dependent; `scripts/benchmark_training_step.py` is the only honest way
+to size it for your GPUs. Optimizer state dominates both memory and step time at
+these sizes for any dense model of this shape.
 
 `tests/test_train_perf.py` is the contract. It compares each fast path against
 the straightforward reference implementation it replaced, including gradients,
@@ -35,8 +83,8 @@ Now (`model/fused_ops.py`):
   `False` by both training recipes. Inference and any caller that asks for
   hidden states still gets the full projection.
 
-Net effect on the 20B at 8k: ~6 GiB less transient VRAM per micro-batch and a
-LM head pass that is O(tokens) instead of O(tokens × vocab) resident.
+Net effect at 20B / 8k / micro-batch 2: **3.9 GiB -> 1.5 GiB** of logits
+memory per rank, and the same reduction of allocator churn.
 
 Be precise about which win is which: this is a **memory** win first. It also
 saves time, but only in proportion to `vocab × tokens` — on the real 128k
@@ -54,8 +102,10 @@ already fits*. Both knobs are recipe fields, not hard-coded choices.
 heads and 8k that is **12 GiB** per micro-batch on the 20B.
 
 Now it calls `F.scaled_dot_product_attention`, which dispatches to flash /
-memory-efficient attention (linear memory in S) and never materialises the
-score matrix. Details that make it *exact*:
+memory-efficient attention (linear memory in S). The old code already reached a
+fused SDPA kernel for the plain unmasked case, so this is **not** where the big
+memory win is: it is where the *mask* cases stop falling back to a materialised
+score matrix, and where GQA stops copying K/V. Details that make it *exact*:
 
 * **Causal masking** uses `is_causal=True`, not an additive mask — same values,
   no `[S, S]` subtraction.
@@ -205,3 +255,35 @@ check the loss column, and a GPU to judge speed.
 * No "fused" kernels written for the sake of it: the MoE dispatch was left as
   the reference masked gather, because batching it would need a transposed copy
   of every expert weight on each step — more traffic under ZeRO, not less.
+
+
+---
+
+## 9. The sliding-window decision (unresolved, deliberately)
+
+`CodingAgentConfig.sliding_window = 4096` is documented as part of the 20B
+architecture, and `docs/` describes 8k native context with a 4k window. In the
+pre-existing implementation the window mask existed **only** in the explicit
+softmax branch of `_compute_attention`. The fused SDPA branch returned before
+reaching it, so:
+
+* the old code ignored the window in every training step (SDPA ran with
+  `is_causal=True`),
+* the explicit branch applied it, so the two paths disagreed whenever
+  `seq > window`.
+
+Two ways out, both breaking something:
+
+| option | consequence |
+| --- | --- |
+| apply the window everywhere (fused path uses a banded boolean mask) | the model has *never* trained with the window at 8k; turning it on changes attention for ~59% of positions per row and invalidates the 24.98B-parameter recipe the rest of the repo documents |
+| ignore the window everywhere, document it honestly | no attention-mask change; costs the compute of full causal attention at 8k (the fused kernel keeps it memory-flat), and the config field becomes documentation of intent rather than behaviour |
+
+This PR takes the second road: correctness of the *shipped recipe* first, no
+silent architecture change. The windowed fused path is implemented and tested
+(`tests/test_train_perf.py::test_windowed_attention_*`) so the decision can be
+reversed with a recipe flag once the 8k context phase is explicitly re-planned.
+
+**Action for the owner:** decide whether the 20B/3B models are supposed to have
+a 4096-token attention window during pretraining. It changes what "8k context"
+means for this model family and cannot be decided by a performance patch.

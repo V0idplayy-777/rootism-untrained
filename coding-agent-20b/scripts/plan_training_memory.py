@@ -33,6 +33,19 @@ from model.config_3b import get_3b_config  # noqa: E402
 from training.perf import estimate, largest_micro_batch, plan_recipe  # noqa: E402
 
 
+def needs_window_scratch(model: CodingAgentConfig, seq_length: int) -> bool:
+    """True when a sliding window shorter than the sequence forces the explicit path.
+
+    See ``training/perf.py``: the model applies its window only in the explicit
+    softmax branch, so a windowed run at this sequence length materialises the
+    quadratic score matrix -- and therefore needs that memory budgeted.
+    """
+
+    window = getattr(model, "sliding_window", None)
+
+    return bool(window) and window < seq_length
+
+
 def model_for(recipe: dict) -> CodingAgentConfig:
 
     size = recipe.get("model_size", "20B")
@@ -91,6 +104,7 @@ def main() -> int:
         chunked_loss=bool(training.get("chunked_loss", True)),
         loss_chunk_size=int(training.get("loss_chunk_size", 1024)),
         fused_attention=training.get("attention_backend", "auto") != "math",
+        window_materialised=needs_window_scratch(model, batching["sequence_length"]),
     )
 
     print(breakdown.report())
