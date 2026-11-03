@@ -59,7 +59,7 @@ Each slice ships with a mechanical check rather than a claim:
 
 | Slice | Check |
 | --- | --- |
-| `security-sft` | 114 pairs; every vulnerable sample must trip `evaluation/security_eval.py`, every safe sample must stay clean (`tests/test_security_augment_longform.py`) |
+| `security-sft` | 114 pairs; the scanner catches 97/97 statically detectable pairs, flags 0 of 114 safe snippets, and `STATIC_UNDETECTABLE` (17 ids) is asserted equal to the observed miss set — a stale entry fails CI |
 | `repair-trace-sft` | 75 traces / 7 languages; python fixes `ast.parse`; rejected patch always differs from buggy and fixed; held-out ≥ 15% (ceil, so it never rounds under) |
 | `app-*` | 65 blueprints render 25–28-file projects; all 65 pass their generated pytest suite; 18 blueprints held out from generation |
 | `instruction-sft` | 8 induction shapes over real files; every row carries `source_path` + SPDX license; rejected licenses never appear |

@@ -36,6 +36,7 @@ class Rule:
     severity: str
     pattern: str
     message: str
+    flags: int = re.IGNORECASE
     languages: tuple[str, ...] = (
         "python",
         "javascript",
@@ -53,6 +54,128 @@ class Rule:
         "dockerfile",
     )
     flags: int = re.IGNORECASE
+
+
+# ---------------------------------------------------------------------------
+# AST rules. Some classes are structural, not lexical: a hard-coded /tmp path is
+# only a bug because it is a *literal* shared between runs, and a nested
+# quantifier is only catastrophic because of the parsed regex body. These rules
+# parse python and inspect the tree; they never fire on other languages.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class AstRule:
+    id: str
+    cwe: str
+    severity: str
+    check: Callable[[ast.AST, str], list[tuple[int, str]]]
+    message: str
+    languages: tuple[str, ...] = ("python",)
+    dedupe_per_file: bool = False
+
+
+_NESTED_QUANTIFIER = re.compile(r"\([^()]*[+*][^()]*\)[+*]|\[[^\]]*\][+*][+*]")
+
+
+_TMP_PREFIXES = ("/tmp/", "/var/tmp/", "/dev/shm/")
+
+
+def _check_hardcoded_tmp(tree: ast.AST, code: str) -> list[tuple[int, str]]:
+    """A shared, hard-coded temp path used for writing.
+
+    Follows the one hop that matters in practice — a module/function-level
+    ``path = "/tmp/x"`` used later by ``open``/``Path`` — because the literal is
+    usually bound to a name before the write. A ``/tmp/...`` string that never
+    reaches a write call (a comment, an assertion, a test fixture) is not a
+    finding.
+    """
+
+    writers = {
+        "open",
+        "Path",
+        "os.open",
+        "write_text",
+        "write_bytes",
+        "NamedTemporaryFile",
+        "mkstemp",
+    }
+
+    bound: dict[str, tuple[str, int]] = {}
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant):
+            value = node.value.value
+            if isinstance(value, str) and value.startswith(_TMP_PREFIXES):
+                line = getattr(node.value, "lineno", 0)
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        bound[target.id] = (value, line)
+
+    hits: list[tuple[int, str]] = []
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+
+        func = node.func
+        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+
+        if name not in writers:
+            continue
+
+        for arg in node.args:
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                if arg.value.startswith(_TMP_PREFIXES):
+                    hits.append((getattr(arg, "lineno", 0), arg.value))
+            elif isinstance(arg, ast.Name) and arg.id in bound:
+                literal, line = bound[arg.id]
+                hits.append((line, literal))
+
+    # dedupe by line: the same literal can be reported by both hops
+    seen: set[tuple[int, str]] = set()
+
+    unique: list[tuple[int, str]] = []
+
+    for hit in hits:
+        if hit in seen:
+            continue
+        seen.add(hit)
+        unique.append(hit)
+
+    return unique
+
+
+def _check_nested_quantifier(tree: ast.AST, code: str) -> list[tuple[int, str]]:
+    """`re.compile` on a pattern with a nested/repeated quantifier (ReDoS)."""
+
+    hits: list[tuple[int, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+        if name not in {"compile", "match", "search", "fullmatch", "sub"}:
+            continue
+        for arg in node.args[:1]:
+            pattern = None
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                pattern = arg.value
+            if pattern and _NESTED_QUANTIFIER.search(pattern):
+                hits.append((getattr(node, "lineno", 0), pattern))
+    return hits
+
+
+AST_RULES: list[AstRule] = [
+    AstRule(
+        id="tempfile-hardcoded-path",
+        cwe="CWE-377",
+        severity="high",
+        check=_check_hardcoded_tmp,
+        message="Hard-coded shared temp path: use tempfile.mkstemp/NamedTemporaryFile",
+    ),
+]
+
 
 
 REGEX_RULES: list[Rule] = [
@@ -82,7 +205,7 @@ REGEX_RULES: list[Rule] = [
     Rule("redirect-unvalidated", "CWE-601", "medium", r"(?:redirect|RedirectResponse)\s*\(\s*(?:request|req)\.", "Redirect target taken from the request without validation"),
     Rule("insecure-deser-json", "CWE-502", "low", r"__reduce__|__setstate__", "Custom pickle hooks present"),
     Rule("csrf-exempt", "CWE-352", "high", r"csrf_exempt", "CSRF protection explicitly disabled on a state-changing view"),
-    Rule("redos-nested", "CWE-1333", "medium", r"(?:re\.compile|re\.match|re\.search|re\.fullmatch|Pattern\.compile|\.test\s*\()\s*\(?\s*[rbuf\"]*[\"'][^\"'\n]{0,120}?\([^()\n]{0,60}[+*][^()\n]{0,60}\)\s*[+*{?]", "Repetition of a group that already contains a quantifier (catastrophic backtracking)"),
+    Rule("redos-nested", "CWE-1333", "high", r"(?:re\.compile|re\.match|re\.search|re\.fullmatch|Pattern\.compile|\.test\s*\()\s*\(?\s*[rbuf\"]*[\"'][^\"'\n]{0,120}?\([^()\n]{0,60}[+*][^()\n]{0,60}\)\s*[+*{?]", "Repetition of a group that already contains a quantifier (catastrophic backtracking)"),
     Rule("log-fstring", "CWE-117", "medium", r"(?:logging|logger)\.\w+\(\s*f[\"']", "Log message built from an f-string (injection of forged log lines)"),
     Rule("static-nonce", "CWE-324", "critical", r"nonce\s*=\s*b?[\"'][0-9a-fA-F]{12,}[\"']", "Hard-coded nonce re-used across AEAD messages"),
     Rule("http-plaintext-url", "CWE-319", "medium", r"[\"']http://(?!localhost|127\.|0\.0\.0\.0|example\.|test)", "Plaintext http:// URL for service traffic"),
@@ -120,6 +243,7 @@ class GuardRule:
     pattern: str
     guard: str
     message: str
+    flags: int = re.IGNORECASE
     languages: tuple[str, ...] = (
         "python",
         "javascript",
@@ -140,6 +264,80 @@ class GuardRule:
 
 
 GUARD_RULES: list[GuardRule] = [
+    GuardRule(
+        id="unbounded-frame",
+        cwe="CWE-190",
+        severity="high",
+        pattern=r"recv\(\s*length\s*\)|read\(\s*length\s*\)|int\.from_bytes\(\s*[a-z_]+\s*,\s*[\"']big",
+        guard=r"MAX_(?:FRAME|LEN|LENGTH|SIZE)|if\s+length\s*>|assert\s+length",
+        message="Length-prefixed read with no upper bound: attacker sets the allocation size",
+    ),
+    GuardRule(
+        id="plaintext-internal-http",
+        cwe="CWE-319",
+        severity="high",
+        pattern=r"[\"']http://(?!localhost|127\.0\.0\.1)[a-z0-9.\-]+(?::\d+)?/",
+        guard=r"https://|allow_insecure|SSLContext|verify=False|localhost|127\.0\.0\.1",
+        message="Sensitive call over plaintext http:// to a named host",
+    ),
+    GuardRule(
+        id="session-not-cleared",
+        cwe="CWE-384",
+        severity="high",
+        pattern=r"session\[(?:[\"'](?:user|user_id|role|account_id)[\"'])\]\s*=",
+        guard=r"session\.(?:clear|rotate|regenerate)\(|request\.session\.cycle_key",
+        message="Session written at login without clearing/rotating it (fixation)",
+    ),
+    GuardRule(
+        id="exception-in-response",
+        cwe="CWE-209",
+        severity="high",
+        pattern=r"catch\s*\(\s*\w+\s+\w+\s*\)\s*\{[^}]{0,160}?(?:string\.Format\([^)]*ex|BadRequest\(\s*ex\)|return\s+ex\.)",
+        guard=r"_logger\.|LogError|logger\.|ILogger",
+        message="Exception object returned to the caller (internal detail leak)",
+    ),
+    GuardRule(
+        id="rust-unwrap-request",
+        cwe="CWE-209",
+        severity="high",
+        pattern=r"fn\s+[a-z_]*handler\w*\([^)]*\)[^{]*\{[^}]{0,240}?\.unwrap\(\)",
+        guard=r"Result<|\?;|ok_or|map_err|unwrap_or",
+        message="Request handler unwraps untrusted input: panics on malformed requests",
+    ),
+
+    GuardRule(
+        id="open-redirect",
+        cwe="CWE-601",
+        severity="high",
+        pattern=r"redirect\(\s*(?:request\.(?:args|form|values)|[a-z_]*(?:next|url|target|return_to)[a-z_]*)\b",
+        guard=r"urlparse|ALLOWED_(?:REDIRECT|HOSTS|HOST)|startswith\(\s*[\"']/(?![/\\])|is_safe_url|allowed_hosts",
+        message="Redirect target comes from the request without a host/scheme allow-list",
+    ),
+    GuardRule(
+        id="log-injection",
+        cwe="CWE-117",
+        severity="high",
+        pattern=r"(?:logging|logger|log)\.(?:info|warning|warn|error|debug|exception)\(\s*f[\"']",
+        guard=r"\.replace\(|re\.sub|sanitiz|_safe\.sub|%s|quote",
+        message="Interpolated log line: attacker-controlled newlines forge entries",
+    ),
+    GuardRule(
+        id="header-injection",
+        cwe="CWE-93",
+        severity="high",
+        pattern=r"headers\[(?!\s*[\"']Access-Control)[^\]]+\]\s*=\s*[a-z_]",
+        guard=r"[\"']\\r|\\n[\"']\s+in|\r\n|sanitiz|quote_header|isprintable",
+        message="Response header set from unvalidated input (CRLF injection)",
+    ),
+    GuardRule(
+        id="toctou-race",
+        cwe="CWE-367",
+        severity="high",
+        pattern=r"os\.path\.(?:exists|isfile)\(",
+        guard=r"O_EXCL|O_CREAT|open\([^)]*[\"']x[\"']|mkstemp|flock|FileExistsError",
+        message="Check-then-use race: the file can change between exists() and open()",
+    ),
+
     GuardRule(
         "xss-sink",
         "CWE-79",
@@ -410,8 +608,8 @@ MULTILANG_RULES: list[Rule] = [
         "php-sql-concat",
         "CWE-89",
         "critical",
-        r"(?:mysqli?_query|->query|->prepare)\s*\([^)\n]*\.\s*\$",
-        "SQL assembled from a concatenated PHP variable",
+        '\\$sql\\s*=\\s*[^;\\n]*\\.\\s*\\$|(?:mysqli?_query|->query)\\s*\\(\\s*[\\"\'][^\\n]*[\\"\']\\s*\\.\\s*\\$',
+        "SQL assembled by concatenating a PHP variable",
         languages=("php",),
     ),
     Rule(
@@ -489,9 +687,10 @@ MULTILANG_RULES: list[Rule] = [
     Rule(
         "docker-latest-tag",
         "CWE-829",
-        "medium",
-        r"^\s*FROM\s+[\w./-]+:latest\b",
-        "Mutable base image tag",
+        "high",
+        r"^\s*FROM\s+[\w./-]+:(?:latest|main|master)\s*$",
+        "Mutable base image tag (no digest): builds are not reproducible",
+        flags=re.IGNORECASE | re.MULTILINE,
         languages=("dockerfile",),
     ),
     Rule(
@@ -734,6 +933,49 @@ class SecurityScanner:
 
         return findings
 
+
+    @staticmethod
+    def _ast_rule_findings(code: str) -> list[Finding]:
+        """Structural checks that regex cannot express (literal paths, regex bodies)."""
+
+        try:
+
+            tree = ast.parse(code)
+
+        except SyntaxError:
+
+            return []
+
+        findings: list[Finding] = []
+
+        seen: set[str] = set()
+
+        for rule in AST_RULES:
+
+            try:
+
+                hits = rule.check(tree, code)
+
+            except Exception:  # a malformed snippet must never break the scanner
+
+                continue
+
+            for line, _detail in hits:
+
+                if rule.dedupe_per_file:
+
+                    if rule.id in seen:
+
+                        continue
+
+                    seen.add(rule.id)
+
+                findings.append(
+                    Finding(rule.id, rule.cwe, rule.severity, rule.message, line)
+                )
+
+        return findings
+
     def scan(self, code: str, language: str = "python") -> list[Finding]:
         """All findings for `code` (deduplicated by rule + line)."""
 
@@ -784,6 +1026,8 @@ class SecurityScanner:
         if language == "python":
 
             findings.extend(self._ast_findings(code))
+
+            findings.extend(self._ast_rule_findings(code))
 
         deduped: dict[tuple[str, int], Finding] = {}
 

@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -35,7 +36,13 @@ from dataset.mixture import (  # noqa: E402
     validate_synthetic_budget,
 )
 from dataset.repair_traces import RepairTraceGenerator, generate_repair_rows  # noqa: E402
-from dataset.security_data import SECURITY_SAMPLES  # noqa: E402
+from dataset.security_data import SECURITY_SAMPLES, STATIC_UNDETECTABLE  # noqa: E402
+from evaluation.security_eval import (  # noqa: E402
+    REQUIRED_OVERRIDES,
+    REQUIRED_PATTERNS,
+    SecurityScanner,
+    cases_from_dataset,
+)
 from scaffold.blueprints import all_blueprints, split, stats as blueprint_stats  # noqa: E402
 
 MIN_TRACES = 60
@@ -45,13 +52,89 @@ MIN_SECURITY_PAIRS = 100
 
 
 def security_report() -> dict:
+    """Pair inventory, detector sweep and the contract the dataset enforces.
+
+    Three verdicts are reported separately because they answer different
+    questions:
+
+    - **static recall / specificity** — does the scanner trip every vulnerable
+      snippet, and stay silent on every safe one? ``STATIC_UNDETECTABLE`` records
+      the classes a static rule cannot see (e.g. ``assert`` used as an
+      authorization check); missing one there is expected, not a regression.
+    - **case verdict under the training contract** — a case counts as passed
+      when a safe snippet stays clean *and* a vulnerable one is flagged or is
+      documented as statically undetectable.
+    - **review contract** — the safe snippet additionally carries the required
+      safe pattern for its category (what the SFT rubric asks for).
+    """
+
     samples = list(SECURITY_SAMPLES)
+
+    scanner = SecurityScanner()
+
+    def _severe(code: str, language: str) -> list[str]:
+        return [
+            finding.rule
+            for finding in scanner.scan(code, language)
+            if finding.severity in {"critical", "high"}
+        ]
+
+    def _required(sample) -> tuple[str, ...]:
+        return REQUIRED_OVERRIDES.get(sample.id) or REQUIRED_PATTERNS.get(
+            sample.category, ()
+        )
+
+    def _has_required(sample, code: str) -> bool:
+        required = _required(sample)
+        if not required:
+            return True
+        return any(re.search(pattern, code, re.IGNORECASE) for pattern in required)
+
+    false_positives: list[str] = []
+    missed: list[str] = []
+    missed_undocumented: list[str] = []
+    review_failures: list[str] = []
+    detected_now: list[str] = []
+
+    for sample in samples:
+        if _severe(sample.safe, sample.language):
+            false_positives.append(sample.id)
+
+        if not _severe(sample.vulnerable, sample.language):
+            missed.append(sample.id)
+            if sample.id not in STATIC_UNDETECTABLE:
+                missed_undocumented.append(sample.id)
+        elif sample.id in STATIC_UNDETECTABLE:
+            # a documented gap that is now caught: the set must shrink
+            detected_now.append(sample.id)
+
+        if not _has_required(sample, sample.safe):
+            review_failures.append(sample.id)
+
+    detectable = [s for s in samples if s.id not in STATIC_UNDETECTABLE]
+    caught = [s for s in detectable if _severe(s.vulnerable, s.language)]
+
     return {
         "pairs": len(samples),
         "categories": len({s.category for s in samples}),
+        "cwes": len({s.cwe for s in samples if s.cwe}),
         "languages": len({s.language for s in samples}),
         "ids_unique": len({s.id for s in samples}) == len(samples),
-        "every_pair_differs": all(s.vulnerable.strip() != s.safe.strip() for s in samples),
+        "every_pair_differs": all(
+            s.vulnerable.strip() != s.safe.strip() for s in samples
+        ),
+        "heldout_benchmark_cases": len(cases_from_dataset()),
+        "static_undetectable": len(STATIC_UNDETECTABLE),
+        "detectable_pairs": len(detectable),
+        "static_recall": round(len(caught) / len(detectable), 4) if detectable else 1.0,
+        "static_missed": missed,
+        "static_missed_undocumented": missed_undocumented,
+        "static_undetectable_detected": detected_now,
+        "static_undetectable_exact": (
+            set(missed) == set(STATIC_UNDETECTABLE) and not missed_undocumented
+        ),
+        "static_false_positives": false_positives,
+        "review_contract_failures": review_failures,
     }
 
 
@@ -214,6 +297,29 @@ def invariants(report: dict) -> list[dict]:
             "security pairs well-formed",
             security["every_pair_differs"] and security["ids_unique"],
             f"{security['categories']} categories / {security['languages']} languages",
+        ),
+        (
+            "scanner catches every statically detectable pair",
+            not security["static_missed_undocumented"],
+            f"recall {security['static_recall']:.0%} over {security['detectable_pairs']} pairs, "
+            f"{security['static_undetectable']} documented as unsupported",
+        ),
+        (
+            "static-unsupported set matches reality",
+            security["static_undetectable_exact"],
+            f"{security['static_undetectable']} documented, "
+            f"{len(security['static_missed'])} actually missed, "
+            f"stale={security['static_undetectable_detected']}",
+        ),
+        (
+            "scanner never flags a safe pair",
+            not security["static_false_positives"],
+            f"false positives={security['static_false_positives']}",
+        ),
+        (
+            "safe snippets carry their required pattern",
+            not security["review_contract_failures"],
+            f"failures={security['review_contract_failures']}",
         ),
         (
             "induction task types >= 8",

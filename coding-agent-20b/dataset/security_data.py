@@ -491,34 +491,37 @@ SECURITY_SAMPLES = [*SECURITY_SAMPLES, *ADDITIONAL_SECURITY_SAMPLES, *ADDITIONAL
 #: benchmark still scores them through the required-safe-pattern check.
 STATIC_UNDETECTABLE: frozenset[str] = frozenset(
     {
+        # Needs data-flow: a sink is only unsafe when attacker input reaches it.
         "ssrf",
         "ssrf-allowlist",
-        "js-prototype-pollution-merge",
-        "cors-credential-wildcard",
         "csrf-state-change",
         "header-injection-crlf",
         "integrity-unsigned-update",
-        "redirect-open",
         "secret-management-env",
         "log-injection-newlines",
         "nonce-reuse-aead",
-        "shell-word-splitting",
-        "shell-env-secret-leak",
-        "php-sql-concat",
-        "ruby-yaml-load",
         "k8s-secret-in-env-literal",
         "java-implicit-oauth",
-        "go-sql-concat",
         "go-goroutine-unbounded",
         "rust-path-traversal",
-        "rust-hardcoded-secret",
         "ts-unsafe-any-cast",
+        # Semantics, not shape: `assert` as an auth check, CSV formula escaping,
+        # timeout absence, cookie flags.
         "python-assert-authorization",
         "python-csv-formula-injection",
         "python-request-timeout",
         "python-insecure-cookie",
     }
 )
+"""Samples whose *vulnerable* form a static rule cannot see by construction.
+
+A member is a class where the defect is a missing data-flow property (untrusted
+input reaching a sink) or a semantically wrong but syntactically ordinary check
+— not a risky token. The scanner is expected to miss these and must catch
+everything else, in both directions: ``scripts/corpus_report.py`` fails if a
+non-member is missed *or* if a member is now detected without the set being
+updated. That keeps the set from growing to hide detector gaps.
+"""
 
 
 def _split_of(sample_id: str) -> str:
