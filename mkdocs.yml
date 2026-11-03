@@ -12,4 +12,5 @@ plugins:
 
 nav:
   - Home: index.md
+  - Training Optimizations: TRAINING_OPTIMIZATIONS.md
   - Code Reference: reference.md

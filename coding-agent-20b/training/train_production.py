@@ -35,6 +35,7 @@ from dataset.processor import StreamingDataset
 from model.config import CodingAgentConfig
 from model.model import CodingAgentModel
 from training.checkpoint import latest_valid_checkpoint, save_checkpoint_atomic
+from training.optimizations import apply_model_optimizations, tune_deepspeed_config
 from training.monitor import (
     RecoveryManager,
     RecoveryPolicy,
@@ -158,9 +159,13 @@ def train(args: argparse.Namespace):
 
     model_config = CodingAgentConfig.from_dict(config_dict["model"])
 
+    active_optimizations = apply_model_optimizations(model_config, config_dict)
+
     train_config = config_dict["training"]
 
     if rank == 0:
+
+        logger.info(f"Execution optimisations: {active_optimizations}")
 
         model_config.print_summary()
 
@@ -192,10 +197,16 @@ def train(args: argparse.Namespace):
 
         ds_config_path = Path(args.config).parent / "ds_config_zero3.json"
 
+        # Same flags as train.py: no fp16 gradient communication, no per-step
+        # FLOPs profiler overhead, no host-side activation checkpoints.
+        ds_config = tune_deepspeed_config(
+            json.loads(ds_config_path.read_text()), config_dict
+        )
+
         model_engine, optimizer, _, scheduler = deepspeed.initialize(
             model=model,
             model_parameters=model.parameters(),
-            config=str(ds_config_path),
+            config=ds_config,
         )
 
     else:
