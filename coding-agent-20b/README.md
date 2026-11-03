@@ -16,6 +16,9 @@ evaluation, staged training and serving.
   3. `python evaluation/tokenizer_ablation.py` — code-aware vs generic GPT-2 pre-tokenization (atomicity gate)
   4. `python evaluation/retrieval_ablation.py` — flat vs hierarchical retrieval recall + feature provenance
 - Train: `training/train_production.py` + `configs/pipeline.json` (pretrain → mid-train → SFT → DPO; security and cross-domain SFT sources are upsampled)
+  - fast + memory-lean path for both 3B and 20B: `docs/TRAINING_PERFORMANCE.md` (fused SDPA, chunked LM loss, segmented activation checkpointing, prefetched pinned data, resident ZeRO-3)
+  - know your budget before launching: `python scripts/plan_training_memory.py --config configs/training_config_3b.json --gpus 8 --budget_gb 24`
+  - prove nothing regressed: `python -m pytest tests/test_train_perf.py -q`
 - Serve: `python -m inference.server --checkpoint <ckpt> --port 8000` (OpenAI-compatible)
 - Docker: `docker compose up serve` (train/eval/serve targets in `Dockerfile`)
 

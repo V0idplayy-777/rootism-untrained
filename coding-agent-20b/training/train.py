@@ -37,6 +37,7 @@ import torch
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
+from dataset.prefetch import PrefetchStream, to_device
 from dataset.processor import MemoryMappedDataset
 from model.config import CodingAgentConfig, get_1b_config, get_7b_config, get_20b_config
 from model.model import CodingAgentModel
@@ -197,7 +198,11 @@ class StreamingDataLoader:
 
         self.end_idx = self.start_idx + self.sequences_per_rank
 
+        self.batch_in_epoch = 0
+
     def __iter__(self):
+
+        self.batch_in_epoch = 0
 
         indices = list(range(self.start_idx, self.end_idx))
 
@@ -215,14 +220,24 @@ class StreamingDataLoader:
 
                 continue
 
-            inputs, targets = self.dataset.get_batch(self.batch_size, batch_indices)
+            tokens = torch.from_numpy(self.dataset.batch_tokens(batch_indices))
 
+            self.batch_in_epoch += 1
+
+            # One token tensor, two shifted views: the old path copied the
+            # whole batch twice (once per shift) and upcast both to int64.
             yield {
-                "input_ids": torch.from_numpy(inputs).long(),
-                "labels": torch.from_numpy(targets).long(),
+                "input_ids": tokens[:, :-1],
+                "labels": tokens[:, 1:],
             }
 
         self.epoch += 1
+
+    @property
+    def position(self) -> tuple[int, int]:
+        """Epoch and batch position of the *next* yielded batch."""
+
+        return self.epoch, self.batch_in_epoch
 
     def __len__(self) -> int:
 
@@ -239,6 +254,33 @@ def create_model(config: CodingAgentConfig) -> CodingAgentModel:
         model.enable_gradient_checkpointing(config.gradient_checkpointing_ratio)
 
     return model
+
+
+def resolve_accumulation(batching_config: dict, micro_batch: int, world_size: int) -> int:
+    """Gradient-accumulation window that makes the global batch land exactly.
+
+    ``"auto"`` in the recipe means "derive it from the job's real world size".
+    A wrong window is the difference between the intended global batch and
+    whatever this rank happened to hold, so the divisibility check is fatal
+    rather than silently rounded.
+    """
+
+    global_batch = batching_config.get("global_batch_size")
+
+    configured = batching_config.get("gradient_accumulation_steps", "auto")
+
+    if not global_batch or configured != "auto":
+
+        return int(configured if configured != "auto" else 1) or 1
+
+    if global_batch % (micro_batch * world_size):
+
+        raise ValueError(
+            f"global_batch_size={global_batch} is not divisible by "
+            f"micro_batch_size_per_gpu * world_size={micro_batch * world_size}"
+        )
+
+    return global_batch // (micro_batch * world_size)
 
 
 def initialize_deepspeed(
@@ -268,10 +310,21 @@ def initialize_deepspeed(
         "gradient_accumulation_steps", 1
     )
 
+    # "auto" in the recipe means "derive it": the accumulation window must make
+    # the global batch land exactly, using all ranks in the job (not the
+    # --num_gpus hint, which is only the per-node default).
+    world_size = int(os.environ.get("WORLD_SIZE", args.num_gpus))
+
+    micro_batch = ds_config["train_micro_batch_size_per_gpu"]
+
+    ds_config["gradient_accumulation_steps"] = resolve_accumulation(
+        batching_config, micro_batch, world_size
+    )
+
     ds_config["train_batch_size"] = (
         ds_config["train_micro_batch_size_per_gpu"]
         * ds_config["gradient_accumulation_steps"]
-        * args.num_gpus
+        * world_size
     )
 
     if "optimizer" in ds_config:
@@ -293,6 +346,38 @@ def initialize_deepspeed(
         ds_config["scheduler"]["params"]["warmup_max_lr"] = training_config.get(
             "learning_rate", 3e-4
         )
+
+    zero = ds_config.setdefault("zero_optimization", {})
+
+    for key in ("offload_optimizer", "offload_param"):
+
+        enabled = config.get("deepspeed", {}).get(key, False)
+
+        if isinstance(zero.get(key), dict):
+            zero[key]["device"] = "cpu" if enabled else "none"
+        else:
+            zero[key] = {"device": "cpu" if enabled else "none"}
+
+    for key, auto in (
+        ("reduce_bucket_size", model.config.hidden_size * model.config.hidden_size),
+        ("stage3_prefetch_bucket_size", int(0.9 * model.config.hidden_size * model.config.hidden_size)),
+    ):
+        if zero.get(key) == "auto":
+            zero[key] = auto
+
+    for key in ("stage3_max_live_parameters", "stage3_max_reuse_distance"):
+        value = config.get("deepspeed", {}).get(key)
+        if value is not None:
+            zero[key] = value
+
+    if config.get("deepspeed", {}).get("zero8bit_optimizer") and "optimizer" in ds_config:
+        ds_config["optimizer"]["type"] = "AdamW8bit"
+
+    # The model checkpoints its own segments (see
+    # CodingAgentModel._checkpointed_layer); leaving DeepSpeed's
+    # activation-checkpointing block in place would recompute every block twice.
+    ds_config.pop("activation_checkpointing", None)
+    ds_config.pop("flops_profiler", None)
 
     precision = training_config.get("precision", "bf16")
 
@@ -321,7 +406,9 @@ def initialize_deepspeed(
         config=ds_config,
     )
 
-    return model_engine, optimizer, scheduler
+    model_engine.optimizer.accumulation = int(ds_config["gradient_accumulation_steps"])
+
+    return model_engine, optimizer, scheduler, ds_config
 
 
 @torch.no_grad()
@@ -347,9 +434,9 @@ def evaluate(
 
             break
 
-        input_ids = batch["input_ids"].to(device)
+        input_ids = to_device(batch["input_ids"], device)
 
-        labels = batch["labels"].to(device)
+        labels = to_device(batch["labels"], device)
 
         if hasattr(model, "module"):
 
@@ -549,13 +636,32 @@ def train(args: argparse.Namespace):
 
         model_config = get_20b_config()
 
-    model_config.use_gradient_checkpointing = config["deepspeed"][
-        "activation_checkpointing"
-    ]
+    deepspeed_config = config["deepspeed"]
 
-    model_config.mixed_precision = config["training"]["precision"]
+    training_config = config["training"]
 
-    model_config.deepspeed_stage = config["deepspeed"]["stage"]
+    model_config.use_gradient_checkpointing = deepspeed_config["activation_checkpointing"]
+
+    model_config.mixed_precision = training_config["precision"]
+
+    model_config.deepspeed_stage = deepspeed_config["stage"]
+
+    # Lossless throughput switches, driven entirely by the recipe.
+    model_config.return_logits = False
+
+    model_config.attention_backend = str(training_config.get("attention_backend", "auto"))
+
+    model_config.logit_softcap = training_config.get("logit_softcap")
+
+    model_config.loss_chunk_size = int(
+        training_config.get("loss_chunk_size", model_config.loss_chunk_size)
+    )
+
+    segments = deepspeed_config.get("activation_checkpointing_segments")
+
+    model_config.gradient_checkpointing_segments = (
+        int(segments) if segments is not None else (2 if model_config.use_gradient_checkpointing else 0)
+    )
 
     if rank == 0:
 
@@ -600,8 +706,14 @@ def train(args: argparse.Namespace):
 
     logger.info(f"Initializing DeepSpeed with config: {ds_config_path}")
 
-    model_engine, optimizer, _scheduler = initialize_deepspeed(
+    model_engine, optimizer, _scheduler, ds_config = initialize_deepspeed(
         model, config, ds_config_path, args
+    )
+
+    ds_config_accumulation = int(ds_config["gradient_accumulation_steps"])
+
+    tokens_per_optimizer_step = (
+        ds_config["train_batch_size"] * config["batching"]["sequence_length"]
     )
 
     device = (
@@ -636,6 +748,14 @@ def train(args: argparse.Namespace):
         rank=rank,
         world_size=world_size,
         shuffle=False,
+    )
+
+    # Reads + host->device staging on a background thread, bounded queue.
+    prefetch_train = PrefetchStream(
+        train_loader,
+        depth=int(config["data"].get("prefetch_depth", 2) or 0),
+        pin_memory=bool(config["data"].get("pin_memory", True)),
+        name=f"20b-prefetch-rank{rank}",
     )
 
     training_config = config["training"]
@@ -693,95 +813,134 @@ def train(args: argparse.Namespace):
         config["batching"]["micro_batch_size_per_gpu"] * seq_length * world_size
     )
 
-    grad_accum_steps = config["batching"]["gradient_accumulation_steps"]
+    grad_accum_steps = ds_config_accumulation
 
-    train_iter = iter(train_loader)
+    if grad_accum_steps < 1:
+        raise ValueError("gradient_accumulation_steps must be resolved to a positive integer")
+
+    train_iter = iter(prefetch_train)
 
     step_start_time = time.time()
 
     max_steps = args.max_steps or total_steps
 
+    optimizer_steps = 0
+
+    last_loss = float("nan")
+
     while state.step < max_steps:
 
-        try:
-
-            batch = next(train_iter)
-
-        except StopIteration:
-
-            state.epoch += 1
-
-            train_iter = iter(train_loader)
-
-            batch = next(train_iter)
-
-        input_ids = batch["input_ids"].to(device)
-
-        labels = batch["labels"].to(device)
-
-        lr = lr_scheduler.get_lr(state.step)
+        lr = lr_scheduler.get_lr(optimizer_steps)
 
         for param_group in optimizer.param_groups:
 
             param_group["lr"] = lr
 
-        output = model_engine(input_ids=input_ids, labels=labels)
+        micro_losses = []
 
-        loss = output.loss if hasattr(output, "loss") else output[0]
+        for _ in range(grad_accum_steps):
 
-        loss = loss / grad_accum_steps
+            try:
 
-        model_engine.backward(loss)
+                batch = next(train_iter)
 
-        if (state.step + 1) % grad_accum_steps == 0:
+            except StopIteration:
 
-            model_engine.step()
+                # Only reachable if the prefetcher was built without restarts.
+                state.epoch += 1
 
-        state.step += 1
+                prefetch_train.close()
 
-        state.tokens_processed += tokens_per_batch
+                prefetch_train = PrefetchStream(
+                    train_loader,
+                    depth=int(config["data"].get("prefetch_depth", 2) or 0),
+                    pin_memory=bool(config["data"].get("pin_memory", True)),
+                    name=f"20b-prefetch-rank{rank}",
+                )
 
-        loss_value = loss.item() * grad_accum_steps
+                train_iter = iter(prefetch_train)
 
-        state.train_loss_history.append(loss_value)
+                batch = next(train_iter)
 
-        if state.step % config["logging"]["log_every_steps"] == 0 and rank == 0:
+            input_ids = to_device(batch["input_ids"], device)
 
-            elapsed = time.time() - step_start_time
+            labels = to_device(batch["labels"], device)
 
-            tokens_per_sec = (
-                tokens_per_batch * config["logging"]["log_every_steps"] / elapsed
-            )
+            output = model_engine(input_ids=input_ids, labels=labels)
 
-            step_start_time = time.time()
+            loss = output.loss if hasattr(output, "loss") else output[0]
 
-            throughput = tokens_per_sec / 1e6
+            # DeepSpeed applies gradient accumulation internally, so backward
+            # takes the unscaled micro-loss.  Scaling it here *and* letting the
+            # engine divide again shrank every update by 1/accumulation, while
+            # the optimizer step fired every micro-batch instead of every
+            # accumulation window.
+            model_engine.backward(loss)
 
-            state.throughput_history.append(throughput)
+            micro_losses.append(loss.detach())
 
-            recent_losses = state.train_loss_history[-100:]
+            state.step += 1
 
-            avg_loss = sum(recent_losses) / len(recent_losses)
+            state.tokens_processed += tokens_per_batch
 
-            elapsed_total = time.time() - state.start_time
+            if state.step % grad_accum_steps == 0:
 
-            elapsed_total / 3600
+                model_engine.step()
 
-            steps_remaining = max_steps - state.step
+                optimizer_steps += 1
 
-            eta_hours = (elapsed_total / max(state.step, 1)) * steps_remaining / 3600
+                last_loss = float(torch.stack(micro_losses).mean())
 
-            logger.info(
-                f"Step {state.step:,}/{max_steps:,} | "
-                f"Loss: {loss_value:.4f} (avg: {avg_loss:.4f}) | "
-                f"LR: {lr:.2e} | "
-                f"Throughput: {throughput:.2f}M tok/s | "
-                f"Tokens: {state.tokens_processed / 1e9:.2f}B | "
-                f"Epoch: {state.epoch} | "
-                f"ETA: {eta_hours:.1f}h"
-            )
+                state.train_loss_history.append(last_loss)
 
-        if state.step % config["logging"]["eval_every_steps"] == 0:
+                micro_losses = []
+
+                if optimizer_steps % config["logging"]["log_every_steps"] == 0 and rank == 0:
+
+                    elapsed = time.time() - step_start_time
+
+                    tokens_per_sec = (
+                        tokens_per_optimizer_step
+                        * config["logging"]["log_every_steps"]
+                        / max(elapsed, 1e-9)
+                    )
+
+                    step_start_time = time.time()
+
+                    throughput = tokens_per_sec / 1e6
+
+                    state.throughput_history.append(throughput)
+
+                    recent_losses = state.train_loss_history[-100:]
+
+                    avg_loss = sum(recent_losses) / len(recent_losses)
+
+                    elapsed_total = time.time() - state.start_time
+
+                    optimizer_steps_remaining = max(
+                        max_steps // grad_accum_steps - optimizer_steps, 0
+                    )
+
+                    eta_hours = (
+                        elapsed_total / max(optimizer_steps, 1)
+                    ) * optimizer_steps_remaining / 3600
+
+                    logger.info(
+                        f"Step {state.step:,}/{max_steps:,} "
+                        f"({optimizer_steps:,} optimizer steps) | "
+                        f"Loss: {last_loss:.4f} (avg: {avg_loss:.4f}) | "
+                        f"LR: {lr:.2e} | "
+                        f"Throughput: {throughput:.2f}M tok/s | "
+                        f"Tokens: {state.tokens_processed / 1e9:.2f}B | "
+                        f"Epoch: {state.epoch} | "
+                        f"ETA: {eta_hours:.1f}h"
+                    )
+
+        if (
+            config["logging"]["eval_every_steps"] > 0
+            and optimizer_steps > 0
+            and optimizer_steps % config["logging"]["eval_every_steps"] == 0
+        ):
 
             eval_metrics = evaluate(
                 model_engine,
@@ -811,9 +970,11 @@ def train(args: argparse.Namespace):
 
         save_every = config["checkpointing"]["save_every_steps"]
 
-        if save_every > 0 and state.step % save_every == 0:
+        if save_every > 0 and optimizer_steps > 0 and optimizer_steps % save_every == 0:
 
             ckpt_manager.save(model_engine, optimizer, state, model_config, state.step)
+
+    prefetch_train.close()
 
     if rank == 0:
 
@@ -827,7 +988,9 @@ def train(args: argparse.Namespace):
 
         logger.info(f"Total tokens processed: {state.tokens_processed / 1e9:.2f}B")
 
-        logger.info(f"Final train loss: {state.train_loss_history[-1]:.4f}")
+        if state.train_loss_history:
+
+            logger.info(f"Final train loss: {state.train_loss_history[-1]:.4f}")
 
         if state.val_loss_history:
 

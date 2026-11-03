@@ -20,6 +20,15 @@ from torch import nn
 from torch.utils.checkpoint import checkpoint
 
 from .config import CodingAgentConfig
+from .fused_ops import (
+    _kernel_selector,
+    apply_rotary_pos_emb as _fused_rope,
+    chunked_cross_entropy,
+    fast_sdpa,
+    rms_norm as _fused_rms_norm,
+    scaled_dot_product_attention as _fused_sdpa,
+    sparse_cross_entropy,
+)
 
 
 class RotaryEmbedding(nn.Module):
@@ -86,6 +95,11 @@ class RotaryEmbedding(nn.Module):
 
         self.register_buffer("inv_freq", inv_freq, persistent=False)
 
+        # cos/sin are baked in the model dtype: the tables are [S, D] (a few MB
+        # even at 8k) and every attention layer reads them on the hot path, so
+        # recomputing the fp32 -> bf16 cast per layer per step is pure waste.
+        self.cache_dtype = torch.get_default_dtype()
+
         self._build_cache(max_position_embeddings)
 
     def _build_cache(self, seq_len: int):
@@ -97,9 +111,9 @@ class RotaryEmbedding(nn.Module):
 
         emb = torch.cat((freqs, freqs), dim=-1)
 
-        self.register_buffer("cos_cached", emb.cos(), persistent=False)
+        self.register_buffer("cos_cached", emb.cos().to(self.cache_dtype), persistent=False)
 
-        self.register_buffer("sin_cached", emb.sin(), persistent=False)
+        self.register_buffer("sin_cached", emb.sin().to(self.cache_dtype), persistent=False)
 
     def forward(
         self, x: torch.Tensor, position_ids: torch.Tensor | None = None
@@ -112,10 +126,21 @@ class RotaryEmbedding(nn.Module):
             position_ids: Optional position IDs [batch, seq_len]
 
         Returns:
-            cos, sin tensors of shape [batch, seq_len, 1, dim]
+            cos, sin tensors of shape [batch, 1, seq_len, dim] -- already laid
+            out for broadcasting against [batch, heads, seq_len, head_dim] so
+            no transpose/copy is needed downstream.
         """
 
-        seq_len = x.shape[1]
+        # Attention calls this with [B, heads, S, D]: the sequence axis is -2.
+        # Reading shape[1] returned the head count there and smeared the
+        # table, and taking `seq_len` from the input also breaks when a KV cache
+        # makes S longer than the current query chunk, so the table follows the
+        # positions themselves, not the tensor shape.
+        seq_len = x.shape[-2] if x.dim() >= 4 else x.shape[1]
+
+        if position_ids is not None:
+
+            seq_len = max(seq_len, int(position_ids.max()) + 1)
 
         if seq_len > self.cos_cached.shape[0]:
 
@@ -123,17 +148,77 @@ class RotaryEmbedding(nn.Module):
 
         if position_ids is not None:
 
-            cos = self.cos_cached[position_ids].unsqueeze(2)
+            cos = self.cos_cached[position_ids].unsqueeze(1)
 
-            sin = self.sin_cached[position_ids].unsqueeze(2)
+            sin = self.sin_cached[position_ids].unsqueeze(1)
 
         else:
 
-            cos = self.cos_cached[:seq_len].unsqueeze(0).unsqueeze(2)
+            cos = self.cos_cached[:seq_len].unsqueeze(0).unsqueeze(1)
 
-            sin = self.sin_cached[:seq_len].unsqueeze(0).unsqueeze(2)
+            sin = self.sin_cached[:seq_len].unsqueeze(0).unsqueeze(1)
 
-        return cos.to(x.dtype), sin.to(x.dtype)
+        if cos.dtype != x.dtype:
+
+            cos = cos.to(x.dtype)
+
+            sin = sin.to(x.dtype)
+
+        return cos, sin
+
+
+MASK_UNSUPPORTED = object()
+
+
+class sliding_window:
+    """Force SDPA onto a memory-efficient kernel for a banded (windowed) mask.
+
+    A sliding-window mask is not expressible as a triangular band, so it is
+    passed as an explicit boolean mask -- which the *flash* kernel does not
+    accept, while the memory-efficient one does.  Without this the "windowed"
+    path would quietly fall back to the quadratically-expensive math kernel
+    whenever ``seq > window``, which is exactly where it matters most (8k
+    sequences, 4096 window).  On a build without kernel selection this is a
+    no-op and SDPA picks whatever it can.
+    """
+
+    def __init__(self, enabled: bool = True):
+
+        self.enabled = enabled
+
+        self._ctx = None
+
+    def __enter__(self):
+
+        if not self.enabled:
+
+            return self
+
+        ctx = _kernel_selector(flash=False, math=True, mem_efficient=True)
+
+        if ctx is not None:
+
+            try:
+
+                ctx.__enter__()
+
+                self._ctx = ctx
+
+            except Exception:
+
+                self._ctx = None
+
+        return self
+
+    def __exit__(self, *exc_info):
+
+        if self._ctx is not None:
+
+            self._ctx.__exit__(*exc_info)
+
+            self._ctx = None
+
+        return False
 
 
 def rotate_half(x: torch.Tensor) -> torch.Tensor:
@@ -152,17 +237,20 @@ def apply_rotary_pos_emb(
     cos: torch.Tensor,
     sin: torch.Tensor,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """Apply rotary position embeddings to query and key tensors."""
+    """Apply rotary position embeddings to query and key tensors.
 
-    cos = cos.transpose(1, 2)
+    ``cos``/``sin`` arrive as ``[B, 1, S, D]`` (see ``RotaryEmbedding.forward``),
+    so they broadcast directly; the previous layout needed a double transpose
+    plus two fp32 multiplies per layer.
+    """
 
-    sin = sin.transpose(1, 2)
+    if cos.dim() == 4 and cos.shape[2] == 1 and cos.shape[1] != 1:
 
-    q_embed = (q * cos) + (rotate_half(q) * sin)
+        cos = cos.transpose(1, 2)
 
-    k_embed = (k * cos) + (rotate_half(k) * sin)
+        sin = sin.transpose(1, 2)
 
-    return q_embed, k_embed
+    return _fused_rope(q, k, cos, sin)
 
 
 class RMSNorm(nn.Module):
@@ -184,10 +272,17 @@ class RMSNorm(nn.Module):
         return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Normalise in fp32, apply the learned scale, return x's dtype.
 
-        output = self._norm(x.float()).type_as(x)
+        Same value as ``self._norm(x.float()).type_as(x) * self.weight`` with
+        one full-size intermediate instead of three.
+        """
 
-        return output * self.weight
+        if x.dtype == torch.float32:
+
+            return x.mul(torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)).mul(self.weight)
+
+        return _fused_rms_norm(x, self.weight, self.eps)
 
 
 class GroupedQueryAttention(nn.Module):
@@ -272,17 +367,13 @@ class GroupedQueryAttention(nn.Module):
 
         value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(
-            batch_size, seq_length, self.num_heads, self.head_dim
-        ).transpose(1, 2)
+        # unflatten+transpose is the same view as view(...).transpose(1, 2) but
+        # does not re-validate 4-D contiguity after every projection.
+        query_states = query_states.unflatten(2, (self.num_heads, self.head_dim)).transpose(1, 2)
 
-        key_states = key_states.view(
-            batch_size, seq_length, self.num_kv_heads, self.head_dim
-        ).transpose(1, 2)
+        key_states = key_states.unflatten(2, (self.num_kv_heads, self.head_dim)).transpose(1, 2)
 
-        value_states = value_states.view(
-            batch_size, seq_length, self.num_kv_heads, self.head_dim
-        ).transpose(1, 2)
+        value_states = value_states.unflatten(2, (self.num_kv_heads, self.head_dim)).transpose(1, 2)
 
         cos, sin = self.rotary_emb(query_states, position_ids=position_ids)
 
@@ -324,70 +415,270 @@ class GroupedQueryAttention(nn.Module):
 
         Adds an optional code-graph bias keyed on AST distance / same-symbol.
         The bias is zero for non-code tokens (when bias is None).
+
+        Two paths, both exact:
+
+        * fused SDPA (flash / memory-efficient).  Requires a boolean causal
+          mask -- or no mask at all -- so the kernel never sees the additive
+          float mask, and GQA head sharing stays fused when the installed
+          torch supports ``enable_gqa``.
+        * the explicit softmax path for anything SDPA cannot express
+          (additive biases, sliding windows).
         """
 
         _batch_size, num_heads, seq_len_q, head_dim = query.shape
 
         _, num_kv_heads, seq_len_kv, _ = key.shape
 
-        if hasattr(F, "scaled_dot_product_attention"):
+        groups = num_heads // num_kv_heads
 
-            if num_kv_heads < num_heads:
+        scale = 1.0 / math.sqrt(head_dim)
 
-                key = self._repeat_kv(key, self.num_kv_groups)
-
-                value = self._repeat_kv(value, self.num_kv_groups)
-
-            attn_mask = None
-
-            if attention_mask is not None:
-
-                attn_mask = attention_mask
-
-            attn_output = F.scaled_dot_product_attention(
-                query,
-                key,
-                value,
-                attn_mask=attn_mask,
-                dropout_p=self.config.attention_dropout if self.training else 0.0,
-                is_causal=(attn_mask is None and seq_len_q > 1),
-            )
-
-            return attn_output
-
-        key = self._repeat_kv(key, self.num_kv_groups)
-
-        value = self._repeat_kv(value, self.num_kv_groups)
-
-        attn_weights = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(head_dim)
+        windowed = (
+            self.sliding_window is not None
+            and seq_len_q > 1
+            and seq_len_kv > self.sliding_window
+        )
 
         if code_graph_bias is not None:
 
-            attn_weights = attn_weights + code_graph_bias
+            return self._bias_attention(query, key, value, code_graph_bias, attention_mask, scale)
 
-        if self.sliding_window is not None and seq_len_q > 1:
+        sdpa_mask = self._sdpa_mask(attention_mask, query.device, seq_len_q)
 
-            window_mask = self._create_sliding_window_mask(
-                seq_len_q, seq_len_kv, query.device
-            )
+        if sdpa_mask is not MASK_UNSUPPORTED:
 
-            attn_weights = attn_weights + window_mask
+            mask, mask_is_causal = (None, False) if sdpa_mask is None else sdpa_mask
+
+            if windowed:
+
+                # Same banded mask as the explicit path, still a fused kernel:
+                # this is the 8k / 4096-window case, where materialising the
+                # quadratic score matrix is the difference between fitting and
+                # not.
+                mask = self._window_keep_mask(
+                    seq_len_q, seq_len_kv, query.device, mask
+                )
+
+                mask_is_causal = False
+
+                selector = sliding_window()
+
+            else:
+
+                selector = fast_sdpa(getattr(self.config, "attention_backend", "auto"))
+
+            with selector:
+
+                return _fused_sdpa(
+                    query,
+                    key,
+                    value,
+                    attention_mask=mask,
+                    is_causal=(mask_is_causal or mask is None) and seq_len_q > 1,
+                    dropout_p=self.config.attention_dropout if self.training else 0.0,
+                    scale=scale,
+                    num_kv_groups=groups,
+                )
+
+        key = self._repeat_kv(key, groups)
+
+        value = self._repeat_kv(value, groups)
+
+        attn_weights = torch.matmul(query, key.transpose(-2, -1)) * scale
 
         if attention_mask is not None:
 
-            attn_weights = attn_weights + attention_mask
+            attn_weights = attn_weights + self._layer_mask(attention_mask, seq_len_kv, attn_weights.dtype)
 
-        attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(
-            query.dtype
-        )
+        attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query.dtype)
 
         if self.config.attention_dropout > 0 and self.training:
 
             attn_weights = F.dropout(attn_weights, p=self.config.attention_dropout)
 
-        attn_output = torch.matmul(attn_weights, value)
+        return torch.matmul(attn_weights, value)
 
-        return attn_output
+    def _bias_attention(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        code_graph_bias: torch.Tensor,
+        attention_mask: torch.Tensor | None,
+        scale: float,
+    ) -> torch.Tensor:
+        """Second attention pass used only when an explicit bias is supplied."""
+
+        groups = query.shape[1] // key.shape[1]
+
+        key = self._repeat_kv(key, groups)
+
+        value = self._repeat_kv(value, groups)
+
+        attn_weights = torch.matmul(query, key.transpose(-2, -1)) * scale
+
+        attn_weights = attn_weights + self.sanitize_code_graph_bias(code_graph_bias)
+
+        if attention_mask is not None:
+
+            attn_weights = attn_weights + self._layer_mask(attention_mask, key.shape[2], attn_weights.dtype)
+
+        attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query.dtype)
+
+        return torch.matmul(attn_weights, value)
+
+    def _attention_with_window(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        attention_mask: torch.Tensor | None,
+        code_graph_bias: torch.Tensor | None,
+        scale: float,
+    ) -> torch.Tensor:
+        """Explicit banded attention (reference implementation)."""
+
+        groups = query.shape[1] // key.shape[1]
+
+        key = self._repeat_kv(key, groups)
+
+        value = self._repeat_kv(value, groups)
+
+        attn_weights = torch.matmul(query, key.transpose(-2, -1)) * scale
+
+        if code_graph_bias is not None:
+
+            attn_weights = attn_weights + self.sanitize_code_graph_bias(code_graph_bias)
+
+        if attention_mask is not None:
+
+            attn_weights = attn_weights + self._layer_mask(attention_mask, key.shape[2], attn_weights.dtype)
+
+        window_mask = self._create_sliding_window_mask(
+            query.shape[2], key.shape[2], query.device, attn_weights.dtype
+        )
+
+        attn_weights = attn_weights + window_mask
+
+        attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query.dtype)
+
+        if self.config.attention_dropout > 0 and self.training:
+
+            attn_weights = F.dropout(attn_weights, p=self.config.attention_dropout)
+
+        return torch.matmul(attn_weights, value)
+
+    @staticmethod
+    def _layer_mask(
+        attention_mask: torch.Tensor, seq_len_kv: int, dtype: torch.dtype
+    ) -> torch.Tensor:
+        """Normalise every mask flavour the model accepts to an additive [B, 1, Q, KV] mask.
+
+        2-D masks are the "1 == keep / 0 == pad" convention used throughout the
+        model; 4-D tensors are already additive and pass through untouched.
+        """
+
+        mask = attention_mask
+
+        if mask.dim() >= 3:
+
+            return mask if mask.dtype == dtype else mask.to(dtype)
+
+        if mask.dtype == torch.bool:
+
+            keep = mask[:, None, None, :]
+
+            return torch.zeros(keep.shape, dtype=dtype, device=mask.device).masked_fill_(
+                ~keep, torch.finfo(dtype).min
+            )
+
+        additive = (1.0 - mask.float()) * torch.finfo(dtype).min
+
+        return additive[:, None, None, :].to(dtype)
+
+    @staticmethod
+    def _sdpa_mask(
+        attention_mask: torch.Tensor | None, device: torch.device, seq_len_q: int | None = None
+    ):
+        """Convert a mask into something the fused SDPA kernels accept *exactly*.
+
+        Returns one of
+
+        * ``None`` -- no masking at all,
+        * ``(mask, is_causal)`` -- a boolean "keep" mask (and whether the causal
+          band still has to be applied),
+        * ``MASK_UNSUPPORTED`` -- the mask cannot be expressed without changing
+          the result, so the explicit softmax path must handle it.
+
+        Two details matter for correctness:
+
+        * a boolean mask in this model means "True == keep", which is exactly
+          SDPA's convention for boolean masks;
+        * a padding mask must *not* silently replace the causal band.  When the
+          query side has not been masked yet the band is composed in
+          explicitly; when it has, ``is_causal`` is turned on so the band is
+          applied by the kernel without materialising anything.
+        """
+
+        if attention_mask is None:
+
+            return None
+
+        if attention_mask.dim() == 4:
+
+            if attention_mask.dtype == torch.bool:
+
+                return (attention_mask, False)
+
+            return MASK_UNSUPPORTED
+
+        if attention_mask.dim() != 2:
+
+            return MASK_UNSUPPORTED
+
+        keep = (
+            attention_mask
+            if attention_mask.dtype == torch.bool
+            else attention_mask > 0
+        )
+
+        if bool(keep.all()):
+
+            return None
+
+        bind = keep[:, None, :]
+
+        if seq_len_q is None or seq_len_q <= 1:
+
+            # Single-query decode: every non-padding key is visible, no band needed.
+            return (bind, False)
+
+        rows = torch.arange(seq_len_q, device=device).unsqueeze(1)
+
+        cols = torch.arange(bind.shape[-1], device=device).unsqueeze(0)
+
+        band = cols <= rows
+
+        composed = band.unsqueeze(0).unsqueeze(0) & bind.unsqueeze(1)
+
+        return (composed, False)
+
+    @staticmethod
+    def sanitize_code_graph_bias(code_graph_bias: torch.Tensor) -> torch.Tensor:
+        """Turn a structural bias into an additive float mask.
+
+        A boolean tensor means "these pairs are disallowed" (True == masked),
+        so it becomes -inf.  Any float tensor is used verbatim.
+        """
+
+        if code_graph_bias.dtype == torch.bool:
+
+            return torch.zeros_like(code_graph_bias, dtype=torch.float32).masked_fill_(
+                code_graph_bias, torch.finfo(torch.float32).min
+            )
+
+        return code_graph_bias
 
     def _repeat_kv(self, x: torch.Tensor, n_rep: int) -> torch.Tensor:
         """Repeat KV heads to match the number of query heads."""
@@ -402,20 +693,91 @@ class GroupedQueryAttention(nn.Module):
 
         return x.reshape(batch, num_kv_heads * n_rep, seq_len, head_dim)
 
-    def _create_sliding_window_mask(
-        self, seq_len_q: int, seq_len_kv: int, device: torch.device
+    def _window_keep_mask(
+        self,
+        seq_len_q: int,
+        seq_len_kv: int,
+        device: torch.device,
+        padding: torch.Tensor | None = None,
     ) -> torch.Tensor:
-        """Create a sliding window attention mask."""
+        """Boolean "may attend" map for the sliding window, combined with padding.
 
-        mask = torch.full((seq_len_q, seq_len_kv), float("-inf"), device=device)
+        ``padding`` is the already-expanded boolean keep-mask from
+        ``_sdpa_mask`` (or None).  Cached per shape/device because it is a
+        constant; a 8k x 8k boolean map is 67 MB.
+        """
 
-        for i in range(seq_len_q):
+        key = (seq_len_q, seq_len_kv, self.sliding_window, str(device))
 
-            start = max(0, i - self.sliding_window + 1)
+        cache = self.__dict__.setdefault("_window_keep_cache", {})
 
-            mask[i, start : i + 1] = 0.0
+        base = cache.get(key)
 
-        return mask.unsqueeze(0).unsqueeze(0)
+        if base is None:
+
+            rows = torch.arange(seq_len_q, device=device).unsqueeze(1)
+
+            cols = torch.arange(seq_len_kv, device=device).unsqueeze(0)
+
+            distance = rows - cols
+
+            base = (distance >= 0) & (distance < int(self.sliding_window))
+
+            base = base.unsqueeze(0).unsqueeze(0)
+
+            if len(cache) < 8:
+
+                cache[key] = base
+
+        if padding is None:
+
+            return base
+
+        if padding.dim() == 2:
+
+            padding = padding[:, None, None, :]
+
+        # *This* module's window is combined with the padding the model already
+        # expanded to a query axis; the [1, 1, Q, K] base broadcasts onto it.
+        return padding & base
+
+    def _create_sliding_window_mask(
+        self,
+        seq_len_q: int,
+        seq_len_kv: int,
+        device: torch.device,
+        dtype: torch.dtype | None = None,
+    ) -> torch.Tensor:
+        """Banded causal mask (allowed iff ``0 <= i - j < window``).
+
+        Same values as the previous per-row loop, built with two broadcasts and
+        memoised per shape/device: the mask is a constant, and rebuilding an
+        [S, S] fp32 tensor inside every layer of every step was pure overhead.
+        """
+
+        dtype = dtype or torch.get_default_dtype()
+
+        key = (seq_len_q, seq_len_kv, self.sliding_window, str(device), dtype)
+
+        cache = self.__dict__.setdefault("_window_mask_cache", {})
+
+        cached = cache.get(key)
+
+        if cached is not None:
+
+            return cached
+
+        allowed = self._window_keep_mask(seq_len_q, seq_len_kv, device)
+
+        mask = torch.zeros((1, 1, seq_len_q, seq_len_kv), dtype=dtype, device=device)
+
+        mask.masked_fill_(~allowed, float("-inf"))
+
+        if len(cache) < 8:
+
+            cache[key] = mask
+
+        return mask
 
 
 class SwiGLUMLP(nn.Module):
@@ -445,13 +807,29 @@ class SwiGLUMLP(nn.Module):
             self.moe = MoEExperts(config, num_experts=num_experts, top_k=top_k)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """``down(silu(gate(x)) * up(x))`` (+ the routed expert branch).
+
+        The elementwise product is fused into the activation with an in-place
+        multiply so the [tokens, intermediate] buffer is written once instead
+        of twice; the values are bit-identical to ``gate * up``.
+        """
+
         gate = self.act_fn(self.gate_proj(x))
+
         up = self.up_proj(x)
-        mlp_output = self.down_proj(gate * up)
+
+        if gate.shape == up.shape:
+
+            gate.mul_(up)
+
+            mlp_output = self.down_proj(gate)
+
+        else:
+
+            mlp_output = self.down_proj(gate * up)
 
         if self.use_moe:
-            moe_output = self.down_proj(self.moe(x))
-            return mlp_output + 0.5 * moe_output
+            return mlp_output + 0.5 * self.down_proj(self.moe(x))
 
         return mlp_output
 
@@ -492,41 +870,43 @@ class MoEExperts(nn.Module):
 
         Returns:
             Mixed output [batch, seq_len, intermediate_size]
+
+        One masked gather + one GEMM + one scatter per expert.  A single
+        batched GEMM over all (token, slot) assignments would need a transposed
+        copy of every expert weight on each step, which under ZeRO costs more
+        than the four small GEMMs it replaces, so the reference dispatch stays.
         """
+
         batch_size, seq_len, _ = x.shape
 
-        router_logits = self.router(x).view(batch_size, seq_len, self.num_experts)
+        router_logits = self.router(x).view(batch_size * seq_len, self.num_experts)
 
-        top_k_weights, top_k_indices = torch.topk(
-            router_logits, self.top_k, dim=-1
-        )
+        top_k_weights, top_k_indices = torch.topk(router_logits, self.top_k, dim=-1)
 
         top_k_weights = F.softmax(top_k_weights, dim=-1)
 
-        x_flat = x.reshape(-1, self.hidden_size)
-        weights_flat = top_k_weights.reshape(-1, self.top_k)
-        indices_flat = top_k_indices.reshape(-1, self.top_k)
+        x_flat = x.reshape(batch_size * seq_len, self.hidden_size)
 
-        expert_outputs = x.new_zeros(
-            batch_size * seq_len, self.intermediate_size
-        )
+        expert_outputs = x.new_zeros(batch_size * seq_len, self.intermediate_size)
 
         for expert_idx in range(self.num_experts):
-            routing_mask = indices_flat == expert_idx
+
+            routing_mask = top_k_indices == expert_idx
+
             token_mask = routing_mask.any(dim=-1)
+
             if not token_mask.any():
                 continue
 
             expert_input = x_flat[token_mask]
+
             expert_output = self.experts[expert_idx](expert_input)
-            expert_weights = (
-                weights_flat[token_mask] * routing_mask[token_mask]
-            ).sum(dim=-1, keepdim=True)
+
+            expert_weights = (top_k_weights[token_mask] * routing_mask[token_mask]).sum(dim=-1, keepdim=True)
+
             expert_outputs[token_mask] += expert_output * expert_weights
 
-        output = expert_outputs.view(batch_size, seq_len, self.intermediate_size)
-
-        return output
+        return expert_outputs.view(batch_size, seq_len, self.intermediate_size)
 
 
 class TransformerBlock(nn.Module):
@@ -803,34 +1183,56 @@ class CodingAgentModel(nn.Module):
 
             hidden_states = self.embed_tokens(input_ids)
 
+        device = hidden_states.device
+
         if position_ids is None:
 
             past_length = past_key_values[0][0].shape[2] if past_key_values else 0
 
-            position_ids = (
-                torch.arange(
+            # [B, S] positions cost a few KB; expanding from one row keeps the
+            # value identical to the previous arange().expand() without the
+            # int64 arange itself per layer-free call.
+            if attention_mask is not None and attention_mask.dim() == 2:
+
+                positions = attention_mask.long().cumsum(-1) - 1
+
+                positions = positions.clamp_min(0)
+
+                if past_length:
+
+                    positions = positions + past_length
+
+                position_ids = positions
+
+            else:
+
+                position_ids = torch.arange(
                     past_length,
                     past_length + seq_length,
                     dtype=torch.long,
-                    device=hidden_states.device,
-                )
-                .unsqueeze(0)
-                .expand(batch_size, -1)
-            )
+                    device=device,
+                ).unsqueeze(0).expand(batch_size, -1)
 
         attention_mask_4d = None
 
         if attention_mask is not None:
 
-            attention_mask_4d = attention_mask[:, None, None, :].to(hidden_states.dtype)
+            # SDPA's fused kernels take a boolean mask; the additive float
+            # version is only needed by the explicit softmax path and is
+            # materialised there (see GroupedQueryAttention._layer_mask).
+            if attention_mask.dim() == 2:
 
-            attention_mask_4d = (1.0 - attention_mask_4d) * torch.finfo(
-                hidden_states.dtype
-            ).min
+                attention_mask_4d = attention_mask[:, None, None, :].to(torch.bool)
+
+            else:
+
+                attention_mask_4d = attention_mask
 
         all_hidden_states = [] if output_hidden_states else None
 
         present_key_values = [] if use_cache else None
+
+        checkpointing = self.gradient_checkpointing and self.training
 
         for idx, layer in enumerate(self.layers):
 
@@ -840,16 +1242,10 @@ class CodingAgentModel(nn.Module):
 
             past_kv = past_key_values[idx] if past_key_values else None
 
-            if self.gradient_checkpointing and self.training:
+            if checkpointing and past_kv is None:
 
-                hidden_states, present_kv = checkpoint(
-                    layer,
-                    hidden_states,
-                    attention_mask_4d,
-                    position_ids,
-                    past_kv,
-                    use_cache,
-                    use_reentrant=False,
+                hidden_states, present_kv = self._checkpointed_layer(
+                    layer, hidden_states, attention_mask_4d, position_ids, past_kv, use_cache
                 )
 
             else:
@@ -872,21 +1268,49 @@ class CodingAgentModel(nn.Module):
 
             all_hidden_states.append(hidden_states)
 
-        logits = self.lm_head(hidden_states)
-
         loss = None
 
-        if labels is not None:
+        logits = None
 
-            shift_logits = logits[..., :-1, :].contiguous()
+        # Inference (and anything that asks for hidden states) always gets the
+        # full projection; only a training step is allowed to skip it.
+        want_logits = (
+            bool(output_hidden_states) or bool(self.config.return_logits) or not self.training
+        )
 
-            shift_labels = labels[..., 1:].contiguous()
+        if labels is not None and not want_logits:
 
-            loss = F.cross_entropy(
-                shift_logits.view(-1, shift_logits.size(-1)),
-                shift_labels.view(-1),
-                ignore_index=-100,
+            # Loss path: never build [B, S, vocab].  The projection is streamed
+            # through the LM head in bounded chunks and the shift is a view, so
+            # the only sizeable temporary is one chunk of logits.
+            shift_hidden = hidden_states[:, :-1, :]
+
+            shift_labels = labels[1:] if labels.dim() == 1 else labels[:, 1:]
+
+            entry = sparse_cross_entropy if self._has_ignored_labels(shift_labels) else chunked_cross_entropy
+
+            loss = entry(
+                shift_hidden,
+                self.lm_head.weight,
+                shift_labels,
+                chunk_size=self.config.loss_chunk_size,
             )
+
+        else:
+
+            logits = self.lm_head(hidden_states)
+
+            if labels is not None:
+
+                shift_logits = logits[:, :-1, :]
+
+                shift_labels = labels[1:] if labels.dim() == 1 else labels[:, 1:]
+
+                loss = F.cross_entropy(
+                    shift_logits.reshape(-1, shift_logits.size(-1)),
+                    shift_labels.reshape(-1),
+                    ignore_index=-100,
+                )
 
         return ModelOutput(
             logits=logits,
@@ -894,6 +1318,86 @@ class CodingAgentModel(nn.Module):
             past_key_values=present_key_values,
             loss=loss,
         )
+
+    @staticmethod
+    def _has_ignored_labels(labels: torch.Tensor) -> bool:
+        """True when part of the batch is masked out (prompt loss masking, pads)."""
+
+        return bool((labels == -100).any())
+
+    def _checkpointed_layer(
+        self,
+        layer: TransformerBlock,
+        hidden_states: torch.Tensor,
+        attention_mask: torch.Tensor | None,
+        position_ids: torch.Tensor | None,
+        past_kv,
+        use_cache: bool,
+    ):
+        """Activation-checkpoint one block, segment by segment.
+
+        ``gradient_checkpointing_segments`` controls how much of the block is
+        recomputed:
+
+        * ``0`` -- no checkpointing (activations kept, fastest step time),
+        * ``1`` -- checkpoint the whole block,
+        * ``2`` (default) -- checkpoint the attention and MLP sub-blocks and
+          keep the two cheap norms live.
+
+        Recomputation recomputes the same function with the same input, so the
+        gradients are unchanged; only the RNG-dependent dropout would need the
+        preserved-RNG wrapper, and the recipe trains with dropout 0.
+        """
+
+        segments = int(getattr(self.config, "gradient_checkpointing_segments", 2) or 0)
+
+        if segments <= 0:
+
+            return layer(
+                hidden_states,
+                attention_mask=attention_mask,
+                position_ids=position_ids,
+                past_key_value=past_kv,
+                use_cache=use_cache,
+            )
+
+        if segments == 1:
+
+            return checkpoint(
+                layer,
+                hidden_states,
+                attention_mask,
+                position_ids,
+                past_kv,
+                use_cache,
+                use_reentrant=False,
+            )
+
+        residual = hidden_states
+
+        normed = layer.input_layernorm(hidden_states)
+
+        attn_out, present_kv = checkpoint(
+            layer.self_attn,
+            normed,
+            attention_mask,
+            position_ids,
+            past_kv,
+            use_cache,
+            use_reentrant=False,
+        )
+
+        hidden_states = residual + attn_out
+
+        residual = hidden_states
+
+        normed = layer.post_attention_layernorm(hidden_states)
+
+        mlp_out = checkpoint(layer.mlp, normed, use_reentrant=False)
+
+        hidden_states = residual + mlp_out
+
+        return hidden_states, present_kv
 
     @torch.no_grad()
     def generate(

@@ -395,6 +395,30 @@ class MemoryMappedDataset:
 
         return tokens.astype(np.int64)
 
+    def batch_tokens(self, indices: list[int]) -> np.ndarray:
+        """Fetch several windows as one contiguous int32 array (no shifting).
+
+        The previous loader called ``get_batch``, which stacked per-index copies,
+        then sliced twice and upcast both halves to int64: three full-size
+        copies of every batch.  A batch is a couple of MB of tokens but the
+        copies are pure host-side latency in the critical path of a step.
+
+        Returns int32 -- the dtype torch accepts for embedding indices -- so the
+        caller can slice ``[:, :-1]`` / ``[:, 1:]`` and get input/label views
+        out of a single buffer.
+        """
+
+        if not indices:
+            raise ValueError("batch_tokens needs at least one sequence index")
+
+        out = np.empty((len(indices), self.seq_length + 1), dtype=np.int32)
+
+        for row, index in enumerate(indices):
+
+            out[row] = self._get_tokens(index * self.seq_length, (index + 1) * self.seq_length + 1)
+
+        return out
+
     def get_batch(
         self, batch_size: int, indices: list[int] | None = None
     ) -> tuple[np.ndarray, np.ndarray]:

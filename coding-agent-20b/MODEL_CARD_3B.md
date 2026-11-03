@@ -60,17 +60,42 @@ Prepare 3B shards with `--seq_length 4096` when the shard generator packs
 documents (`scripts/generate_dataset.py`); the trainer re-windows the flat token
 stream using its own `sequence_length`, so existing 8192-packed shards still work.
 
-DeepSpeed stays on ZeRO-3 with **both** parameter and optimizer offload to CPU
-(`pin_memory: true`, unchanged in `configs/ds_config_zero3.json`). The 3B path
-activates activation checkpointing through the model's own
-`torch.utils.checkpoint` switch (`deepspeed.activation_checkpointing` in the
-recipe), which is why `training/train_3b.py` drops the shared template's
-`activation_checkpointing` block instead of double-checkpointing; the template
-keeps `partition_activations` and `cpu_checkpointing` for the 20B path. The 3B
-recipe additionally lowers `stage3_max_live_parameters` /
-`stage3_max_reuse_distance` to 5e8 (from the shared template's 1e9) to cap the
-16-bit parameter working set held on the GPU. Those two knobs are read from the
-3B recipe only, so the shared 20B template is unchanged.
+DeepSpeed stays on ZeRO-3, now with **no CPU offload by default**
+(`offload_optimizer` / `offload_param` are `false` in the recipe; the shared
+template resolves them to `{"device": "none"}`). At 2.55B the whole sharded
+training state is small enough to live in VRAM: on 8 ranks that is ~10.5 GiB per
+rank, so streaming weights and optimizer state over PCIe every step was pure
+loss. `configs/ds_config_zero3_offload.json` is the fallback for a rank that
+cannot hold its shard — identical maths, ~2 GiB/rank instead of ~10 GiB, at
+roughly 1.4-1.6x the step time.
+
+Activation checkpointing is done by the model itself
+(`deepspeed.activation_checkpointing` in the recipe, with
+`activation_checkpointing_segments: 2`): the attention and MLP sub-blocks are
+recomputed, the two cheap norms stay live. `training/train_3b.py` drops the
+shared template's `activation_checkpointing` block so nothing is checkpointed
+twice, and the template's `partition_activations` / `cpu_checkpointing` are off
+because they only matter with offload. The recipe lowers
+`stage3_max_live_parameters` / `stage3_max_reuse_distance` to 5e8 (from the
+template's 1e9) to cap the 16-bit parameter working set held on the GPU; those
+two knobs are read from the 3B recipe only, so the shared 20B template is
+unchanged.
+
+Throughput features in this recipe (all lossless — see
+`docs/TRAINING_PERFORMANCE.md`):
+
+- fused SDPA attention (`training.attention_backend: "auto"`): no
+  `[B, heads, S, S]` score matrix and no fp32 copy of it,
+- chunked LM-head loss (`training.chunked_loss`, `loss_chunk_size: 1024`): the
+  `[B, S, 128256]` logits buffer never exists during training; the projection is
+  streamed and only the scalar loss is kept,
+- threaded + pinned prefetch (`data.prefetch_depth: 3`, `pin_memory: true`),
+- `torch.compile` on the block stack as an opt-in (`compile.enabled`).
+
+`scripts/plan_training_memory.py --config configs/training_config_3b.json
+--gpus 8` prints the per-rank breakdown for any host, and
+`--budget_gb 24 --apply` resolves the micro-batch/accumulation that fits while
+keeping the global batch fixed.
 
 The **pretraining cap is 18B input tokens** (20B's separate recipe remains at
 300B). With global batch 512 and 4096 tokens per sequence, this is 2,097,152
@@ -107,7 +132,7 @@ The 3B pretrainer saves sharded DeepSpeed checkpoints in `checkpoints-3b/`
 (all ranks participate). Checkpoints record the global token count, data
 position, batch topology and training-manifest hash; `--resume` requires those
 to match. The recipe keeps the most recent five checkpoints with both parameter
-and optimizer state offloaded to CPU memory. These sharded checkpoints
+and optimizer state. These sharded checkpoints
 are not the atomic, SHA-256-verified single-file format used by
 `training/checkpoint.py`; consolidate them before inference.
 

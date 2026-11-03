@@ -38,6 +38,33 @@ instruction 0.08 · security 0.03 (×3) · creative 0.03 (×2) · instruction-in
 Checkpoints are atomic + SHA-256 verified (`training/checkpoint.py`); recovery
 policy in `training/monitor.py`.
 
+### Training throughput and memory
+
+`configs/training_config.json` is the 20B recipe. It is tuned for step time and
+resident memory without touching anything that changes the model:
+
+| what | old default | now |
+| --- | --- | --- |
+| attention | explicit softmax, `[B, 48, S, S]` fp32 weights | fused SDPA, no score matrix |
+| LM loss | full `[B, S, 128256]` logits, then CE | chunked projection (1024 rows), loss only |
+| micro-batch | 2 | 1, with `gradient_accumulation_steps: "auto"` from the real world size |
+| ZeRO-3 state | optimizer + params offloaded to CPU | resident (`{"device": "none"}`) |
+| activation checkpointing | whole block, plus DeepSpeed's own block | 2 segments per block, model-side only |
+| data feeding | synchronous mmap read + `.to(device)` | threaded prefetch into pinned memory |
+| accumulation | loss pre-divided *and* DeepSpeed-divided | DeepSpeed's internal window used correctly |
+
+Loss, gradients, optimizer update, learning-rate schedule, global batch,
+sequence length and data order are unchanged; `tests/test_train_perf.py` proves
+bit-level agreement with the reference implementations. Enabling `bf16` mixed
+precision with `torch.autocast` is *not* required — the recipe stays in bf16
+parameter precision as before.
+
+`python scripts/plan_training_memory.py --config configs/training_config.json
+--gpus 64 --budget_gb 80` reports the per-rank breakdown (weights, gradients,
+fp32 master, Adam moments, activations, logits, ZeRO gather buffers) before a
+job is launched, and `--apply` writes back a fitting micro-batch. Full detail:
+`docs/TRAINING_PERFORMANCE.md`.
+
 ## Evaluation
 Protocol: `docs/EVAL_PROTOCOL.md`. Benchmarks: HumanEval, MBPP, LiveCodeBench,
 SWE-bench Lite (repo-level, with a retrieval ablation: `none` / `flat` /

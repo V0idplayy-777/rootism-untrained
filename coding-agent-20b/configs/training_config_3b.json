@@ -1,7 +1,7 @@
 {
   "model_name": "CodingAgent-3B",
   "model_size": "3B",
-  "notes": "EXACT same architecture family as CodingAgent-20B, scaled to the 3B class. Width halved (6144->3072, 16384->7168, 48/8->24/4), depth 60->20, thinner SwiGLU MLP (intermediate 7168, ratio 2.33x), head_dim 128, RoPE 500k, sliding window 4096, vocab 128256 preserved. See model/config_3b.py for breakdown. Memory-lean pretraining recipe: 4096-token sequences (native 8192 / YaRN 32k / 64k contexts remain available for inference), micro-batch 1 per GPU with a 512 global batch, and ZeRO-3 with full CPU offload of both parameters and optimizer state. The 3B pretrainer uses its own 18B-token budget; shared data mixture settings are unchanged.",
+  "notes": "EXACT same architecture family as CodingAgent-20B, scaled to the 3B class. Width halved (6144->3072, 16384->7168, 48/8->24/4), depth 60->20, thinner SwiGLU MLP (intermediate 7168, ratio 2.33x), head_dim 128, RoPE 500k, sliding window 4096, vocab 128256 preserved. See model/config_3b.py for breakdown. Throughput recipe: 4096-token sequences (native 8192 / YaRN 32k / 64k contexts remain available for inference), micro-batch 1 per GPU with a 512 global batch, and ZeRO-3 with everything resident on the GPU (2.55B params: ~5.1 GB of bf16 weights, ~5.1 GB of grads and ~20.4 GB of Adam fp32 state, sharded across ranks). Offload is deliberately OFF: at 3B the optimizer state fits, and streaming it over PCIe every step was the single largest throughput loss in the old recipe. If a rank cannot hold its shard, either add ranks or enable configs/ds_config_zero3_offload.json (same math, ~2 GB/rank instead of ~10 GB). The 3B pretrainer uses its own 18B-token budget; shared data mixture settings are unchanged.",
   "training": {
     "total_tokens": 18000000000,
     "learning_rate": 0.0003,
@@ -13,7 +13,11 @@
     "eps": 1e-08,
     "max_grad_norm": 1.0,
     "precision": "bf16",
-    "seed": 42
+    "seed": 42,
+    "attention_backend": "auto",
+    "chunked_loss": true,
+    "loss_chunk_size": 1024,
+    "logit_softcap": null
   },
   "batching": {
     "global_batch_size": 512,
@@ -23,18 +27,28 @@
   },
   "deepspeed": {
     "stage": 3,
-    "offload_optimizer": true,
-    "offload_param": true,
+    "offload_optimizer": false,
+    "offload_param": false,
+    "zero8bit_optimizer": false,
     "activation_checkpointing": true,
+    "activation_checkpointing_segments": 2,
     "stage3_max_live_parameters": 500000000,
     "stage3_max_reuse_distance": 500000000,
-    "config_file": "configs/ds_config_zero3.json"
+    "stage3_param_persistence_threshold": 100000,
+    "config_file": "configs/ds_config_zero3.json",
+    "offload_config_file": "configs/ds_config_zero3_offload.json"
   },
   "data": {
     "data_dir": "data/processed",
     "num_workers": 4,
     "prefetch_factor": 2,
+    "prefetch_depth": 3,
     "pin_memory": true
+  },
+  "compile": {
+    "enabled": false,
+    "mode": "reduce-overhead",
+    "note": "torch.compile on the block stack; opt-in because it costs a few minutes of warmup on the first steps."
   },
   "checkpointing": {
     "save_dir": "checkpoints-3b",

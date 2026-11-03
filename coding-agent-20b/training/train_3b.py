@@ -20,6 +20,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from dataset.prefetch import PrefetchStream, to_device
 from dataset.processor import MemoryMappedDataset
 from model.config_3b import get_3b_config
 from model.model import CodingAgentModel
@@ -40,6 +41,9 @@ class TrainingPlan:
     total_steps: int
     warmup_steps: int
     run_steps: int
+    prefetch_depth: int = 2
+    pin_memory: bool = True
+    attention_backend: str = "auto"
 
     @property
     def planned_tokens(self) -> int:
@@ -104,6 +108,9 @@ def build_training_plan(config: dict, world_size: int, max_steps: int | None = N
         total_steps,
         warmup_steps,
         run_steps,
+        prefetch_depth=int(config["data"].get("prefetch_depth", 2) or 0),
+        pin_memory=bool(config["data"].get("pin_memory", True)),
+        attention_backend=str(config["training"].get("attention_backend", "auto")),
     )
 
 
@@ -142,11 +149,20 @@ def build_deepspeed_config(template: dict, config: dict, plan: TrainingPlan, hid
 
     zero = result.setdefault("zero_optimization", {})
     zero["stage"] = 3
+    staging = {
+        "offload_optimizer": {"pin_memory": True, "buffer_count": 4},
+        "offload_param": {"pin_memory": True, "buffer_count": 5, "buffer_size": 1e8},
+    }
     for key, enabled in (("offload_optimizer", ds["offload_optimizer"]), ("offload_param", ds["offload_param"])):
         if enabled:
-            zero[key] = {**zero.get(key, {}), "device": "cpu"}
+            # Same staging defaults as configs/ds_config_zero3_offload.json.
+            zero[key] = {**staging[key], **zero.get(key, {}), "device": "cpu"}
+        elif isinstance(zero.get(key), dict):
+            # Keep the template's staging knobs (pin_memory, buffer counts) but
+            # move the tensors back to the device: residency only.
+            zero[key] = {**zero[key], "device": "none"}
         else:
-            zero.pop(key, None)
+            zero[key] = {"device": "none"}
     auto_values = {
         "reduce_bucket_size": hidden_size * hidden_size,
         "stage3_prefetch_bucket_size": int(0.9 * hidden_size * hidden_size),
@@ -155,6 +171,13 @@ def build_deepspeed_config(template: dict, config: dict, plan: TrainingPlan, hid
     for key, value in auto_values.items():
         if zero.get(key) == "auto":
             zero[key] = value
+    # Overlap the parameter all-gather with compute and keep small tensors
+    # (norms, biases, patch embeddings) resident so they are never gathered.
+    zero.setdefault("overlap_comm", True)
+    zero.setdefault("contiguous_gradients", True)
+    zero.setdefault("stage3_gather_16bit_weights_on_model_save", True)
+    if zero.get("stage3_prefetch_bucket_size") in (None, 0):
+        zero["stage3_prefetch_bucket_size"] = int(0.9 * hidden_size * hidden_size)
 
     for key in ("stage3_max_live_parameters", "stage3_max_reuse_distance"):
         value = ds.get(key)
@@ -174,10 +197,20 @@ def build_deepspeed_config(template: dict, config: dict, plan: TrainingPlan, hid
             "weight_decay": train["weight_decay"],
         }
     )
+    if ds.get("zero8bit_optimizer"):
+        # Same AdamW update, moments kept in 8 bits (bitsandbytes).  Halves the
+        # optimizer-state resident set at the cost of a small, well-characterised
+        # quantisation error; off by default so the reference numerics stand.
+        optimizer["type"] = "AdamW8bit"
+        optimizer["params"].pop("eps", None)
     # One cosine schedule is applied at optimizer-step boundaries in the loop.
     result.pop("scheduler", None)
     result.pop("activation_checkpointing", None)
     result.pop("flops_profiler", None)
+    if ds.get("zero8bit_optimizer"):
+        result["zero_optimization"]["zero_quantized_weights"] = False
+    if "compile" not in ds and config.get("compile", {}).get("enabled"):
+        result["compile"] = dict(config["compile"])
     return result
 
 
@@ -190,6 +223,15 @@ def build_3b_model_config(config: dict):
     model_config.use_gradient_checkpointing = config["deepspeed"]["activation_checkpointing"]
     model_config.deepspeed_stage = config["deepspeed"]["stage"]
     model_config.mixed_precision = config["training"]["precision"]
+    model_config.return_logits = False
+    model_config.attention_backend = str(config["training"].get("attention_backend", "auto"))
+    model_config.logit_softcap = config["training"].get("logit_softcap")
+    model_config.loss_chunk_size = int(config["training"].get("loss_chunk_size", model_config.loss_chunk_size))
+    segments = config["deepspeed"].get("activation_checkpointing_segments")
+    if segments is not None:
+        model_config.gradient_checkpointing_segments = int(segments)
+    elif not model_config.use_gradient_checkpointing:
+        model_config.gradient_checkpointing_segments = 0
     return model_config
 
 
@@ -275,6 +317,12 @@ class TokenBatchStream:
         self.batch_in_epoch += 1
         batch = np.stack([self._sequence(int(index)) for index in indices])
         return torch.from_numpy(batch)
+
+    @property
+    def position(self) -> tuple[int, int]:
+        """Where the *next* batch will be drawn from (survives a checkpoint)."""
+
+        return self.epoch, self.batch_in_epoch
 
 
 @dataclass
@@ -363,10 +411,12 @@ def evaluate_3b(engine, dataset, config: dict, plan: TrainingPlan, rank: int) ->
         return None
     engine.eval()
     losses = []
+    eval_batches = PrefetchStream(stream, depth=2, pin_memory=True, name=f"3b-eval-rank{rank}")
     with torch.no_grad():
         for _ in range(max_batches):
-            inputs = next(stream).to(engine.device)
+            inputs = to_device(next(eval_batches), engine.device)
             losses.append(engine(input_ids=inputs, labels=inputs).detach().float())
+    eval_batches.close()
     loss = torch.stack(losses).mean()
     if torch.distributed.is_available() and torch.distributed.is_initialized():
         torch.distributed.all_reduce(loss)
@@ -407,6 +457,16 @@ def run_3b_training(
         raise ValueError("3B data stream does not match the training plan")
     stream.epoch, stream.batch_in_epoch = state.epoch, state.batch_in_epoch
     stream._order = None
+    # Prefetching hides both the mmap reads and the host->device copy behind
+    # GPU compute.  The position each batch was drawn from travels with it, so
+    # the checkpoint below records what the optimizer actually consumed, never
+    # what the prefetcher has raced ahead to.
+    batches = PrefetchStream(
+        stream,
+        depth=plan.prefetch_depth,
+        pin_memory=plan.pin_memory,
+        name=f"3b-prefetch-rank{rank}",
+    )
     train = config["training"]
     ckpt = config["checkpointing"]
     log_every = config["logging"]["log_every_steps"]
@@ -426,20 +486,24 @@ def run_3b_training(
             group["lr"] = lr
         losses = []
         for _ in range(plan.gradient_accumulation_steps):
-            inputs = next(stream).to(engine.device)
+            inputs = to_device(next(batches), engine.device)
             if tuple(inputs.shape) != (plan.micro_batch_size, plan.sequence_length):
                 raise ValueError("3B data stream returned an incomplete micro-batch")
             loss = engine(input_ids=inputs, labels=inputs)
-            losses.append(loss.detach().float())
+            # Keep the loss on the device: accumulating four of them on the GPU
+            # costs a register, while moving each to host synchronises the
+            # stream and stalls the next micro-batch.
+            losses.append(loss.detach())
             # DeepSpeed scales the loss and steps the optimizer at its own
             engine.backward(loss)
             engine.step()
+        batch_epoch, batch_in_epoch = batches.position
         if getattr(engine, "global_steps", state.step + 1) != state.step + 1:
             raise RuntimeError("DeepSpeed did not advance at the expected accumulation boundary")
         previous_tokens = state.tokens_processed
         state.step += 1
         state.tokens_processed += plan.tokens_per_step
-        state.epoch, state.batch_in_epoch = stream.epoch, stream.batch_in_epoch
+        state.epoch, state.batch_in_epoch = batch_epoch, batch_in_epoch
 
         if rank == 0 and log_every > 0 and state.step % log_every == 0:
             elapsed = max(time.monotonic() - start_time, 1e-9)
@@ -466,6 +530,7 @@ def run_3b_training(
             save_3b_checkpoint(engine, checkpoint_dir, state, metadata, ckpt["keep_last_n"], rank)
             last_saved_step = state.step
 
+    batches.close()
     if state.step and state.step != last_saved_step:
         save_3b_checkpoint(engine, checkpoint_dir, state, metadata, ckpt["keep_last_n"], rank)
     if rank == 0:

@@ -70,6 +70,31 @@ class CodingAgentConfig:
 
     gradient_checkpointing_ratio: float = 1.0
 
+    # 0 disables activation checkpointing, 1 checkpoints every block.  The
+    # checkpointed segments are the ones whose activations dominate memory
+    # (the MLP block and the attention block); the norms are ~S*d floats so
+    # splitting them out costs nothing to keep live and buys a full block's
+    # worth of recompute per checkpoint.
+    gradient_checkpointing_segments: int = 2
+
+    # Optional logit soft-cap (Gemma-2 style); None keeps raw logits.
+    logit_softcap: float | None = None
+
+    # Rows per chunk when the language-model head is projected for the loss.
+    # Bounds the [tokens, vocab] temporary (and its fp32 log-softmax scratch)
+    # without changing what is computed.
+    loss_chunk_size: int = 2048
+
+    # Materialise the full [B, S, vocab] logits tensor.  Kept True so every
+    # existing caller sees exactly the same ModelOutput as before; the training
+    # recipes set it to False, which is what removes the [B, S, vocab] buffer
+    # (several GB per micro-batch on the 20B at 8k) from the training step.
+    return_logits: bool = True
+
+    # SDPA backend preference: "auto" (fused kernels preferred), "flash"
+    # (fused kernels required) or "math".
+    attention_backend: str = "auto"
+
     bos_token_id: int = 1
 
     eos_token_id: int = 2

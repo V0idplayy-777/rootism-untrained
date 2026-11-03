@@ -185,9 +185,19 @@ def test_deepspeed_config_resolves_3b_without_changing_template(recipe, tmp_path
     assert config["train_micro_batch_size_per_gpu"] == 1
     assert config["gradient_accumulation_steps"] == 64
     assert config["bf16"]["enabled"] and not config["fp16"]["enabled"]
+    # The tuned recipe keeps ZeRO-3 state resident on the device (offload is
+    # opt-in per host); residency is the only thing this switch may change.
     for offload in ("offload_optimizer", "offload_param"):
-        assert config["zero_optimization"][offload]["device"] == "cpu"
-        assert config["zero_optimization"][offload]["pin_memory"] is True
+        assert config["zero_optimization"][offload]["device"] == "none"
+
+    offloading = copy.deepcopy(recipe)
+    offloading["deepspeed"].update(offload_optimizer=True, offload_param=True)
+    offloaded = build_deepspeed_config(copy.deepcopy(template), offloading, plan, model_config.hidden_size)
+    for offload in ("offload_optimizer", "offload_param"):
+        assert offloaded["zero_optimization"][offload]["device"] == "cpu"
+        assert offloaded["zero_optimization"][offload]["pin_memory"] is True
+    for key in ("optimizer", "bf16", "gradient_clipping", "train_batch_size"):
+        assert offloaded[key] == config[key]
     assert config["zero_optimization"]["stage3_max_live_parameters"] == 500_000_000
     assert config["zero_optimization"]["stage3_max_reuse_distance"] == 500_000_000
     assert "auto" not in json.dumps(config)
