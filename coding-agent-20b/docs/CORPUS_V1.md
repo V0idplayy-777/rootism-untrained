@@ -75,6 +75,40 @@ Each slice ships with a mechanical check rather than a claim:
 - Real code: `scripts/fetch_real_corpus.py --heldout_dir` keeps repository-level
   holdouts out of the tokenizer/shard pipeline (`HeldoutRegistry`).
 
+## Building shards
+
+```bash
+python scripts/fetch_real_corpus.py --output_dir data/corpus_v1/real_jsonl --heldout_dir data/corpus_v1/heldout
+python scripts/build_corpus_v1.py \
+    --real_dir data/corpus_v1/real_jsonl \
+    --heldout_dir data/corpus_v1/heldout \
+    --output_dir data/corpus_v1/shards_3b
+python -m dataset.quality_gates data/corpus_v1/shards_3b/corpus_manifest.json
+python training/train_3b.py --config configs/training_config_3b.json --data_dir data/corpus_v1/shards_3b
+```
+
+`build_corpus_v1.py` is a two-pass builder: real documents are routed into their
+backbone slice first, then verified synthetic slices are admitted only while
+they fit the allowance derived from the real tokens (`share / (1 - share)`).
+Rows that do not fit are recorded under `synthetic.dropped_rows`, and if the
+real backbone is too small to fund even one synthetic row the manifest says so
+(`allowance_starved`) instead of reporting a passing build.
+
+`dataset/quality_gates.py` then decides whether that manifest may train:
+
+| Gate | Fails when |
+| --- | --- |
+| `coverage` | a required slice is missing, or the backbone slices are below their floor share |
+| `mixture` | a real/hybrid slice drifts outside 0.5×–2.5× its planned weight (synthetic slices are governed by the token budget instead) |
+| `license` | any non-permissive SPDX id appears in the manifest |
+| `diversity` | unique paths, structural patterns or multi-file ratio collapse |
+| `isolation` | held-out overlap or train/val overlap is non-zero |
+| `synthetic_budget` | synthetic tokens exceed 5% |
+| `real_backbone` | real code falls below 70% |
+
+`training/train_3b.py` runs the same gates through
+`verify_corpus_manifest_for_3b()` and raises instead of training.
+
 ## Adding a slice
 
 1. Add it to `DEFAULT_MIXTURE` with a `kind` and keep the sum at 1.00.

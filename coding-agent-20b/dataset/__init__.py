@@ -17,8 +17,10 @@ Primary production entry points:
   SPDX license gates, quality & complexity floors, exact + MinHash near-dedup,
   mixture sampling (``dataset.mixture.DEFAULT_MIXTURE``), sequence packing, and
   shard + SHA-256 manifest emission.
-- ``dataset/quality_gates.py`` — pre-training coverage, diversity, license,
-  mixture, and held-out isolation gates.
+- ``dataset/quality_gates.py`` — pre-training coverage, mixture, license,
+  diversity, held-out isolation, real-backbone and synthetic-budget gates over
+  the built corpus manifest; the 3B trainer refuses to start when any gate
+  fails (``verify_corpus_manifest_for_3b``).
 
 Pure template generators (``dataset/code_templates.py``, ``dataset/generator.py``)
 are supplementary minority sources only and are never used as a standalone
