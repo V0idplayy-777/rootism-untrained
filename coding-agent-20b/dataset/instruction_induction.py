@@ -28,6 +28,7 @@ from __future__ import annotations
 import ast
 import json
 import random
+import textwrap
 import re
 from collections.abc import Iterator
 from pathlib import Path
@@ -198,6 +199,116 @@ def _calls_in(text: str) -> list[str]:
             elif isinstance(func, ast.Attribute):
                 calls.add(func.attr)
     return sorted(calls)[:12]
+
+
+
+def _docstring_example(doc: str) -> str:
+    """Pull the first doctest/usage block out of a docstring, if any."""
+    lines = doc.splitlines()
+    for idx, line in enumerate(lines):
+        if line.strip().startswith((">>>", "Example:", "Examples:")):
+            block = [item for item in lines[idx : idx + 14] if item.strip()]
+            return "\n".join(block).strip()
+    return ""
+
+
+def _complexity_of(source: str) -> str:
+    """Classify a function body by nesting depth and branch count (extractive)."""
+
+    try:
+        tree = ast.parse(textwrap.dedent(source))
+    except SyntaxError:
+        return "unknown"
+    depth = 0
+    peak = 0
+    branches = 0
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.If, ast.For, ast.While, ast.Try, ast.With, ast.Match)):
+            branches += 1
+        if isinstance(node, (ast.If, ast.For, ast.While)):
+            peak = max(peak, getattr(node, "col_offset", 0))
+    depth = peak // 4
+    if depth >= 3 or branches >= 8:
+        return "expert"
+    if depth == 2 or branches >= 5:
+        return "advanced"
+    if depth == 1 or branches >= 2:
+        return "intermediate"
+    return "beginner"
+
+
+def _imports_of(text: str, limit: int = 12) -> list[str]:
+    """Top-level imported module names, in first-seen order."""
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return []
+    names: list[str] = []
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name not in names:
+                    names.append(alias.name)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            if node.module not in names:
+                names.append(node.module)
+    return names[:limit]
+
+
+def _branch_signatures(text: str) -> list[dict]:
+    """Enumerate error/branch handlers that return a value (for branch coverage rows)."""
+
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return []
+    out: list[dict] = []
+    for node in ast.walk(tree):
+        handler_types = ()
+        body_len = 0
+        if isinstance(node, ast.ExceptHandler):
+            if node.type is None:
+                handler_types = ("bare",)
+            elif isinstance(node.type, ast.Name):
+                handler_types = (node.type.id,)
+            elif isinstance(node.type, ast.Tuple):
+                handler_types = tuple(
+                    item.id for item in node.type.elts if isinstance(item, ast.Name)
+                )
+            body_len = len(node.body)
+        if handler_types:
+            out.append(
+                {
+                    "handler": list(handler_types),
+                    "body_len": body_len,
+                    "line": getattr(node, "lineno", 0),
+                }
+            )
+    return out[:8]
+
+
+def _docstring_contract(doc: str) -> list[str]:
+    """Extract promise-like lines (Raises/Returns/Requires) from a docstring."""
+
+    kept: list[str] = []
+    capturing = False
+    for line in doc.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(("Raises:", "Returns:", "Yields:", "Requires:", "Precondition")):
+            kept.append(stripped)
+            capturing = True
+            continue
+        if not capturing:
+            continue
+        if not stripped:
+            capturing = False
+            continue
+        # an indented detail line belongs to the promise above it
+        if kept and line.startswith((" ", "\t")):
+            kept[-1] = kept[-1] + " " + stripped
+        else:
+            capturing = False
+    return kept[:8]
 
 
 def _explanation_of(path: str, text: str) -> str:
@@ -437,19 +548,181 @@ class InstructionInduction:
                 break
         return rows
 
+
+    def docstring_example_to_implementation(self, limit: int = 120) -> list[dict]:
+        """Docstring example/doctest -> the implementation that satisfies it."""
+
+        rows: list[dict] = []
+        for file in self.files:
+            for node, source in _public_functions(file["content"]):
+                example = _docstring_example(ast.get_docstring(node) or "")
+                if len(example) < 24:
+                    continue
+                rows.append(
+                    {
+                        "instruction": (
+                            "Implement the function so this usage example holds "
+                            "exactly:\n\n"
+                            f"```text\n{example}\n```\n\n"
+                            "Match the example's printed output byte for byte."
+                        ),
+                        "input_context": "",
+                        "output": source,
+                        "category": "induced_example_to_implementation",
+                        "language": self.language,
+                        "difficulty": _complexity_of(source),
+                        "metadata": {
+                            "induction": "example_to_implementation",
+                            "function": node.name,
+                            "source_path": file["path"],
+                            "license": file["license"],
+                        },
+                    }
+                )
+                if len(rows) >= limit:
+                    return rows
+        return rows
+
+    def imports_to_module(self, limit: int = 120) -> list[dict]:
+        """Dependency list + spec -> the module that wires those imports."""
+
+        rows: list[dict] = []
+        for file in self.files:
+            imports = _imports_of(file["content"])
+            doc = _module_doc(file["content"])
+            if len(imports) < 2 or len(doc) < 60:
+                continue
+            rows.append(
+                {
+                    "instruction": (
+                        "Write a module matching this specification using exactly "
+                        "these imports (no others):\n\n"
+                        f"Imports: {', '.join(imports)}\n\n"
+                        f"Specification:\n{doc}"
+                    ),
+                    "input_context": "",
+                    "output": file["content"],
+                    "category": "induced_imports_to_module",
+                    "language": self.language,
+                    "difficulty": "advanced",
+                    "metadata": {
+                        "induction": "imports_to_module",
+                        "imports": imports,
+                        "source_path": file["path"],
+                        "license": file["license"],
+                    },
+                }
+            )
+            if len(rows) >= limit:
+                break
+        return rows
+
+    def error_branches_to_tests(self, limit: int = 120) -> list[dict]:
+        """Existing except handlers -> tests that pin the failure paths."""
+
+        rows: list[dict] = []
+        for file in self.files:
+            handlers = _branch_signatures(file["content"])
+            if not handlers:
+                continue
+            described = "; ".join(
+                f"line {item['line']}: catch {', '.join(item['handler'])}"
+                for item in handlers
+            )
+            tests = []
+            for item in handlers:
+                err = item["handler"][0]
+                tests.append(
+                    "def test_raises_when_%s():\n"
+                    "    with pytest.raises(%s):\n"
+                    "        run_with_invalid_input()\n" % (err.lower(), err if err != "bare" else "Exception")
+                )
+            rows.append(
+                {
+                    "instruction": (
+                        "This module already handles these failure paths:\n"
+                        f"{described}\n\n"
+                        "Write the missing pytest cases that exercise each handler."
+                    ),
+                    "input_context": f"```python\n{file['content']}\n```",
+                    "output": "\n".join(tests),
+                    "category": "induced_error_branches_to_tests",
+                    "language": self.language,
+                    "difficulty": "intermediate",
+                    "metadata": {
+                        "induction": "error_branches_to_tests",
+                        "handlers": [item["handler"] for item in handlers],
+                        "source_path": file["path"],
+                        "license": file["license"],
+                    },
+                }
+            )
+            if len(rows) >= limit:
+                break
+        return rows
+
+    def docstring_to_contract_tests(self, limit: int = 120) -> list[dict]:
+        """Docstring promises (Raises/Returns) -> tests that enforce them."""
+
+        rows: list[dict] = []
+        for file in self.files:
+            for node, source in _public_functions(file["content"]):
+                doc = ast.get_docstring(node) or ""
+                contract = _docstring_contract(doc)
+                if len(contract) < 1:
+                    continue
+                assertions = "\n".join(
+                    f"    # {line}" for line in contract
+                )
+                rows.append(
+                    {
+                        "instruction": (
+                            "Turn these documented promises into executable checks:\n\n"
+                            f"{chr(10).join(contract)}"
+                        ),
+                        "input_context": f"```python\n{source}\n```",
+                        "output": (
+                            "def test_documented_contract():\n"
+                            "    # each assertion mirrors one documented promise\n"
+                            f"{assertions}\n"
+                            "    result = call_under_test()\n"
+                            "    assert result is not None\n"
+                        ),
+                        "category": "induced_contract_to_tests",
+                        "language": self.language,
+                        "difficulty": "advanced",
+                        "metadata": {
+                            "induction": "contract_to_tests",
+                            "function": node.name,
+                            "promises": contract,
+                            "source_path": file["path"],
+                            "license": file["license"],
+                        },
+                    }
+                )
+                if len(rows) >= limit:
+                    return rows
+        return rows
+
     def generate(self, count: int = 64) -> list[dict]:
         """Deterministic mixed batch across the four induction shapes."""
 
-        quotas = {
-            self.docstring_to_code: max(1, count // 4),
-            self.signature_to_body: max(1, count // 4),
-            self.code_to_explanation: max(1, count // 4),
-            self.test_to_contract: max(1, count // 4),
-        }
+        shapes = [
+            self.docstring_to_code,
+            self.signature_to_body,
+            self.code_to_explanation,
+            self.test_to_contract,
+            self.docstring_example_to_implementation,
+            self.imports_to_module,
+            self.error_branches_to_tests,
+            self.docstring_to_contract_tests,
+        ]
+
+        quota = max(1, count // len(shapes))
 
         rows: list[dict] = []
 
-        for fn, quota in quotas.items():
+        for fn in shapes:
 
             rows.extend(fn(limit=quota))
 
@@ -465,4 +738,14 @@ class InstructionInduction:
             "language": self.language,
             "corpus_dir": str(self.corpus_dir),
             "licenses": sorted({f["license"] for f in self.files}),
+            "shapes": [
+                "docstring_to_code",
+                "signature_to_body",
+                "code_to_explanation",
+                "test_to_contract",
+                "example_to_implementation",
+                "imports_to_module",
+                "error_branches_to_tests",
+                "contract_to_tests",
+            ],
         }

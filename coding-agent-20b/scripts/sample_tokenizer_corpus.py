@@ -111,18 +111,26 @@ class CorpusSampler:
         self.buffers: dict[str, list[dict]] = defaultdict(list)
 
     def accept(self, item: dict) -> tuple[bool, str]:
+        """Validate ``item``; returns ``(ok, language_or_reason)``."""
+
+        ok, info, _enriched = self.accept_detailed(item)
+
+        return ok, info
+
+    def accept_detailed(self, item: dict) -> tuple[bool, str, dict]:
+        """Validate and return the enriched document that should be stored."""
 
         content = item.get("content") or ""
 
         if not content:
 
-            return False, "empty"
+            return False, "empty", {}
 
         lines = content.split("\n")
 
         if not (self.min_lines <= len(lines) <= self.max_lines):
 
-            return False, "size"
+            return False, "size", {}
 
         lic = item.get("license") or item.get("licenses")
 
@@ -132,17 +140,22 @@ class CorpusSampler:
 
         if not self.license_filter.allows(lic):
 
-            return False, "license"
+            return False, "license", {}
 
         lang = item.get("language") or LanguageDetector.detect(content, item.get("path"))
 
         if lang not in self.languages:
 
-            return False, "language"
+            return False, "language", {}
 
-        if self.dedup.is_duplicate(str(item.get("path") or content[:64]), content):
+        # Peek only: ``accept``/``accept_detailed`` are validators, so they must
+        # not consume dedup state. Otherwise probing a document and then calling
+        # ``add`` marks it as already-seen and silently drops it.
+        if self.dedup.is_duplicate(  # noqa: SIM102
+            str(item.get("path") or content[:64]), content, remember=False
+        ):
 
-            return False, "duplicate"
+            return False, "duplicate", {}
 
         item = dict(item)
 
@@ -150,19 +163,27 @@ class CorpusSampler:
 
         item["_sha256"] = hashlib.sha256(content.encode("utf-8", "ignore")).hexdigest()
 
-        return True, lang
+        return True, lang, item
 
     def add(self, item: dict) -> bool:
 
-        ok, info = self.accept(item)
+        ok, info, enriched = self.accept_detailed(item)
 
         if not ok:
 
             return False
 
+        item = enriched
+
         lang = info
 
         if self.counts[lang] >= self.per_language_target_docs:
+
+            return False
+
+        # Claim the document now: this is the only place dedup state advances.
+        key = str(item.get("path") or (item.get("content") or "")[:64])
+        if self.dedup.is_duplicate(key, item.get("content") or ""):
 
             return False
 

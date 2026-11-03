@@ -11,6 +11,21 @@
       "weight_decay": 0.1,
       "data": {
         "mixture": "dataset/mixture.DEFAULT_MIXTURE",
+        "weights": {
+          "the-stack-code": 0.48,
+          "github-issues": 0.06,
+          "github-prs": 0.07,
+          "tests": 0.07,
+          "docs-and-comments": 0.05,
+          "instruction-sft": 0.06,
+          "security-sft": 0.03,
+          "repair-trace-sft": 0.04,
+          "app-sft": 0.05,
+          "app-repair-sft": 0.03,
+          "app-preference-dpo": 0.02,
+          "recovery-sft": 0.02,
+          "project-scaffold-sft": 0.02
+        },
         "packing": "attention-aware",
         "seq_curriculum": [
           [
@@ -25,7 +40,22 @@
             6000,
             8192
           ]
-        ]
+        ],
+        "synthetic_budget": {
+          "synthetic_token_cap": 0.05,
+          "synthetic_token_slices": [
+            "security-sft",
+            "repair-trace-sft",
+            "app-sft",
+            "app-repair-sft",
+            "app-preference-dpo",
+            "recovery-sft",
+            "project-scaffold-sft"
+          ],
+          "enforced_by": "dataset.quality_gates.check_synthetic_budget",
+          "drop_policy": "downsample synthetic slices deterministically (seed 42) before shards"
+        },
+        "gates": "dataset.quality_gates.evaluate_manifest"
       }
     },
     {
@@ -38,21 +68,28 @@
       "seq_length": 8192,
       "weight_decay": 0.1,
       "data": {
-        "upsample": [
-          "tests",
-          "issues",
-          "prs",
-          "docs",
-          "security",
-          "creative",
-          "induction",
-          "recovery",
-          "project",
-          "repair",
-          "app",
-          "app-repair",
-          "app-taste"
-        ]
+        "mixture": "dataset/mixture.DEFAULT_MIXTURE",
+        "upsample": {
+          "security-sft": 3.0,
+          "repair-trace-sft": 2.5,
+          "app-sft": 2.5,
+          "app-repair-sft": 2.5
+        },
+        "synthetic_budget": {
+          "synthetic_token_cap": 0.05,
+          "synthetic_token_slices": [
+            "security-sft",
+            "repair-trace-sft",
+            "app-sft",
+            "app-repair-sft",
+            "app-preference-dpo",
+            "recovery-sft",
+            "project-scaffold-sft"
+          ],
+          "enforced_by": "dataset.quality_gates.check_synthetic_budget",
+          "drop_policy": "downsample synthetic slices deterministically (seed 42) before shards"
+        },
+        "gates": "dataset.quality_gates.evaluate_manifest"
       }
     },
     {
@@ -69,27 +106,35 @@
         "sources": [
           "instruction-sft",
           "security-sft",
-          "creative-sft",
-          "instruction-induction",
-          "recovery-sft",
-          "project-scaffold-sft",
           "repair-trace-sft",
           "app-sft",
           "app-repair-sft",
-          "app-taste-sft"
+          "recovery-sft",
+          "project-scaffold-sft"
         ],
         "upsample": {
           "security-sft": 3.0,
-          "creative-sft": 2.0,
-          "instruction-induction": 1.5,
-          "recovery-sft": 2.0,
-          "project-scaffold-sft": 2.0,
           "repair-trace-sft": 2.5,
-          "app-sft": 3.0,
-          "app-repair-sft": 3.0,
-          "app-taste-sft": 2.5
+          "app-sft": 2.5,
+          "app-repair-sft": 2.5,
+          "recovery-sft": 1.5,
+          "project-scaffold-sft": 1.5
         },
-        "security_examples_per_batch": 8
+        "security_examples_per_batch": 8,
+        "synthetic_budget": {
+          "synthetic_token_cap": 0.05,
+          "synthetic_token_slices": [
+            "security-sft",
+            "repair-trace-sft",
+            "app-sft",
+            "app-repair-sft",
+            "app-preference-dpo",
+            "recovery-sft",
+            "project-scaffold-sft"
+          ],
+          "enforced_by": "dataset.quality_gates.check_synthetic_budget",
+          "drop_policy": "downsample synthetic slices deterministically (seed 42) before shards"
+        }
       }
     },
     {
@@ -112,11 +157,25 @@
           "repair-trace-dpo"
         ],
         "upsample": {
-          "app-preference-dpo": 4.0,
+          "app-preference-dpo": 2.5,
           "security-dpo": 2.0,
           "repair-trace-dpo": 2.0
         },
-        "beta": 0.1
+        "beta": 0.1,
+        "synthetic_budget": {
+          "synthetic_token_cap": 0.05,
+          "synthetic_token_slices": [
+            "security-sft",
+            "repair-trace-sft",
+            "app-sft",
+            "app-repair-sft",
+            "app-preference-dpo",
+            "recovery-sft",
+            "project-scaffold-sft"
+          ],
+          "enforced_by": "dataset.quality_gates.check_synthetic_budget",
+          "drop_policy": "downsample synthetic slices deterministically (seed 42) before shards"
+        }
       }
     }
   ],
@@ -135,7 +194,7 @@
   },
   "tokenizer": {
     "script": "scripts/train_production_tokenizer.py",
-    "corpus_script": "scripts/sample_tokenizer_corpus.py",
+    "corpus_script": "scripts/fetch_real_corpus.py",
     "vocab_size": 128256,
     "min_chars_per_token": 2.5,
     "benchmark_gate": true,

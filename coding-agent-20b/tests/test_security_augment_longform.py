@@ -56,8 +56,9 @@ def test_curated_security_samples_are_paired_and_valid_python():
         assert sample.category in REQUIRED_PATTERNS, sample.category
 
 
-# in SecurityBenchmark instead of by the static scanner.
-STATIC_UNDETECTABLE = {"ssrf"}
+# in SecurityBenchmark instead of by the static scanner. The canonical list lives
+# in ``dataset.security_data`` so the dataset and the test cannot drift apart.
+from dataset.security_data import STATIC_UNDETECTABLE  # noqa: E402
 
 
 def test_scanner_catches_vulnerable_and_passes_safe_samples():
@@ -578,3 +579,60 @@ def test_long_form_generate_fn_signature_is_respected():
     assert plan.size == 1
 
     assert all(isinstance(v, int) and v > 0 for v in seen)
+
+
+def test_new_static_rules_catch_the_classes_they_claim():
+    """Each formerly-blind class is now caught, and its safe twin stays clean."""
+
+    from dataset.security_data import SECURITY_SAMPLES
+    from evaluation.security_eval import SecurityScanner
+
+    scanner = SecurityScanner()
+    expected = {
+        "tempfile": "tempfile-hardcoded-path",
+        "open-redirect": "open-redirect",
+        "redos-nested": "redos-nested",
+        "log-injection": "log-injection",
+        "header-crlf": "header-injection",
+        "toctou-upload": "toctou-race",
+        "unbounded-alloc": "unbounded-frame",
+        "internal-http": "plaintext-internal-http",
+        "session-fixation": "session-not-cleared",
+        "csharp-exception-leak": "exception-in-response",
+        "docker-unpinned-base": "docker-latest-tag",
+        "rust-unwrap-request": "rust-unwrap-request",
+        "php-sql-concat": "php-sql-concat",
+    }
+    samples = {s.id: s for s in SECURITY_SAMPLES}
+
+    def severe(code: str, language: str) -> set[str]:
+        return {
+            f.rule
+            for f in scanner.scan(code, language)
+            if f.severity in {"critical", "high"}
+        }
+
+    for sample_id, rule_id in expected.items():
+        sample = samples[sample_id]
+        assert rule_id in severe(sample.vulnerable, sample.language), sample_id
+        # the safe twin must not carry the rule that fires on the vulnerable one
+        assert rule_id not in severe(sample.safe, sample.language), sample_id
+        assert not severe(sample.safe, sample.language), sample_id
+
+
+def test_static_undetectable_is_exactly_what_the_scanner_misses():
+    from dataset.security_data import SECURITY_SAMPLES, STATIC_UNDETECTABLE
+    from evaluation.security_eval import SecurityScanner
+
+    scanner = SecurityScanner()
+    missed = {
+        sample.id
+        for sample in SECURITY_SAMPLES
+        if not [
+            f
+            for f in scanner.scan(sample.vulnerable, sample.language)
+            if f.severity in {"critical", "high"}
+        ]
+    }
+    assert missed == set(STATIC_UNDETECTABLE)
+    assert len(missed) < len(SECURITY_SAMPLES) // 4

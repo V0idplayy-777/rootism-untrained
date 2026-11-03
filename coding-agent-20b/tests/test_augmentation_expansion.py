@@ -84,3 +84,49 @@ def test_generators_are_deterministic():
     a = RecoveryInstructionGenerator(seed=3).generate()
     b = RecoveryInstructionGenerator(seed=3).generate()
     assert a == b
+
+
+def test_synthetic_share_is_capped_at_five_percent():
+    from dataset.augmentation import MAX_SYNTHETIC_SHARE, augment_rows, row_tokens
+
+    rows = [
+        {"instruction": f"write a retry helper number {i}", "output": "def f(): pass"}
+        for i in range(40)
+    ]
+    # 4000 tokens total -> 200 synthetic tokens, far below what the generators emit
+    out = augment_rows(rows, per_row=2, total_tokens=4000)
+    report = out[0]["metadata"]["budget"]
+    assert MAX_SYNTHETIC_SHARE == 0.05
+    assert report["cap_tokens"] == 200
+    assert report["synthetic_share"] <= MAX_SYNTHETIC_SHARE
+    assert report["within_cap"] is True
+    assert report["dropped"] > 0
+    synthetic = [r for r in out if (r.get("metadata") or {}).get("synthetic")]
+    assert sum(row_tokens(r) for r in synthetic) <= 200
+    # every original instruction survives untouched
+    kept_instructions = {r["instruction"] for r in out}
+    assert all(r["instruction"] in kept_instructions for r in rows)
+
+
+def test_uncapped_by_default_and_deterministic():
+    from dataset.augmentation import augment_rows
+
+    rows = [{"instruction": "write a function", "output": "def f(): pass"}]
+    plain = augment_rows(rows, per_row=1)
+    assert all("budget" not in (r.get("metadata") or {}) for r in plain)
+    capped_a = augment_rows(rows, per_row=1, total_tokens=50_000)
+    capped_b = augment_rows(rows, per_row=1, total_tokens=50_000)
+    assert capped_a == capped_b
+
+
+def test_token_cap_rejects_bad_arguments():
+    import pytest
+
+    from dataset.augmentation import cap_rows, synthetic_token_cap
+
+    with pytest.raises(ValueError):
+        synthetic_token_cap(0)
+    with pytest.raises(ValueError):
+        synthetic_token_cap(1000, max_share=0.0)
+    with pytest.raises(ValueError):
+        cap_rows([], total_tokens=-1)

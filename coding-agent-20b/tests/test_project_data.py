@@ -15,6 +15,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from agent.deploy_tool import TOOL_HANDLERS, handle_tool, tool_schemas
 from dataset.mixture import DEFAULT_MIXTURE, MixtureSampler
 from dataset.project_data import ProjectDatasetGenerator, write_project_dataset
@@ -75,7 +77,8 @@ def test_curated_repair_pairs_produce_grounded_rows():
     assert result["sft"], "expected curated repair rows"
     first = result["sft"][0]
     assert "Test output" in first["prompt"] or "test" in first["prompt"].lower()
-    assert "```python" in first["response"]
+    language = first["metadata"]["language"]
+    assert f"```{language}" in first["response"]
     assert first["metadata"]["has_test_evidence"] is True
 
     dpo = result["dpo"][0]
@@ -197,3 +200,48 @@ def test_project_map_tool_returns_budgeted_map(tmp_path):
     assert "pkg/core.py" in payload["map"]
     assert len(payload["map"]) <= 240
     assert payload["stats"]["files"] >= 1
+
+
+def test_synthetic_slices_stay_under_the_five_percent_token_cap():
+    from dataset.mixture import (
+        MAX_SYNTHETIC_TOKEN_SHARE,
+        SYNTHETIC_TOKEN_SLICES,
+        hybrid_share,
+        synthetic_share,
+        synthetic_token_budget,
+        validate_synthetic_budget,
+    )
+
+    audit = validate_synthetic_budget()
+    assert audit["max_share"] == MAX_SYNTHETIC_TOKEN_SHARE == 0.05
+    # synthetic sampling share is bounded, real backbone still dominates
+    assert synthetic_share() <= 0.21
+    assert hybrid_share() <= 0.10
+
+    budget = synthetic_token_budget(18_000_000_000, synthetic_share_of_slice=0.05)
+    assert budget["cap_tokens"] == 900_000_000
+    assert budget["within_cap"] is True
+    assert budget["plan_share"] <= MAX_SYNTHETIC_TOKEN_SHARE
+    assert set(budget["slices"]) == set(SYNTHETIC_TOKEN_SLICES)
+
+    with pytest.raises(ValueError):
+        synthetic_token_budget(0)
+    with pytest.raises(ValueError):
+        synthetic_token_budget(1000, max_share=0.0)
+
+
+def test_corpus_report_passes_every_invariant():
+    from scripts.corpus_report import build_report, invariants
+
+    report = build_report()
+    checks = invariants(report)
+    failed = [check for check in checks if not check["ok"]]
+    assert not failed, failed
+    assert len(checks) >= 12
+    repair = report["sections"]["repair"]
+    assert repair["traces"] >= 60
+    assert repair["languages"] >= 6
+    assert repair["held_out_share"] >= 0.15
+    assert report["sections"]["apps"]["min_files_per_app"] >= 12
+    assert report["sections"]["induction"]["shape_count"] >= 8
+    assert report["sections"]["mixture"]["within_token_cap"] is True

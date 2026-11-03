@@ -12,6 +12,8 @@ across many programming languages. It uses:
 import random
 from dataclasses import dataclass
 
+from .code_pattern_catalog import ALL_PATTERNS, PatternSpec, patterns_for
+
 
 @dataclass
 class CodeSample:
@@ -295,43 +297,52 @@ class NameGenerator:
 
 
 class PythonCodeGenerator:
-    """Generate Python code samples at various complexity levels."""
+    """Generate Python code samples for every (complexity, domain) cell.
+
+    All 4 complexity tiers x 10 engineering domains are backed by the pattern
+    catalog in :mod:`dataset.code_pattern_catalog`. There is deliberately no
+    cross-domain or cross-complexity fallback: an unknown cell raises so that
+    corpus builds fail closed instead of silently mislabelling samples.
+    """
 
     def __init__(self):
 
         self.names = NameGenerator()
 
     def generate(self, complexity: str, domain: str) -> CodeSample:
-        """Generate a code sample for the given complexity and domain.
+        """Generate a code sample for the exact complexity tier and domain.
 
-        Falls back to any available generator if the exact combination
-        is not implemented.
+        Raises:
+            KeyError: if the complexity tier is unknown.
+            ValueError: if the (complexity, domain) cell has no patterns.
         """
 
-        generators = {
-            ("beginner", "algorithms"): self._beginner_algorithms,
-            ("intermediate", "algorithms"): self._intermediate_algorithms,
-            ("intermediate", "data"): self._intermediate_data,
-            ("intermediate", "web"): self._intermediate_web,
-            ("intermediate", "testing"): self._intermediate_testing,
-            ("advanced", "algorithms"): self._advanced_algorithms,
-            ("advanced", "data"): self._advanced_data,
-            ("advanced", "web"): self._advanced_web,
-            ("advanced", "systems"): self._advanced_systems,
-            ("expert", "algorithms"): self._expert_algorithms,
-            ("expert", "systems"): self._expert_systems,
-            ("expert", "data"): self._expert_data,
-        }
+        tier = (complexity or "").strip().lower()
 
-        gen_func = generators.get((complexity, domain))
+        patterns = patterns_for(tier, domain)
 
-        if gen_func is None:
+        pattern = random.choice(patterns)
 
-            all_gens = list(generators.values())
+        return CodeSample(
+            language="python",
+            code=pattern.code,
+            description=pattern.description,
+            complexity=pattern.complexity,
+            domain=pattern.domain,
+            tags=list(pattern.tags),
+        )
 
-            gen_func = random.choice(all_gens)
+    @staticmethod
+    def all_patterns() -> tuple[PatternSpec, ...]:
+        """Return every pattern in the catalog (all complexity/domain cells)."""
 
-        return gen_func()
+        return ALL_PATTERNS
+
+    @staticmethod
+    def pattern_count() -> int:
+        """Return the total number of generated code patterns."""
+
+        return len(ALL_PATTERNS)
 
     def _beginner_algorithms(self) -> CodeSample:
 

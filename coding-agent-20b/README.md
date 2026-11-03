@@ -8,6 +8,7 @@ evaluation, staged training and serving.
 - **Training speed / VRAM:** `../docs/TRAINING_OPTIMIZATIONS.md` · quality gate: `python scripts/verify_no_quality_loss.py` · benchmark: `python scripts/benchmark_training.py`
 - Capability gaps and how each is addressed/measured: `docs/CAPABILITY_GAPS.md`
 - Idea → live app in four commands: `docs/QUICKSTART.md` · No lock-in / eject: `docs/EJECT.md`
+- Data recipe, slice grounding, 5% synthetic cap: `docs/CORPUS_V1.md`
 - Install: `pip install -r requirements.txt` (dev: `requirements-dev.txt`)
 - Test: `python -m pytest tests/ -q` (CPU, tiny config — no GPU needed)
 - Tokenizer (real corpus + Rust engine + parity/competitive gates):
@@ -46,9 +47,27 @@ Nothing above needs a GPU or a hosted service. The pieces:
 | `agent/deploy_tool.py` | `deploy` / `scaffold_project` / `project_map` / `search_project` / `checkpoint` as model tools, sharing the CLI code path |
 | `ui/` | simple/power chat surface, SSE progress, same-origin live preview |
 | `quality/taste.py` | design gate: tokens, dark mode, breakpoints, empty/loading/error states, focus, labels, copy, legacy smells |
-| `dataset/app_corpus.py` | 275 rows from 47 train blueprints: app SFT, preference (legacy/broken-auth/incomplete relations), repair traces, taste decisions; `--verify` records real pytest evidence |
+| `dataset/app_corpus.py` | app SFT, preference (legacy/broken-auth/incomplete relations), repair traces and taste decisions from the 47 train blueprints (18 held out); `--verify` records real pytest evidence — 65/65 blueprints pass their own suites |
 | `evaluation/app_suite.py` | fixed idea→running-app scoreboard: render, tests, critic, taste, deploy plan, uvicorn health; **65/65 prompts green** |
-| `dataset/project_data.py`, `dataset/repair_traces.py` | multi-file project SFT/DPO rows and fail→diagnose→fix traces (fed by real `VerificationLoop` runs) |
+| `dataset/project_data.py`, `dataset/repair_traces.py`, `dataset/repair_traces_extra.py` | multi-file project SFT/DPO rows and 75 fail→diagnose→fix traces in 7 languages (python/js/ts/go/rust/java/sql), each with a distinct rejected patch |
+
+## Corpus v1
+
+13 frozen slices in `dataset/mixture.py`: 73% real permissively licensed code
+(the Stack v2 / StarCoderData / pinned GitHub), 6% real-derived induction, 21%
+verified synthetic — with model-generated text capped at **5% of tokens**
+(`dataset.mixture.synthetic_token_budget`, `dataset.augmentation.cap_rows`).
+
+```bash
+python scripts/fetch_real_corpus.py --output_dir data/corpus_v1/real_jsonl --heldout_dir data/corpus_v1/heldout
+python scripts/build_real_dataset.py --config configs/training_config_3b.json
+python scripts/corpus_report.py --strict   # 14 invariants: sizes, languages, splits, caps
+```
+
+Every reported number is produced by that last command rather than asserted in
+prose: slice sizes, language coverage, held-out shares (repair 16%, apps 28%),
+`ast.parse`-checked python repairs, the 5% synthetic token plan (currently
+1.05%) and the 372-pattern catalogue.
 
 The blueprint path is documented end to end in `docs/APP_GENERATION.md` (catalogue,
 corpus, taste rubric, suite, honest limits).

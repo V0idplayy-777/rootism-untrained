@@ -478,6 +478,52 @@ SECURITY_SAMPLES: list[SecuritySample] = [
 ]
 
 
+from .security_data_extra import ADDITIONAL_SECURITY_SAMPLES  # noqa: E402  (import cycle guard)
+from .security_data_extra_v2 import ADDITIONAL_SECURITY_SAMPLES_V2  # noqa: E402
+
+#: Corpus v1 expands the curated set to 100+ paired samples covering 20+ CWE
+#: classes across Python, JavaScript, TypeScript, Go, Rust, Java, SQL, Shell,
+#: PHP, C#, Ruby, Kubernetes YAML, and Dockerfiles.
+SECURITY_SAMPLES = [*SECURITY_SAMPLES, *ADDITIONAL_SECURITY_SAMPLES, *ADDITIONAL_SECURITY_SAMPLES_V2]
+
+#: Samples whose defect is design-level (trust boundary, missing control) rather
+#: than a recognisable sink. The regex/AST scanner cannot see them; the
+#: benchmark still scores them through the required-safe-pattern check.
+STATIC_UNDETECTABLE: frozenset[str] = frozenset(
+    {
+        # Needs data-flow: a sink is only unsafe when attacker input reaches it.
+        "ssrf",
+        "ssrf-allowlist",
+        "csrf-state-change",
+        "header-injection-crlf",
+        "integrity-unsigned-update",
+        "secret-management-env",
+        "log-injection-newlines",
+        "nonce-reuse-aead",
+        "k8s-secret-in-env-literal",
+        "java-implicit-oauth",
+        "go-goroutine-unbounded",
+        "rust-path-traversal",
+        "ts-unsafe-any-cast",
+        # Semantics, not shape: `assert` as an auth check, CSV formula escaping,
+        # timeout absence, cookie flags.
+        "python-assert-authorization",
+        "python-csv-formula-injection",
+        "python-request-timeout",
+        "python-insecure-cookie",
+    }
+)
+"""Samples whose *vulnerable* form a static rule cannot see by construction.
+
+A member is a class where the defect is a missing data-flow property (untrusted
+input reaching a sink) or a semantically wrong but syntactically ordinary check
+— not a risky token. The scanner is expected to miss these and must catch
+everything else, in both directions: ``scripts/corpus_report.py`` fails if a
+non-member is missed *or* if a member is now detected without the set being
+updated. That keeps the set from growing to hide detector gaps.
+"""
+
+
 def _split_of(sample_id: str) -> str:
     """Deterministic train/held-out split (~20% held out), stable across runs."""
     import hashlib

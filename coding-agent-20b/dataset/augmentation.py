@@ -873,12 +873,132 @@ class RecoveryInstructionGenerator:
         ]
 
 
+# ---------------------------------------------------------------------------
+# Token budget: synthetic augmentation never exceeds a fixed share of the
+# mixture. The share is a *hard* cap, not a target: if the augmented set would
+# cross it, rows are trimmed deterministically (seeded shuffle order) rather
+# than allowed through.
+# ---------------------------------------------------------------------------
+
+MAX_SYNTHETIC_SHARE = 0.05
+
+
+def estimate_tokens(text: str) -> int:
+    """Cheap, dependency-free token estimate (~4 chars/token, min 1)."""
+
+    if not text:
+        return 0
+
+    return max(1, len(text) // 4)
+
+
+def row_tokens(row: dict) -> int:
+    """Tokens a row costs once serialised into the training mixture."""
+
+    parts = [
+        row.get("instruction", "") or "",
+        row.get("input_context", "") or "",
+        row.get("output", "") or "",
+    ]
+
+    metadata = row.get("metadata")
+
+    if isinstance(metadata, dict):
+
+        parts.extend(str(value) for value in metadata.values())
+
+    return sum(estimate_tokens(part) for part in parts)
+
+
+def synthetic_token_cap(total_tokens: int, max_share: float = MAX_SYNTHETIC_SHARE) -> int:
+    """Hard ceiling on synthetic tokens for a given mixture size."""
+
+    if total_tokens <= 0:
+
+        raise ValueError("total_tokens must be positive")
+
+    if not (0.0 < max_share <= 1.0):
+
+        raise ValueError("max_share must be in (0, 1]")
+
+    return int(total_tokens * max_share)
+
+
+def cap_rows(
+    rows: list[dict],
+    total_tokens: int,
+    max_share: float = MAX_SYNTHETIC_SHARE,
+    keep: int | list[dict] | None = None,
+    seed: int = 42,
+) -> tuple[list[dict], dict]:
+    """Trim synthetic rows so they fit under ``max_share`` of ``total_tokens``.
+
+    ``keep`` rows (usually the un-augmented originals) always survive; the cap
+    applies to the synthetic remainder only. Returns ``(kept, report)``.
+    """
+
+    originals = list(keep or [])
+
+    originals_tokens = sum(row_tokens(row) for row in originals)
+
+    cap = synthetic_token_cap(total_tokens, max_share)
+
+    remaining = cap
+
+    rng = random.Random(seed)
+
+    ordered = list(rows)
+
+    rng.shuffle(ordered)
+
+    kept: list[dict] = []
+
+    used = 0
+
+    dropped = 0
+
+    for row in ordered:
+
+        cost = row_tokens(row)
+
+        if used + cost > remaining:
+
+            dropped += 1
+
+            continue
+
+        kept.append(row)
+
+        used += cost
+
+    # restore a deterministic but readable ordering
+    kept.sort(key=lambda row: row.get("category", ""))
+
+    synthetic_used = sum(row_tokens(row) for row in kept)
+
+    report = {
+        "total_tokens": total_tokens,
+        "max_share": max_share,
+        "cap_tokens": cap,
+        "original_tokens": originals_tokens,
+        "synthetic_tokens": synthetic_used,
+        "synthetic_share": round(synthetic_used / total_tokens, 6),
+        "kept": len(kept),
+        "dropped": dropped,
+        "within_cap": synthetic_used <= cap,
+    }
+
+    return kept, report
+
+
 def augment_rows(
     rows: list[dict],
     per_row: int = 2,
     seed: int = 42,
     include_cross_domain: int = 4,
     include_clarification: int = 3,
+    total_tokens: int | None = None,
+    max_synthetic_share: float = MAX_SYNTHETIC_SHARE,
 ) -> list[dict]:
     """Expand instruction rows into a distribution-shift batch.
 
@@ -927,7 +1047,56 @@ def augment_rows(
 
     rng.shuffle(out)
 
-    return out
+    if total_tokens is None:
+
+        return out
+
+    originals = [dict(r) for r in rows[:]]
+
+    synthetic = [r for r in out[len(rows):]]
+
+    # tag before measuring: the marker itself costs tokens in the mixture
+    for row in synthetic:
+
+        metadata = row.get("metadata")
+
+        row["metadata"] = (
+            {**metadata, "synthetic": True}
+            if isinstance(metadata, dict)
+            else {"synthetic": True}
+        )
+
+    kept, report = cap_rows(
+        synthetic,
+        total_tokens=total_tokens,
+        max_share=max_synthetic_share,
+        keep=[],
+        seed=seed,
+    )
+
+    report["original_rows"] = len(originals)
+
+    report["within_cap"] = report["synthetic_share"] <= max_synthetic_share
+
+    merged = originals + kept
+
+    merged.sort(key=lambda row: row.get("category", ""))
+
+    rng.shuffle(merged)
+
+    if merged:
+
+        metadata = merged[0].get("metadata")
+
+        if isinstance(metadata, dict):
+
+            merged[0]["metadata"] = {**metadata, "budget": report}
+
+        else:
+
+            merged[0]["metadata"] = {"budget": report}
+
+    return merged
 
 
 def ladders_for(rows: list[dict], limit: int = 3) -> list[dict]:

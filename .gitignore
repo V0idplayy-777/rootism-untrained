@@ -11,3 +11,7 @@ workspace/
 node_modules/
 dist/
 *.sqlite3
+.venv/
+.coverage
+coverage.xml
+htmlcov/

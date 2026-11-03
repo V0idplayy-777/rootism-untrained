@@ -175,16 +175,19 @@ def test_files_block_prioritises_the_product_surface():
 
 def test_mixture_upsamples_app_generation_sources():
     weights = {source.name: source.weight for source in DEFAULT_MIXTURE}
-    for name in ("app-sft", "app-repair-sft", "app-taste-sft", "app-preference-dpo"):
-        assert weights.get(name, 0) >= 0.03
-    assert weights["project-scaffold-sft"] > 0.02
-    assert weights["repair-trace-sft"] > 0.02
-    assert abs(sum(weights.values()) - 1.0) < 0.02
+    upsample = {source.name: source.upsample for source in DEFAULT_MIXTURE}
+    assert weights["the-stack-code"] == 0.48
+    assert weights["app-sft"] == 0.05 and upsample["app-sft"] == 2.5
+    assert weights["app-repair-sft"] == 0.03 and upsample["app-repair-sft"] == 2.5
+    assert weights["app-preference-dpo"] == 0.02
+    assert weights["project-scaffold-sft"] == 0.02
+    assert weights["repair-trace-sft"] == 0.04 and upsample["repair-trace-sft"] == 2.5
+    assert sum(source.weight for source in DEFAULT_MIXTURE) == 1.0
     pipeline = json.loads(
         (Path(__file__).resolve().parent.parent / "configs" / "pipeline.json").read_text()
     )
     text = json.dumps(pipeline)
-    for name in ("app-sft", "app-repair-sft", "app-taste-sft", "app-preference-dpo"):
+    for name in ("app-sft", "app-repair-sft", "app-preference-dpo"):
         assert name in text
 
 
@@ -274,3 +277,48 @@ def test_build_app_tool_reports_gates_without_claiming_success_early(tmp_path):
     assert payload["taste"]["ok"] and payload["taste"]["score"] >= 70
     assert "uvicorn" in payload["preview"]
     assert payload["deploy_provider"]
+
+
+def test_catalogue_reaches_twelve_multi_file_blueprints():
+    from collections import Counter
+
+    from scaffold.blueprints import BLUEPRINTS, all_blueprints, stats
+
+    assert len(BLUEPRINTS) >= 12
+    assert stats()["blueprints"] == len(BLUEPRINTS)
+
+    features = Counter(item.feature for item in all_blueprints())
+    assert sum(count for feature, count in features.items() if feature != "none") >= 25
+
+    tiers = stats()["by_tier"]
+    assert tiers["crud"] >= 12
+    assert tiers["relations"] >= 12
+    assert tiers["feature"] >= 12
+
+    for blueprint in all_blueprints():
+        files = render_blueprint(blueprint).files
+        assert len(files) >= 12, blueprint.id
+        assert any(path.startswith("tests/") for path in files), blueprint.id
+        assert "README.md" in files
+        assert any(path.startswith("web/") for path in files)
+
+
+def test_representative_blueprints_pass_their_own_suites():
+    """One blueprint per feature tier must pass its generated pytest suite."""
+
+    from scaffold.blueprints import all_blueprints
+
+    seen: set[str] = set()
+    chosen = []
+    for blueprint in all_blueprints():
+        if blueprint.feature in seen:
+            continue
+        seen.add(blueprint.feature)
+        chosen.append(blueprint)
+
+    assert len(chosen) >= 5
+    corpus = AppCorpus(blueprints=chosen, verify=True)
+    for sample in corpus.samples():
+        assert sample.evidence.kind == "pytest", sample.blueprint.id
+        assert sample.evidence.ok, (sample.blueprint.id, sample.evidence.summary[-400:])
+        assert sample.evidence.exit_code == 0

@@ -305,8 +305,37 @@ class PretrainState:
     batch_in_epoch: int = 0
 
 
+def verify_corpus_manifest_for_3b(data_dir: Path, seq_length: int) -> dict | None:
+    """Validate Corpus v1 manifest invariants when ``corpus_manifest.json`` is present."""
+    corpus_path = data_dir / "corpus_manifest.json"
+    if not corpus_path.is_file():
+        return None
+    manifest = json.loads(corpus_path.read_text(encoding="utf-8"))
+    manifest_seq = manifest.get("seq_length")
+    if manifest_seq is not None and int(manifest_seq) != seq_length:
+        raise ValueError(
+            f"Corpus manifest seq_length={manifest_seq} does not match 3B sequence_length={seq_length}"
+        )
+    isolation = manifest.get("isolation") or {}
+    if isolation.get("heldout_overlap_documents", 0) != 0:
+        raise ValueError("Corpus manifest reports non-zero held-out contamination; refusing to train")
+    if isolation.get("train_val_overlap_documents", 0) != 0:
+        raise ValueError("Corpus manifest reports train/val document overlap; refusing to train")
+
+    # Pre-training gates: coverage, mixture, license, diversity, isolation,
+    # synthetic budget. A build that fails any gate must not start a run.
+    from dataset.quality_gates import evaluate_manifest
+
+    report = evaluate_manifest(manifest)
+    manifest["quality_gates"] = report.to_dict()
+    if not report.ok:
+        failures = ", ".join(result.name for result in report.failures())
+        raise ValueError(f"corpus_manifest.json fails quality gates: {failures}")
+    return manifest
+
+
 def checkpoint_metadata(plan: TrainingPlan, stream: TokenBatchStream, manifest_path: Path) -> dict:
-    return {
+    meta = {
         "model_size": "3B",
         "world_size": plan.world_size,
         "global_batch_size": plan.global_batch_size,
@@ -317,6 +346,10 @@ def checkpoint_metadata(plan: TrainingPlan, stream: TokenBatchStream, manifest_p
         "dataset_seed": stream.seed,
         "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
     }
+    corpus_manifest = manifest_path.parent / "corpus_manifest.json"
+    if corpus_manifest.is_file():
+        meta["corpus_manifest_sha256"] = hashlib.sha256(corpus_manifest.read_bytes()).hexdigest()
+    return meta
 
 
 def restore_3b_checkpoint(engine, checkpoint_dir: Path, plan: TrainingPlan, metadata: dict) -> PretrainState:
@@ -547,6 +580,13 @@ def train_3b(args, config: dict) -> PretrainState:
     if not resume and (output_dir / "latest").exists():
         raise FileExistsError(f"3B checkpoint already exists in {output_dir}; use --resume or another output directory")
 
+    corpus_info = verify_corpus_manifest_for_3b(data_dir, plan.sequence_length)
+    if rank == 0 and corpus_info is not None:
+        logger.info(
+            "Verified Corpus v1 manifest (corpus_sha256=%s, documents=%s)",
+            str(corpus_info.get("corpus_sha256", ""))[:16],
+            f"{corpus_info.get('total_documents', 0):,}",
+        )
     dataset = MemoryMappedDataset(str(data_dir), split="train", seq_length=plan.sequence_length)
     stream = TokenBatchStream(dataset, plan.micro_batch_size, rank, world_size, config["training"]["seed"])
     metadata = checkpoint_metadata(plan, stream, data_dir / "train_manifest.json")

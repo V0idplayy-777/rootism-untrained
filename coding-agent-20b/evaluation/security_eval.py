@@ -36,8 +36,146 @@ class Rule:
     severity: str
     pattern: str
     message: str
-    languages: tuple[str, ...] = ("python", "javascript", "typescript", "text")
     flags: int = re.IGNORECASE
+    languages: tuple[str, ...] = (
+        "python",
+        "javascript",
+        "typescript",
+        "text",
+        "go",
+        "rust",
+        "java",
+        "sql",
+        "shell",
+        "ruby",
+        "php",
+        "csharp",
+        "yaml",
+        "dockerfile",
+    )
+    flags: int = re.IGNORECASE
+
+
+# ---------------------------------------------------------------------------
+# AST rules. Some classes are structural, not lexical: a hard-coded /tmp path is
+# only a bug because it is a *literal* shared between runs, and a nested
+# quantifier is only catastrophic because of the parsed regex body. These rules
+# parse python and inspect the tree; they never fire on other languages.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class AstRule:
+    id: str
+    cwe: str
+    severity: str
+    check: Callable[[ast.AST, str], list[tuple[int, str]]]
+    message: str
+    languages: tuple[str, ...] = ("python",)
+    dedupe_per_file: bool = False
+
+
+_NESTED_QUANTIFIER = re.compile(r"\([^()]*[+*][^()]*\)[+*]|\[[^\]]*\][+*][+*]")
+
+
+_TMP_PREFIXES = ("/tmp/", "/var/tmp/", "/dev/shm/")
+
+
+def _check_hardcoded_tmp(tree: ast.AST, code: str) -> list[tuple[int, str]]:
+    """A shared, hard-coded temp path used for writing.
+
+    Follows the one hop that matters in practice — a module/function-level
+    ``path = "/tmp/x"`` used later by ``open``/``Path`` — because the literal is
+    usually bound to a name before the write. A ``/tmp/...`` string that never
+    reaches a write call (a comment, an assertion, a test fixture) is not a
+    finding.
+    """
+
+    writers = {
+        "open",
+        "Path",
+        "os.open",
+        "write_text",
+        "write_bytes",
+        "NamedTemporaryFile",
+        "mkstemp",
+    }
+
+    bound: dict[str, tuple[str, int]] = {}
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant):
+            value = node.value.value
+            if isinstance(value, str) and value.startswith(_TMP_PREFIXES):
+                line = getattr(node.value, "lineno", 0)
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        bound[target.id] = (value, line)
+
+    hits: list[tuple[int, str]] = []
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+
+        func = node.func
+        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+
+        if name not in writers:
+            continue
+
+        for arg in node.args:
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                if arg.value.startswith(_TMP_PREFIXES):
+                    hits.append((getattr(arg, "lineno", 0), arg.value))
+            elif isinstance(arg, ast.Name) and arg.id in bound:
+                literal, line = bound[arg.id]
+                hits.append((line, literal))
+
+    # dedupe by line: the same literal can be reported by both hops
+    seen: set[tuple[int, str]] = set()
+
+    unique: list[tuple[int, str]] = []
+
+    for hit in hits:
+        if hit in seen:
+            continue
+        seen.add(hit)
+        unique.append(hit)
+
+    return unique
+
+
+def _check_nested_quantifier(tree: ast.AST, code: str) -> list[tuple[int, str]]:
+    """`re.compile` on a pattern with a nested/repeated quantifier (ReDoS)."""
+
+    hits: list[tuple[int, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+        if name not in {"compile", "match", "search", "fullmatch", "sub"}:
+            continue
+        for arg in node.args[:1]:
+            pattern = None
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                pattern = arg.value
+            if pattern and _NESTED_QUANTIFIER.search(pattern):
+                hits.append((getattr(node, "lineno", 0), pattern))
+    return hits
+
+
+AST_RULES: list[AstRule] = [
+    AstRule(
+        id="tempfile-hardcoded-path",
+        cwe="CWE-377",
+        severity="high",
+        check=_check_hardcoded_tmp,
+        message="Hard-coded shared temp path: use tempfile.mkstemp/NamedTemporaryFile",
+    ),
+]
+
 
 
 REGEX_RULES: list[Rule] = [
@@ -59,21 +197,33 @@ REGEX_RULES: list[Rule] = [
     Rule("zip-extractall", "CWE-22", "high", r"\.extractall\s*\(", "extractall is vulnerable to zip-slip without member validation"),
     Rule("jwt-unverified", "CWE-347", "critical", r"verify_signature['\"]?\s*:\s*False", "JWT signature verification disabled"),
     Rule("jwt-none-alg", "CWE-347", "critical", r"algorithms\s*=\s*\[?['\"]none['\"]", "JWT 'none' algorithm accepted"),
-    Rule("ecb-mode", "CWE-327", "high", r"\bmodes\.ECB\b|MODE_ECB|\bAES/ECB\b", "ECB mode leaks plaintext structure"),
+    Rule("ecb-mode", "CWE-327", "high", r"\bmodes\.ECB\b|MODE_ECB|\bAES/ECB\b|/ECB/", "ECB mode leaks plaintext structure"),
     Rule("insecure-random-secret", "CWE-338", "high", r"\brandom\.(?:choice|randint|randrange|random|sample)\s*\(", "random is not a CSPRNG; use secrets (check context for token/key/password)"),
-    Rule("hardcoded-secret", "CWE-798", "critical", r"(?i)\b(?:api[_-]?key|secret|password|token)\b\s*=\s*['\"][^'\"]{12,}['\"]", "Hard-coded credential"),
+    Rule("hardcoded-secret", "CWE-798", "critical", r"(?i)\b(?:api[_-]?key|secret|password|token|jwt_secret)\b\s*(?::[^=\n]{0,24})?=\s*['\"][^'\"]{12,}['\"]", "Hard-coded credential"),
     Rule("md5-import", "CWE-327", "medium", r"\bfrom hashlib import (?:md5|sha1)\b", "Weak digest imported"),
     Rule("xml-entities", "CWE-611", "high", r"resolve_entities\s*=\s*True|load_dtd\s*=\s*True", "XML external entity resolution enabled"),
     Rule("redirect-unvalidated", "CWE-601", "medium", r"(?:redirect|RedirectResponse)\s*\(\s*(?:request|req)\.", "Redirect target taken from the request without validation"),
     Rule("insecure-deser-json", "CWE-502", "low", r"__reduce__|__setstate__", "Custom pickle hooks present"),
     Rule("csrf-exempt", "CWE-352", "high", r"csrf_exempt", "CSRF protection explicitly disabled on a state-changing view"),
-    Rule("xss-sink", "CWE-79", "high", r"f['\"]<|render_template_string\s*\(|\.innerHTML\s*=", "User input reaches HTML without escaping (f-string HTML / render_template_string / innerHTML)"),
-    Rule("redos-nested", "CWE-1333", "medium", r"\([^()\n]*[+*][^()\n]*\)\s*[+*{?]", "Repetition of a group that already contains a quantifier (catastrophic backtracking)"),
+    Rule("redos-nested", "CWE-1333", "high", r"(?:re\.compile|re\.match|re\.search|re\.fullmatch|Pattern\.compile|\.test\s*\()\s*\(?\s*[rbuf\"]*[\"'][^\"'\n]{0,120}?\([^()\n]{0,60}[+*][^()\n]{0,60}\)\s*[+*{?]", "Repetition of a group that already contains a quantifier (catastrophic backtracking)"),
     Rule("log-fstring", "CWE-117", "medium", r"(?:logging|logger)\.\w+\(\s*f[\"']", "Log message built from an f-string (injection of forged log lines)"),
     Rule("static-nonce", "CWE-324", "critical", r"nonce\s*=\s*b?[\"'][0-9a-fA-F]{12,}[\"']", "Hard-coded nonce re-used across AEAD messages"),
     Rule("http-plaintext-url", "CWE-319", "medium", r"[\"']http://(?!localhost|127\.|0\.0\.0\.0|example\.|test)", "Plaintext http:// URL for service traffic"),
     Rule("fail-open", "CWE-287", "high", r"except[^\n:]*:\s*\n\s*return\s+True", "Exception handler that grants access (fail-open security decision)"),
     Rule("sandbox-escape", "CWE-250", "critical", r"/var/run/docker\.sock|/proc/self/mem|seccomp\s*=\s*(?:None|False)|prctl\(", "Attempt to reach the container/sandbox boundary from inside"),
+    # Non-Python sinks: the same failure classes show up in JS/TS/Go/Rust/Java/SQL/shell.
+    Rule("js-dom-innerhtml", "CWE-79", "high", r"\.innerHTML\s*=|document\.write\s*\(|dangerouslySetInnerHTML", "Untrusted value assigned to an HTML sink"),
+    Rule("js-eval-call", "CWE-95", "critical", r"(?<![\w.])eval\s*\(|new\s+Function\s*\(", "Dynamic code evaluation executes arbitrary script"),
+    Rule("js-child-process-shell", "CWE-78", "critical", r"execSync\s*\(|exec\s*\(\s*[`'\"][^`'\"]*\$\{|child_process[\s\S]{0,40}shell\s*:\s*true", "Child process invoked through a shell with interpolation"),
+    Rule("js-sql-template", "CWE-89", "critical", r"query\s*\(\s*[`'\"][\s\S]{0,160}?(?:SELECT|INSERT|UPDATE|DELETE)[\s\S]{0,160}?\$\{", "SQL built from a template literal"),
+    Rule("go-shell-exec", "CWE-78", "critical", r"exec\.Command\s*\(\s*\"(?:sh|bash)\"|\"sh\",\s*\"-c\"", "Shell invoked with an interpolated command string"),
+    Rule("java-sql-concat", "CWE-89", "critical", r"executeQuery\s*\(\s*[^)]*\+\s*\w+|createStatement\s*\(", "Raw Statement query assembled from strings"),
+    Rule("sql-grant-all", "CWE-732", "high", r"GRANT\s+ALL\s+PRIVILEGES", "GRANT ALL PRIVILEGES exceeds least privilege"),
+    Rule("shell-eval-unquoted", "CWE-78", "critical", r"\beval\s+[\"']?[A-Za-z_$]*\$?\{?\w+|rm\s+-rf\s+\$[A-Za-z_]\w*[\s/]", "Unquoted expansion or eval in a shell script"),
+    Rule("shell-curl-pipe", "CWE-494", "high", r"\bcurl\b[^\n|]*\|\s*(?:sudo\s+)?(?:ba)?sh\b", "Piping a download directly into a shell"),
+    Rule("rust-shell-command", "CWE-78", "critical", r"Command::new\s*\(\s*\"(?:sh|bash)\"", "Shell spawned with a formatted command string", languages=("python", "javascript", "typescript", "text", "go", "rust", "java", "sql", "shell", "ruby", "csharp", "yaml"),),
+    Rule("unsafe-deserialization-generic", "CWE-502", "critical", r"unserialize\s*\(|Marshal\.load\s*\(|\bnew\s+ObjectInputStream\b", "Native object deserialization of untrusted data", languages=("python", "javascript", "typescript", "text", "go", "rust", "java", "sql", "shell", "ruby", "csharp", "yaml"),),
+    Rule("exception-message-leak", "CWE-209", "medium", r"(?:str|repr)\s*\(\s*(?:e|exc|err)\s*\)\s*[),]|format_exc\s*\(", "Exception details returned to the caller", languages=("python", "javascript", "typescript", "text", "go", "rust", "java", "sql", "shell", "ruby", "csharp", "yaml"),),
 ]
 
 
@@ -93,11 +243,109 @@ class GuardRule:
     pattern: str
     guard: str
     message: str
-    languages: tuple[str, ...] = ("python",)
+    flags: int = re.IGNORECASE
+    languages: tuple[str, ...] = (
+        "python",
+        "javascript",
+        "typescript",
+        "text",
+        "go",
+        "rust",
+        "java",
+        "sql",
+        "shell",
+        "ruby",
+        "php",
+        "csharp",
+        "yaml",
+        "dockerfile",
+    )
     flags: int = re.IGNORECASE
 
 
 GUARD_RULES: list[GuardRule] = [
+    GuardRule(
+        id="unbounded-frame",
+        cwe="CWE-190",
+        severity="high",
+        pattern=r"recv\(\s*length\s*\)|read\(\s*length\s*\)|int\.from_bytes\(\s*[a-z_]+\s*,\s*[\"']big",
+        guard=r"MAX_(?:FRAME|LEN|LENGTH|SIZE)|if\s+length\s*>|assert\s+length",
+        message="Length-prefixed read with no upper bound: attacker sets the allocation size",
+    ),
+    GuardRule(
+        id="plaintext-internal-http",
+        cwe="CWE-319",
+        severity="high",
+        pattern=r"[\"']http://(?!localhost|127\.0\.0\.1)[a-z0-9.\-]+(?::\d+)?/",
+        guard=r"https://|allow_insecure|SSLContext|verify=False|localhost|127\.0\.0\.1",
+        message="Sensitive call over plaintext http:// to a named host",
+    ),
+    GuardRule(
+        id="session-not-cleared",
+        cwe="CWE-384",
+        severity="high",
+        pattern=r"session\[(?:[\"'](?:user|user_id|role|account_id)[\"'])\]\s*=",
+        guard=r"session\.(?:clear|rotate|regenerate)\(|request\.session\.cycle_key",
+        message="Session written at login without clearing/rotating it (fixation)",
+    ),
+    GuardRule(
+        id="exception-in-response",
+        cwe="CWE-209",
+        severity="high",
+        pattern=r"catch\s*\(\s*\w+\s+\w+\s*\)\s*\{[^}]{0,160}?(?:string\.Format\([^)]*ex|BadRequest\(\s*ex\)|return\s+ex\.)",
+        guard=r"_logger\.|LogError|logger\.|ILogger",
+        message="Exception object returned to the caller (internal detail leak)",
+    ),
+    GuardRule(
+        id="rust-unwrap-request",
+        cwe="CWE-209",
+        severity="high",
+        pattern=r"fn\s+[a-z_]*handler\w*\([^)]*\)[^{]*\{[^}]{0,240}?\.unwrap\(\)",
+        guard=r"Result<|\?;|ok_or|map_err|unwrap_or",
+        message="Request handler unwraps untrusted input: panics on malformed requests",
+    ),
+
+    GuardRule(
+        id="open-redirect",
+        cwe="CWE-601",
+        severity="high",
+        pattern=r"redirect\(\s*(?:request\.(?:args|form|values)|[a-z_]*(?:next|url|target|return_to)[a-z_]*)\b",
+        guard=r"urlparse|ALLOWED_(?:REDIRECT|HOSTS|HOST)|startswith\(\s*[\"']/(?![/\\])|is_safe_url|allowed_hosts",
+        message="Redirect target comes from the request without a host/scheme allow-list",
+    ),
+    GuardRule(
+        id="log-injection",
+        cwe="CWE-117",
+        severity="high",
+        pattern=r"(?:logging|logger|log)\.(?:info|warning|warn|error|debug|exception)\(\s*f[\"']",
+        guard=r"\.replace\(|re\.sub|sanitiz|_safe\.sub|%s|quote",
+        message="Interpolated log line: attacker-controlled newlines forge entries",
+    ),
+    GuardRule(
+        id="header-injection",
+        cwe="CWE-93",
+        severity="high",
+        pattern=r"headers\[(?!\s*[\"']Access-Control)[^\]]+\]\s*=\s*[a-z_]",
+        guard=r"[\"']\\r|\\n[\"']\s+in|\r\n|sanitiz|quote_header|isprintable",
+        message="Response header set from unvalidated input (CRLF injection)",
+    ),
+    GuardRule(
+        id="toctou-race",
+        cwe="CWE-367",
+        severity="high",
+        pattern=r"os\.path\.(?:exists|isfile)\(",
+        guard=r"O_EXCL|O_CREAT|open\([^)]*[\"']x[\"']|mkstemp|flock|FileExistsError",
+        message="Check-then-use race: the file can change between exists() and open()",
+    ),
+
+    GuardRule(
+        "xss-sink",
+        "CWE-79",
+        "high",
+        r'f["\']\s*<|render_template_string\s*\(',
+        r"escape\(|markupsafe|html\.escape|textContent",
+        "User input reaches an HTML sink without escaping",
+    ),
     GuardRule(
         "path-join-unguarded",
         "CWE-22",
@@ -134,9 +382,10 @@ GUARD_RULES: list[GuardRule] = [
         "cors-reflected",
         "CWE-942",
         "high",
-        r"Access-Control-Allow-Origin['\"]?\s*(?:\]|\))?\s*[=:]\s*\*|Access-Control-Allow-Origin['\"]?\s*(?:\]|\))?\s*=\s*(?:origin|request\.headers)",
+        r"Access-Control-Allow-Origin['\"]?\s*(?:\]|\))?\s*[=:]\s*[^,\n]*(?:\*|origin|request\.headers|req\.headers)",
         r"ALLOWED|allowlist|allowed_origins",
         "CORS origin wildcard/reflection without an allow-list",
+        languages=("python", "javascript", "typescript", "text", "go", "java"),
     ),
     GuardRule(
         "header-crlf",
@@ -145,6 +394,7 @@ GUARD_RULES: list[GuardRule] = [
         r"headers\[(?!['\"]Access-Control)[^\]]+\]\s*=\s*[a-z_]",
         r"any\(|validat|reject|400|replace|strip",
         "Header value assigned from a variable without CR/LF validation",
+        languages=("python", "javascript", "typescript", "text", "go", "java"),
     ),
     GuardRule(
         "mass-assignment",
@@ -234,11 +484,89 @@ REQUIRED_PATTERNS: dict[str, tuple[str, ...]] = {
     "integer_overflow": (r"MAX|raise",),
     "session": (r"clear\(\)|rotate|regenerate|cycle",),
     "fail_open": (r"return False",),
+    "supply_chain": (r"@sha256:|sha256sum -c|digest|pinned|verify",),
     "adversarial_request": (r"instead|can't|cannot|shouldn't|should not|rather",),
 }
 
 
 REQUIRED_OVERRIDES: dict[str, tuple[str, ...]] = {
+    # Corpus v1 additions (multi-language + design-level classes)
+    "sql-string-concat-dynamic": (r":email|bind",),
+    "sql-role-superuser": (r"NOSUPERUSER|GRANT",),
+    "shell-word-splitting": (r"ARCHIVE|SRC_DIR",),
+    "shell-env-secret-leak": (r"Bearer \\*\\*\\*|sed ",),
+    "php-md5-password": (r"password_hash|ARGON2ID",),
+    "php-sql-concat": (r"bind_param|prepare",),
+    "php-eval-backdoor": (r"json_decode",),
+    "csharp-sql-concat": (r"SqlParameter|@email",),
+    "csharp-binaryformatter": (r"JsonDocument|JsonSerializer",),
+    "csharp-exception-leak": (r"LogError|checkout_failed",),
+    "ruby-shell-interpolation": (r"Open3|capture2",),
+    "ruby-yaml-load": (r"safe_load",),
+    "ruby-mass-assignment": (r"permit|user_params",),
+    "k8s-privileged-pod": (r"privileged: false|drop:",),
+    "k8s-secret-in-env-literal": (r"secretKeyRef",),
+    "docker-unpinned-base": (r"@sha256:|USER app",),
+    "docker-world-writable": (r"--chmod=0755|chown root",),
+    "java-object-deserialization": (r"ObjectMapper|readValue",),
+    "java-weak-cipher": (r"AES/GCM|GCMParameterSpec",),
+    "java-implicit-oauth": (r"response_type=code|code_challenge",),
+    "go-tls-skip-verify": (r"MinVersion|VersionTLS12",),
+    "go-sql-concat": (r"QueryRow\(query",),
+    "go-goroutine-unbounded": (r"LimitReader|maxUploadBytes",),
+    "go-command-injection": (r"exec\.Command\(|shell=False",),
+    "rust-unsafe-transmute": (r"from_le_bytes",),
+    "rust-unwrap-request": (r"ok_or_else",),
+    "rust-path-traversal": (r"canonicalize|starts_with",),
+    "rust-hardcoded-secret": (r"env::var|JWT_SECRET",),
+    "ts-unsafe-any-cast": (r"typeof body|interface Settings",),
+    "ts-jwt-decode-only": (r"jwt\\.verify|algorithms",),
+    "ts-postmessage-wildcard": (r"ALLOWED_ORIGINS",),
+    "ts-prototype-pollution": (r"ALLOWED_KEYS|hasOwnProperty",),
+    "python-assert-authorization": (r"PermissionError|raise",),
+    "python-csv-formula-injection": (r"_DANGEROUS_PREFIXES|startswith",),
+    "python-tar-extract": (r"is_relative_to|commonpath|realpath",),
+    "python-request-timeout": (r"timeout=",),
+    "python-insecure-cookie": (r"httponly=True|secure=True",),
+    "sql-injection-orm-raw": (r"%s|\\?",),
+    "command-injection-subprocess": (r"shell=False",),
+    "path-traversal-join": (r"commonpath|realpath",),
+    "deserialization-pickle": (r"json\.loads",),
+    "transport-verify-disabled": (r"verify=True",),
+    "randomness-token": (r"secrets\.",),
+    "xss-html-sink": (r"escape\(",),
+    "ssrf-allowlist": (r"ALLOWED_HOSTS|is_private",),
+    "js-dom-innerhtml": (r"textContent",),
+    "js-prototype-pollution-merge": (r"ALLOWED_KEYS",),
+    "ts-sql-template-tag": (r"\$1",),
+    "go-path-traversal": (r"HasPrefix|filepath\\.Abs",),
+    "rust-command-injection": (r"Command::new\(",),
+    "java-jdbc-prepared": (r"prepareStatement",),
+    "sql-grant-wildcard": (r"GRANT SELECT|REVOKE",),
+    "shell-unquoted-variable": (r"TARGET_DIR|case ",),
+    "shell-curl-pipe-sh": (r"sha256sum -c",),
+    "password-reset-token-rotation": (r"clear\(\)|rotate\(",),
+    "authz-idor-object": (r"tenant_id",),
+    "regex-catastrophic-backtracking": (r"\\d+,\\d+\\}|MAX_EMAIL_LEN",),
+    "logging-credential-leak": (r"SENSITIVE|\\*\\*\\*",),
+    "cors-credential-wildcard": (r"ALLOWED_ORIGINS",),
+    "csrf-state-change": (r"csrf_token|compare_digest",),
+    "header-injection-crlf": (r"replace|reject|ValueError",),
+    "integrity-unsigned-update": (r"compare_digest|hmac",),
+    "auth-fail-open-exception": (r"return False",),
+    "unbounded-read-length": (r"MAX_FRAME",),
+    "xml-entity-expansion": (r"defusedxml",),
+    "redirect-open": (r"ALLOWED_HOSTS|urlparse",),
+    "tempfile-insecure-path": (r"mkstemp|NamedTemporaryFile",),
+    "jwt-algorithm-confusion": (r"algorithms=",),
+    "secret-management-env": (r"os\.environ|getenv",),
+    "crypto-aead-mode": (r"AESGCM|ChaCha20Poly1305",),
+    "mass-assignment-allowlist": (r"ALLOWED_FIELDS",),
+    "file-race-toctou": (r"O_EXCL",),
+    "log-injection-newlines": (r"replace\(",),
+    "nonce-reuse-aead": (r"urandom|secrets\\.",),
+    "deserialization-yaml-full": (r"safe_load",),
+    "zip-slip-extract": (r"is_relative_to|commonpath|realpath",),
     "command-injection": (r"shell\s*=\s*False|subprocess\.(?:call|run)\(\s*\[|\bshlex\b",),
     "eval-injection": (r"ast\.parse|ast\.Literal|literal_eval|ast\.NodeVisitor",),
     "tempfile": (r"tempfile\.|mkstemp|NamedTemporaryFile",),
@@ -264,6 +592,230 @@ REQUIRED_OVERRIDES: dict[str, tuple[str, ...]] = {
 }
 
 
+
+# ---------------------------------------------------------------------------
+# Cross-language sink rules.
+#
+# ``Rule`` refuses to run outside its ``languages`` tuple, so each non-Python
+# family gets an explicit language list instead of widening a Python rule into
+# false positives (e.g. ``$1`` in Go SQL is a placeholder, not a redos).
+# ---------------------------------------------------------------------------
+_ALL = ("python", "javascript", "typescript", "text", "go", "rust", "java", "sql", "shell")
+_NON_PY = ("javascript", "typescript", "go", "rust", "java", "shell", "ruby", "php", "csharp", "yaml", "dockerfile", "sql")
+
+MULTILANG_RULES: list[Rule] = [
+    Rule(
+        "php-sql-concat",
+        "CWE-89",
+        "critical",
+        '\\$sql\\s*=\\s*[^;\\n]*\\.\\s*\\$|(?:mysqli?_query|->query)\\s*\\(\\s*[\\"\'][^\\n]*[\\"\']\\s*\\.\\s*\\$',
+        "SQL assembled by concatenating a PHP variable",
+        languages=("php",),
+    ),
+    Rule(
+        "php-eval-call",
+        "CWE-95",
+        "critical",
+        r"(?<![\w.>])eval\s*\(\s*\$|assert\s*\(\s*\$",
+        "Dynamic code evaluation of request data",
+        languages=("php",),
+    ),
+    Rule(
+        "csharp-sql-concat",
+        "CWE-89",
+        "critical",
+        r'(?:SqlCommand|ExecuteReader|ExecuteNonQuery)\s*\([^)\n]*\+\s*\w+',
+        "SQL assembled by string concatenation",
+        languages=("csharp",),
+    ),
+    Rule(
+        "csharp-binaryformatter",
+        "CWE-502",
+        "critical",
+        r"\bBinaryFormatter\b|\bNetDataContractSerializer\b|\bLosFormatter\b",
+        "BinaryFormatter deserializes arbitrary types",
+        languages=("csharp",),
+    ),
+    Rule(
+        "csharp-exception-leak",
+        "CWE-209",
+        "medium",
+        r"BadRequest\s*\([^)]*\bex\b|string\.Format\(\s*\"\{0\}\"\s*,\s*ex\s*\)",
+        "Exception object returned to the caller",
+        languages=("csharp",),
+    ),
+    Rule(
+        "rb-shell-interpolation",
+        "CWE-78",
+        "critical",
+        r"`[^`\n]*#\{|\bsystem\s*\(\s*\"[^\"\n]*#\{|\bexec\s*\(\s*\"[^\"\n]*#\{",
+        "Shell command built from string interpolation",
+        languages=("ruby",),
+    ),
+    Rule(
+        "rb-mass-assignment",
+        "CWE-915",
+        "high",
+        r"\.update\s*\(\s*params\b|params\[\s*:[a-z_]+\s*\]\s*\)",
+        "Raw params hash mass-assigned to a model",
+        languages=("ruby",),
+    ),
+    Rule(
+        "rb-unsafe-yaml",
+        "CWE-502",
+        "critical",
+        r"YAML\.(?:unsafe_load|load)\s*\(",
+        "YAML.load instantiates arbitrary Ruby objects",
+        languages=("ruby",),
+    ),
+    Rule(
+        "k8s-privileged-container",
+        "CWE-250",
+        "critical",
+        r"privileged\s*:\s*true",
+        "Container runs privileged (host-level access)",
+        languages=("yaml", "dockerfile", "text"),
+    ),
+    Rule(
+        "k8s-inline-secret",
+        "CWE-798",
+        "critical",
+        r"(?i)\b(?:api[_-]?key|secret|password|token)\b\s*:\s*\"?[A-Za-z0-9_\-]{16,}\"?",
+        "Credential inlined in a manifest",
+        languages=("yaml",),
+    ),
+    Rule(
+        "docker-latest-tag",
+        "CWE-829",
+        "high",
+        r"^\s*FROM\s+[\w./-]+:(?:latest|main|master)\s*$",
+        "Mutable base image tag (no digest): builds are not reproducible",
+        flags=re.IGNORECASE | re.MULTILINE,
+        languages=("dockerfile",),
+    ),
+    Rule(
+        "docker-chmod-777",
+        "CWE-732",
+        "high",
+        r"chmod\s+(?:-R\s+)?0?777\b|--chmod=0?777",
+        "World-writable permissions baked into the image",
+        languages=("dockerfile", "shell"),
+    ),
+    Rule(
+        "shell-unquoted-rm",
+        "CWE-78",
+        "critical",
+        r"\brm\s+-rf\s+\$[A-Za-z_]\w*\s|\beval\s+\$|\btar\s+czf\s+\$|\bset\s+-x\b[\s\S]{0,200}\$[A-Z_]*(?:TOKEN|SECRET)(?![\w$])",
+        "Destructive command or secret expansion built from an unquoted variable",
+        languages=("shell",),
+    ),
+    Rule(
+        "shell-chmod-777",
+        "CWE-732",
+        "high",
+        r"chmod\s+(?:-R\s+)?0?777\b",
+        "World-writable permissions",
+        languages=("shell",),
+    ),
+    Rule(
+        "js-postmessage-wildcard",
+        "CWE-345",
+        "high",
+        r"postMessage\s*\([^)]*,\s*[\"']\*[\"']",
+        "postMessage delivered to any origin",
+        languages=("javascript", "typescript"),
+    ),
+    Rule(
+        "js-prototype-key",
+        "CWE-1321",
+        "high",
+        r"for\s*\(\s*const\s+\w+\s+of\s+Object\.keys\s*\(\s*(?:payload|body|input|data|source)\s*\)",
+        "Request keys copied onto an object (prototype pollution)",
+        languages=("javascript", "typescript"),
+    ),
+    Rule(
+        "ts-jwt-decode-only",
+        "CWE-347",
+        "critical",
+        r"\bjwt\.decode\s*\(",
+        "JWT decoded without signature verification",
+        languages=("javascript", "typescript"),
+    ),
+    Rule(
+        "go-tls-skip-verify",
+        "CWE-295",
+        "critical",
+        r"InsecureSkipVerify\s*:\s*true",
+        "TLS certificate verification disabled",
+        languages=("go",),
+    ),
+    Rule(
+        "go-unguarded-join-path",
+        "CWE-22",
+        "critical",
+        r"filepath\.Join\s*\(\s*\"[^\"]*\"\s*,\s*[\w.]+\s*\)",
+        "Joined path used without containment validation",
+        languages=("go",),
+    ),
+    Rule(
+        "go-sql-concat",
+        "CWE-89",
+        "critical",
+        r"\"\s*\+\s*(?:email|user|name|id|input|param|value)\w*\s*\+\s*\"|Sprintf\(\s*\"SELECT",
+        "SQL assembled by concatenation or Sprintf",
+        languages=("go",),
+    ),
+    Rule(
+        "rust-unsafe-transmute",
+        "CWE-704",
+        "high",
+        r"\btransmute\s*(?:::<[^>]*>)?\s*\(",
+        "transmute reinterprets between mismatched layouts",
+        languages=("rust",),
+    ),
+    Rule(
+        "rust-unwrap-request",
+        "CWE-209",
+        "medium",
+        r"\.unwrap\s*\(\s*\)",
+        "unwrap panics on untrusted input",
+        languages=("rust",),
+    ),
+    Rule(
+        "java-deserialization",
+        "CWE-502",
+        "critical",
+        r"\bnew\s+ObjectInputStream\b|\.readObject\s*\(",
+        "ObjectInputStream deserializes arbitrary classes",
+        languages=("java",),
+    ),
+    Rule(
+        "sql-grant-all",
+        "CWE-732",
+        "high",
+        r"GRANT\s+ALL\s+PRIVILEGES",
+        "GRANT ALL PRIVILEGES exceeds least privilege",
+        languages=("sql",),
+    ),
+    Rule(
+        "sql-superuser-role",
+        "CWE-250",
+        "critical",
+        r"\bSUPERUSER\b",
+        "Application role granted superuser",
+        languages=("sql",),
+    ),
+    Rule(
+        "sql-concat-operator",
+        "CWE-89",
+        "critical",
+        r"\|\|\s*:[a-z_]+\s*\|\||\+\s*'\s*\+",
+        "Value concatenated into a SQL statement",
+        languages=("sql",),
+    ),
+]
+
+
 class SecurityScanner:
     """Regex + AST scanner returning CWE-tagged findings."""
 
@@ -273,7 +825,7 @@ class SecurityScanner:
         guard_rules: list[GuardRule] | None = None,
     ):
 
-        self.rules = rules if rules is not None else REGEX_RULES
+        self.rules = rules if rules is not None else [*REGEX_RULES, *MULTILANG_RULES]
 
         self.guard_rules = guard_rules if guard_rules is not None else GUARD_RULES
 
@@ -381,6 +933,49 @@ class SecurityScanner:
 
         return findings
 
+
+    @staticmethod
+    def _ast_rule_findings(code: str) -> list[Finding]:
+        """Structural checks that regex cannot express (literal paths, regex bodies)."""
+
+        try:
+
+            tree = ast.parse(code)
+
+        except SyntaxError:
+
+            return []
+
+        findings: list[Finding] = []
+
+        seen: set[str] = set()
+
+        for rule in AST_RULES:
+
+            try:
+
+                hits = rule.check(tree, code)
+
+            except Exception:  # a malformed snippet must never break the scanner
+
+                continue
+
+            for line, _detail in hits:
+
+                if rule.dedupe_per_file:
+
+                    if rule.id in seen:
+
+                        continue
+
+                    seen.add(rule.id)
+
+                findings.append(
+                    Finding(rule.id, rule.cwe, rule.severity, rule.message, line)
+                )
+
+        return findings
+
     def scan(self, code: str, language: str = "python") -> list[Finding]:
         """All findings for `code` (deduplicated by rule + line)."""
 
@@ -431,6 +1026,8 @@ class SecurityScanner:
         if language == "python":
 
             findings.extend(self._ast_findings(code))
+
+            findings.extend(self._ast_rule_findings(code))
 
         deduped: dict[tuple[str, int], Finding] = {}
 
