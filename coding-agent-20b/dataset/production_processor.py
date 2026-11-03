@@ -992,8 +992,17 @@ class ProductionShardBuilder:
             raise ValueError(f"held-out document {doc.path!r} attempted to enter shards")
 
         doc_sha = doc.sha256()
-        total_docs_so_far = self._multi_file_docs + self._single_file_docs
-        split = force_split or self._choose_split(doc_sha, total_docs_so_far)
+
+        # Never let one document land in both splits: a synthesized slice can
+        # legitimately repeat content across ids, and a train/val hash overlap is
+        # leakage regardless of intent.
+        if doc_sha in self._doc_hashes["train"]:
+            split = "train"
+        elif doc_sha in self._doc_hashes["val"]:
+            split = "val"
+        else:
+            total_docs_so_far = self._multi_file_docs + self._single_file_docs
+            split = force_split or self._choose_split(doc_sha, total_docs_so_far)
 
         tokens = self.tokenizer.encode(doc.content, add_special_tokens=True)
         if not tokens:
@@ -1110,6 +1119,11 @@ class ProductionShardBuilder:
                 **self.heldout.summary(),
                 "heldout_overlap_documents": heldout_overlap,
                 "train_val_overlap_documents": train_val_overlap,
+                "duplicate_documents": max(
+                    0,
+                    total_docs
+                    - len(self._doc_hashes["train"] | self._doc_hashes["val"]),
+                ),
             },
         }
         if extra_metadata:
