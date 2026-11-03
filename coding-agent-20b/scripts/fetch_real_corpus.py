@@ -47,6 +47,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from dataset.dedup_index import DedupIndex
 from dataset.production_processor import (
     Deduplicator,
     Document,
@@ -54,6 +55,7 @@ from dataset.production_processor import (
     QualityScorer,
     classify_real_slice,
 )
+from scripts import corpus_sources
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +150,34 @@ LANGUAGE_BUDGETS: dict[str, int] = {
     "diff": 20_000_000,
 }
 
+# Curated expansion (see ``scripts/corpus_sources.py``): additional repositories,
+# package-manager names, languages, extensions and availability budgets. Every
+# added archive still goes through the same fail-closed licence gate.
+EXTENSIONS.update(corpus_sources.EXTRA_EXTENSIONS)
+LANGUAGE_BUDGETS.update(corpus_sources.EXTRA_LANGUAGE_BUDGETS)
+
+# The curated expansion is bound to module-level names (rather than read from
+# ``corpus_sources`` inside the functions) so tests and deployments can narrow
+# the fetch by rebinding a list, exactly like ``GITHUB_REPOS``.
+EXTRA_GITHUB_REPOS: list[tuple[str, str]] = list(corpus_sources.EXTRA_GITHUB_REPOS)
+LONG_TAIL_GITHUB_REPOS: list[tuple[str, str]] = list(corpus_sources.LONG_TAIL_GITHUB_REPOS)
+EXTRA_PYPI_PACKAGES: list[str] = list(corpus_sources.EXTRA_PYPI_PACKAGES)
+EXTRA_NPM_PACKAGES: list[str] = list(corpus_sources.EXTRA_NPM_PACKAGES)
+
+# The exact row contract the trainer consumes: ``scripts/build_corpus_v1.py`` ->
+# ``dataset.production_processor.ProductionShardBuilder`` reads these keys and
+# nothing else is allowed to be required.
+REQUIRED_ROW_FIELDS: tuple[str, ...] = (
+    "content",
+    "language",
+    "license",
+    "source",
+    "path",
+    "quality_score",
+    "slice",
+    "sha256",
+)
+
 PER_SOURCE_FRACTION = 0.25
 
 # 310+ curated permissively licensed repositories across 17+ languages.
@@ -163,7 +193,7 @@ GITHUB_REPOS: list[tuple[str, str]] = [
     ("pallets/markupsafe", "python"), ("sphinx-doc/sphinx", "python"),
     ("scrapy/scrapy", "python"), ("python-attrs/attrs", "python"),
     ("python-attrs/cattrs", "python"), ("marshmallow-code/marshmallow", "python"),
-    ("aio-libs/aiofiles", "python"), ("aio-libs/aiohttp", "python"),
+    ("Tinche/aiofiles", "python"), ("aio-libs/aiohttp", "python"),
     ("aio-libs/yarl", "python"), ("aio-libs/multidict", "python"),
     ("httpie/cli", "python"), ("jd/tenacity", "python"),
     ("pytest-dev/pytest", "python"), ("pytest-dev/pluggy", "python"),
@@ -197,7 +227,7 @@ GITHUB_REPOS: list[tuple[str, str]] = [
     ("sindresorhus/got", "typescript"), ("unjs/nitro", "typescript"),
     ("unjs/ofetch", "typescript"), ("unjs/h3", "typescript"),
     ("graphql/graphql-js", "typescript"), ("apollographql/apollo-client", "typescript"),
-    ("ianstormtaylor/superstruct", "typescript"), ("valibot-dev/valibot", "typescript"),
+    ("ianstormtaylor/superstruct", "typescript"), ("open-circle/valibot", "typescript"),
     ("biomejs/biome", "rust"), ("swc-project/swc", "rust"),
     ("oxc-project/oxc", "rust"), ("denoland/deno", "rust"),
     ("sveltejs/kit", "typescript"), ("vuejs/core", "typescript"),
@@ -244,8 +274,8 @@ GITHUB_REPOS: list[tuple[str, str]] = [
     ("actix/actix-web", "rust"), ("launchbadge/sqlx", "rust"),
     ("diesel-rs/diesel", "rust"), ("sharkdp/fd", "rust"),
     ("sharkdp/bat", "rust"), ("BurntSushi/memchr", "rust"),
-    ("indexmap-rs/indexmap", "rust"), ("once_cell/once_cell", "rust"),
-    ("itertools/itertools", "rust"), ("uuid-rs/uuid", "rust"),
+    ("indexmap-rs/indexmap", "rust"), ("matklad/once_cell", "rust"),
+    ("rust-itertools/itertools", "rust"), ("uuid-rs/uuid", "rust"),
     ("google/guava", "java"), ("google/auto", "java"),
     ("google/gson", "java"), ("google/dagger", "java"),
     ("brettwooldridge/HikariCP", "java"), ("redis/jedis", "java"),
@@ -564,6 +594,25 @@ def is_heldout_document(path: str, heldout_every: int = 20) -> bool:
     return (digest % heldout_every) == 0
 
 
+def validate_row_schema(row: dict[str, Any]) -> list[str]:
+    """Return the contract violations in one emitted JSONL row (empty == valid)."""
+
+    problems: list[str] = []
+    for field in REQUIRED_ROW_FIELDS:
+        if field not in row:
+            problems.append(f"missing:{field}")
+    if row.get("license") not in PERMISSIVE_LICENSES:
+        problems.append(f"non-permissive-license:{row.get('license')!r}")
+    if not str(row.get("content") or "").strip():
+        problems.append("empty-content")
+    if not str(row.get("path") or "").strip():
+        problems.append("empty-path")
+    score = row.get("quality_score")
+    if not isinstance(score, (int, float)) or not 0.0 <= float(score) <= 1.0:
+        problems.append(f"quality_score-out-of-range:{score!r}")
+    return problems
+
+
 def enrich_and_validate_doc(raw_doc: dict[str, Any], min_quality: float = 0.20) -> dict[str, Any] | None:
     """Apply hard quality + complexity filters and attach canonical Corpus v1 fields."""
     content = raw_doc.get("content") or ""
@@ -610,6 +659,7 @@ class CorpusWriter:
         out_dir: Path,
         shard_docs: int = 200,
         dedup_threshold: float = 0.85,
+        dedup_index: DedupIndex | None = None,
     ):
         self.out_dir = out_dir
         self.out_dir.mkdir(parents=True, exist_ok=True)
@@ -620,12 +670,26 @@ class CorpusWriter:
         self.chars: Counter[str] = Counter()
         self.slices: Counter[str] = Counter()
         self.licenses: Counter[str] = Counter()
+        self.sources: Counter[str] = Counter()
+        self.quality_sum = 0.0
         self.hasher = hashlib.sha256()
-        self.dedup = Deduplicator(threshold=dedup_threshold)
+        # ``Deduplicator`` keeps signatures in RAM and is fine for a few hundred
+        # thousand files; ``DedupIndex`` is the SQLite-backed path used for a
+        # real backbone where the index would not fit in memory.
+        self.dedup_index: DedupIndex | None = dedup_index
+        self.dedup: Any = dedup_index if dedup_index is not None else Deduplicator(
+            threshold=dedup_threshold
+        )
 
     def duplicate(self, content: str, doc_id: str = "") -> bool:
         key = doc_id or hashlib.sha256(content[:256].encode("utf-8", "ignore")).hexdigest()[:20]
-        if self.dedup.is_duplicate(key, content):
+        # ``self.dedup`` is rebound by ``run_fetch`` when a shared index is used,
+        # so always dispatch on the attribute, never on the constructor argument.
+        if self.dedup_index is not None:
+            is_duplicate, _reason = self.dedup_index.check_and_add(content, key)
+        else:
+            is_duplicate = self.dedup.is_duplicate(key, content)
+        if is_duplicate:
             return True
         digest = hashlib.sha256(content.encode("utf-8", "ignore")).hexdigest()[:32]
         self.hasher.update(digest.encode("utf-8"))
@@ -637,6 +701,8 @@ class CorpusWriter:
         self.chars[language] += len(doc["content"])
         self.slices[doc.get("slice", "the-stack-code")] += 1
         self.licenses[doc.get("license", "UNKNOWN")] += 1
+        self.sources[doc.get("source", "unknown")] += 1
+        self.quality_sum += float(doc.get("quality_score") or 0.0)
         if len(self.buffers[language]) >= self.shard_docs:
             self.flush(language)
         return True
@@ -669,6 +735,8 @@ class CorpusWriter:
             },
             "per_slice": dict(sorted(self.slices.items())),
             "per_license": dict(sorted(self.licenses.items())),
+            "unique_sources": len(self.sources),
+            "mean_quality": round(self.quality_sum / max(sum(self.counts.values()), 1), 4),
             "dedup": self.dedup.stats(),
             "shards": sum(self.shard_index.values()),
             "corpus_sha256": self.hasher.hexdigest(),
@@ -922,6 +990,131 @@ def _extract_npm_tarball(blob: bytes, source_id: str) -> tuple[list[dict[str, An
     return docs, license_id
 
 
+def merged_github_repos() -> list[tuple[str, str]]:
+    """Core + curated expansion, de-duplicated, order preserved.
+
+    A repository that appears in both lists is fetched once. Pinned refs
+    (``owner/name@tag``) are keyed by slug, so ``redis/redis@7.4.1`` wins over an
+    unpinned duplicate and the fetch stays reproducible.
+    """
+
+    seen: set[str] = set()
+    out: list[tuple[str, str]] = []
+    for repo, language in list(GITHUB_REPOS) + list(EXTRA_GITHUB_REPOS) + list(LONG_TAIL_GITHUB_REPOS):
+        slug = repo.split("@", 1)[0]
+        if slug in seen:
+            continue
+        seen.add(slug)
+        out.append((repo, language))
+    return out
+
+
+def merged_pypi_packages() -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for name in list(PYPI_PACKAGES) + list(EXTRA_PYPI_PACKAGES):
+        if name in seen:
+            continue
+        seen.add(name)
+        out.append(name)
+    return out
+
+
+def merged_npm_packages() -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for name in list(NPM_PACKAGES) + list(EXTRA_NPM_PACKAGES):
+        if name in seen:
+            continue
+        seen.add(name)
+        out.append(name)
+    return out
+
+
+def build_jobs(
+    *,
+    languages: list[str] | None,
+    budgets: dict[str, int],
+    skip_github: bool,
+    skip_pypi: bool,
+    skip_npm: bool,
+    only: str | None,
+    target_chars: int | None,
+) -> list[dict[str, Any]]:
+    """Deterministic job list, ordered so the biggest budget gaps are filled first.
+
+    Order matters for a corpus, not just for politeness: the per-language
+    character budgets are cumulative, so fetching in a fixed shuffled order
+    spends the first N downloads on whatever the shuffle produced. Ordering by
+    ``deficit / (family size)`` means a language that is far from its budget is
+    served before a language that is already satisfied, and a truncated run
+    (``--max_sources``, a timeout, a machine reboot) still leaves a corpus that
+    covers every language instead of one that is 80% Python.
+    """
+
+    repos = merged_github_repos()
+    pypi = merged_pypi_packages()
+    npm = merged_npm_packages()
+
+    families: list[dict[str, Any]] = []
+    if not skip_github:
+        by_language: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for repo, language in repos:
+            if languages and language not in budgets:
+                continue
+            by_language[language].append(
+                {"kind": "github", "id": f"github:{repo}", "repo": repo, "language": language}
+            )
+        for language, jobs in by_language.items():
+            families.append({"language": language, "jobs": jobs})
+    if not skip_pypi and (not languages or "python" in budgets):
+        families.append(
+            {
+                "language": "python",
+                "jobs": [
+                    {"kind": "pypi", "id": f"pypi:{name}", "name": name, "language": "python"}
+                    for name in pypi
+                ],
+            }
+        )
+    if not skip_npm and (not languages or {"javascript", "typescript"} & set(budgets)):
+        families.append(
+            {
+                "language": "javascript",
+                "jobs": [
+                    {"kind": "npm", "id": f"npm:{name}", "name": name, "language": "javascript"}
+                    for name in npm
+                ],
+            }
+        )
+
+    # Interleave the families: one job from each language, largest deficit
+    # first, round-robin until every family is exhausted.
+    for family in families:
+        family["deficit"] = budgets.get(family["language"], 0) / max(len(family["jobs"]), 1)
+
+    ordered: list[dict[str, Any]] = []
+    cursors = {id(family): 0 for family in families}
+    while True:
+        progressed = False
+        for family in sorted(families, key=lambda f: (-f["deficit"], f["language"])):
+            position = cursors[id(family)]
+            if position >= len(family["jobs"]):
+                continue
+            ordered.append(family["jobs"][position])
+            cursors[id(family)] = position + 1
+            progressed = True
+        if not progressed:
+            break
+
+    if only:
+        ordered = [job for job in ordered if only in job["id"]]
+    if target_chars is not None and target_chars > 0:
+        # approximate: 1 job ~ per-source fraction of the language budget
+        ordered = ordered[: max(1, int(target_chars / 2_000_000))]
+    return ordered
+
+
 def run_fetch(
     *,
     output_dir: str | Path = "data/corpus_v1/real_jsonl",
@@ -939,7 +1132,19 @@ def run_fetch(
     heldout_every: int = 20,
     min_quality: float = 0.20,
     dedup_threshold: float = 0.85,
+    dedup_index_path: str | Path | None = None,
+    target_chars: int | None = None,
 ) -> dict[str, Any]:
+    """Fetch, gate, dedup and shard real permissive code.
+
+    ``dedup_index_path`` selects the SQLite-backed dedup index
+    (``dataset.dedup_index.DedupIndex``) instead of the in-RAM
+    ``Deduplicator``. At real backbone scale (10^7 documents) the in-RAM index is
+    the thing that runs out of memory first; the on-disk index keeps ~1 MB of
+    page cache and reopens across runs, so an interrupted fetch resumes without
+    re-admitting duplicates it already saw.
+    """
+
     out_dir = Path(output_dir)
     held_dir = Path(heldout_dir)
     src_log = Path(source_log) if source_log else out_dir / "sources.jsonl"
@@ -963,29 +1168,35 @@ def run_fetch(
                 except json.JSONDecodeError:
                     continue
 
-    writer = CorpusWriter(out_dir, dedup_threshold=dedup_threshold)
+    if dedup_index_path is not None:
+        dedup_index = DedupIndex(
+            dedup_index_path,
+            threshold=dedup_threshold,
+            namespace="train",
+        )
+    else:
+        dedup_index = None
+
+    writer = CorpusWriter(
+        out_dir,
+        dedup_threshold=dedup_threshold,
+        dedup_index=dedup_index,
+    )
     heldout_writer = HeldoutWriter(held_dir)
     totals: Counter[str] = Counter()
+    rejected_licenses: Counter[str] = Counter()
 
-    jobs: list[dict[str, Any]] = []
-    if not skip_github:
-        for repo, lang in GITHUB_REPOS:
-            if languages and lang not in budgets:
-                continue
-            jobs.append({"kind": "github", "id": f"github:{repo}", "repo": repo})
-    if not skip_pypi and (not languages or "python" in budgets):
-        for name in PYPI_PACKAGES:
-            jobs.append({"kind": "pypi", "id": f"pypi:{name}", "name": name})
-    if not skip_npm and (not languages or {"javascript", "typescript"} & set(budgets)):
-        for name in NPM_PACKAGES:
-            jobs.append({"kind": "npm", "id": f"npm:{name}", "name": name})
+    jobs = build_jobs(
+        languages=languages,
+        budgets=budgets,
+        skip_github=skip_github,
+        skip_pypi=skip_pypi,
+        skip_npm=skip_npm,
+        only=only,
+        target_chars=target_chars,
+    )
 
-    if only:
-        jobs = [j for j in jobs if only in j["id"]]
-
-    import random as _random
-
-    _random.Random(1337).shuffle(jobs)
+    skip_budget_langs = set()
     if max_sources is not None:
         jobs = jobs[:max_sources]
 
@@ -1027,6 +1238,10 @@ def run_fetch(
             if res is not None:
                 fetched[job["id"]] = res
 
+    # ``fetched`` is consumed below; snapshot the accounting before any pop().
+    fetched_count = len(fetched)
+    skipped_completed_count = sum(1 for job in jobs if job["id"] in done_sources)
+
     with open(src_log, "a", encoding="utf-8") as logf:
 
         def log_source(source_id: str, status: str, license_id: str | None, detail: dict[str, Any]) -> None:
@@ -1058,8 +1273,24 @@ def run_fetch(
                 docs, license_id = _extract_npm_tarball(blob, source_id)
 
             if license_id is None or license_id not in PERMISSIVE_LICENSES:
+                rejected_licenses[str(license_id)] += 1
                 log_source(source_id, "license-rejected", license_id, {"bytes": len(blob), "docs": len(docs)})
                 logger.info("skip %s: licence %r not permissive", source_id, license_id)
+                continue
+
+            if all(totals[lang] >= budgets.get(lang, 0) for lang in {d["language"] for d in docs}):
+                # Every language this archive offers is already at budget: this is
+                # an availability measurement, not a drop. Recording it separately
+                # keeps "we have enough X" distinct from "X was filtered out".
+                log_source(
+                    source_id,
+                    "budget-saturated",
+                    license_id,
+                    {"bytes": len(blob), "docs": len(docs), "channels": sorted({
+                        f"{lang} (availability)" for lang in {d["language"] for d in docs}
+                    })},
+                )
+                skip_budget_langs.update({d["language"] for d in docs})
                 continue
 
             archive_sha = hashlib.sha256(blob).hexdigest()[:16]
@@ -1119,16 +1350,51 @@ def run_fetch(
     writer.flush()
     heldout_manifest = heldout_writer.flush()
     manifest = writer.manifest_fragment()
+    if dedup_index is not None:
+        manifest["dedup"] = dedup_index.stats()
+        dedup_index.close()
+
+    budget_saturated = {lang for lang, cap in budgets.items() if totals[lang] >= cap}
+    under_budget = {lang: cap - totals[lang] for lang, cap in budgets.items() if totals[lang] < cap}
     manifest["budgets"] = budgets
+    manifest["budget_usage"] = {
+        lang: {
+            "chars": totals[lang],
+            "budget_chars": budgets[lang],
+            "utilisation": round(totals[lang] / max(budgets[lang], 1), 4),
+            "saturated": lang in budget_saturated,
+        }
+        for lang in sorted(budgets)
+    }
+    manifest["availability_gaps"] = {
+        "saturated_languages": sorted(budget_saturated),
+        "under_budget_chars": dict(sorted(under_budget.items())),
+    }
+    manifest["license_rejections"] = dict(sorted(rejected_licenses.items()))
     manifest["heldout"] = {
         "dir": str(held_dir),
         "documents": heldout_manifest["documents"],
         "unique_hashes": len(heldout_manifest["heldout_sha256"]),
     }
     manifest["sources_configured"] = {
-        "github": len(GITHUB_REPOS),
-        "pypi": len(PYPI_PACKAGES),
-        "npm": len(NPM_PACKAGES),
+        "github": len(merged_github_repos()),
+        "github_core": len(GITHUB_REPOS),
+        "github_expanded": len(EXTRA_GITHUB_REPOS) + len(LONG_TAIL_GITHUB_REPOS),
+        "pypi": len(merged_pypi_packages()),
+        "npm": len(merged_npm_packages()),
+        "languages": len(LANGUAGE_BUDGETS),
+    }
+    manifest["schema"] = {
+        "row_contract": list(REQUIRED_ROW_FIELDS),
+        "shard_naming": "<language>-<index:06d>.jsonl",
+        "slice_routing": "classify_real_slice(path, language, content)",
+        "validator": "scripts.fetch_real_corpus.validate_row_schema",
+    }
+    manifest["jobs"] = {
+        "planned": len(jobs),
+        "fetched": fetched_count,
+        "skipped_completed": skipped_completed_count,
+        "failed_or_unavailable": len(jobs) - fetched_count - skipped_completed_count,
     }
     with open(out_dir / "manifest.json", "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
@@ -1152,6 +1418,17 @@ def main() -> int:
     parser.add_argument("--heldout_every", type=int, default=20)
     parser.add_argument("--min_quality", type=float, default=0.20)
     parser.add_argument("--dedup_threshold", type=float, default=0.85)
+    parser.add_argument(
+        "--dedup_index",
+        default=None,
+        help="SQLite dedup index path (constant RAM); default keeps signatures in RAM",
+    )
+    parser.add_argument(
+        "--target_chars",
+        type=int,
+        default=None,
+        help="Stop after roughly this many source characters (size-bounded smoke run)",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -1172,6 +1449,8 @@ def main() -> int:
         heldout_every=args.heldout_every,
         min_quality=args.min_quality,
         dedup_threshold=args.dedup_threshold,
+        dedup_index_path=args.dedup_index,
+        target_chars=args.target_chars,
     )
     logger.info("=== real corpus complete: %s docs, %s chars ===", f"{manifest['documents']:,}", f"{manifest['chars']:,}")
     return 0

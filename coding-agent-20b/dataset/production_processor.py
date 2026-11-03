@@ -312,19 +312,209 @@ _GENERATED_MARKERS = (
 _VENDORED_PATH_PARTS = frozenset(
     {
         "node_modules",
+        "bower_components",
+        "jspm_packages",
         "vendor",
         "vendors",
         "third_party",
+        "third-party",
         "thirdparty",
         "external",
+        "extern",
+        "deps",
         "dist",
         "build",
+        "out",
+        "obj",
         ".venv",
         "venv",
+        "site-packages",
         "__pycache__",
         "target",
+        "pods",
+        "carthage",
+        ".gradle",
+        "gradle",
+        "coverage",
+        "htmlcov",
+        ".tox",
+        ".eggs",
+        "eggs",
+        "buck-out",
+        "bazel-out",
+        "generated",
+        "autogen",
+        "testdata",
+        "test_data",
+        "fixtures",
+        "snapshots",
+        "__snapshots__",
+        "golden",
     }
 )
+
+# Filenames that are configuration, lockfiles or packaging metadata rather than
+# code. They clear a line-count floor and score non-zero on structure, so they
+# need an explicit name check instead of another content heuristic.
+_NON_CODE_NAMES_RE = re.compile(
+    r"(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|package\.json|tsconfig.*\.json|"
+    r"Cargo\.lock|Cargo\.toml|poetry\.lock|Pipfile\.lock|Pipfile|pyproject\.toml|"
+    r"setup\.cfg|requirements.*\.(txt|in)|\.eslintrc.*|\.prettierrc.*|"
+    r"go\.sum|go\.mod|composer\.(lock|json)|Gemfile(\.lock)?|\.gitignore|"
+    r"\.dockerignore|\.editorconfig|\.npmrc|\.nvmrc|\.babelrc.*|"
+    r"Dockerfile|docker-compose.*\.ya?ml)$",
+    re.I,
+)
+
+# Vendored third-party code is often *not* inside a directory called "vendor":
+# it is a single file whose header credits another project, sometimes under a
+# different licence. Keeping it would smuggle a non-permissive file into an
+# otherwise permissively licensed repository.
+_THIRD_PARTY_NOTICE_RE = re.compile(
+    r"(this file (?:is|was) (?:part of|taken from|copied from|derived from)|"
+    r"originally (?:written|authored) by|ported from|vendored from|"
+    r"adapted from [A-Z]|extracted from [A-Z])",
+    re.I,
+)
+
+# --------------------------------------------------------------------------- #
+# Hard quality floors for real code (Corpus v1, task 4)
+# --------------------------------------------------------------------------- #
+#
+# These are filters, not scores: each one can reject a document, and each exists
+# because a real corpus contained a million of them.
+#
+# - short files carry almost no signal and dominate dedup pressure (every
+#   package ships a three-line __init__.py);
+# - prose-heavy files (READMEs, notebooks, YAML) pass a line floor but teach
+#   nothing about code;
+# - minified/generated output survives the average-line-length check when it is
+#   wrapped, so it is caught by long-token soup and repeated-line boilerplate.
+
+QUALITY_FLOOR: dict[str, float] = {
+    "min_nonblank_lines": 8,
+    "min_complexity": 1,
+    "min_alnum_ratio": 0.15,
+    "min_code_line_ratio": 0.35,
+    "max_avg_line_length": 220,
+    "max_line_length": 1_000,
+    "max_single_line_repeat": 0.25,
+    "max_long_token_ratio": 0.30,
+}
+
+# Languages judged by size and structure only: the code-specific floors below
+# would reject every one of them.
+STRUCTURE_ONLY_LANGUAGES: frozenset[str] = frozenset(
+    {"markdown", "yaml", "toml", "diff", "html", "css", "scss", "sql", "protobuf", "graphql"}
+)
+
+_COMMENT_PREFIXES: tuple[str, ...] = (
+    "#",
+    "//",
+    "/*",
+    "*",
+    "<!--",
+    "---",
+    "@@",
+    "--",
+)
+
+
+def _is_comment_line(line: str) -> bool:
+    stripped = line.strip()
+    if not stripped:
+        return False
+    if stripped.startswith(_COMMENT_PREFIXES):
+        return True
+    quote = chr(34) * 3
+    apostrophe = chr(39) * 3
+    return stripped.startswith(quote) or stripped.startswith(apostrophe)
+
+
+def significant_lines(content: str) -> int:
+    """Non-blank, non-comment lines."""
+
+    return sum(
+        1
+        for line in content.splitlines()
+        if line.strip() and not _is_comment_line(line)
+    )
+
+
+_CODE_LINE_START_RE = re.compile(
+    r"^(?:async\s+)?(?:def|class|func|fn|impl|trait|interface|enum|struct|"
+    r"import|from|package|using|namespace|return|raise|throw|assert|yield|"
+    r"if|elif|else|for|while|loop|match|switch|case|try|except|catch|finally|"
+    r"with|const|let|var|function|export|public|private|protected|static|"
+    r"go|defer|select|pass|break|continue|require|include)\b"
+)
+
+
+def code_line_ratio(content: str) -> float:
+    """Share of non-blank lines that read as code rather than prose or markup.
+
+    A README, an ``.ipynb`` dump or a YAML manifest can all clear a line-count
+    floor. Code lines end in punctuation or an operator, begin with a statement
+    keyword, or carry an assignment or a call; prose lines generally do not.
+    Counting statement keywords matters for small tests, where ``import`` and
+    ``assert`` lines otherwise look like prose to a punctuation-only heuristic.
+    """
+
+    lines = [line.strip() for line in content.splitlines() if line.strip()]
+    if not lines:
+        return 0.0
+    code = 0
+    for line in lines:
+        if _is_comment_line(line):
+            continue
+        last = line[-1]
+        if (
+            last in ";{}[](),:=+-*/%&|<>"
+            or " = " in line
+            or "(" in line
+            or "{" in line
+            or _CODE_LINE_START_RE.match(line)
+        ):
+            code += 1
+    return code / len(lines)
+
+
+def long_token_ratio(content: str, threshold: int = 40) -> float:
+    """Share of whitespace tokens longer than ``threshold`` characters.
+
+    Minified bundles, base64 blobs and machine-generated identifier soup show up
+    here even when the average line length looks unremarkable.
+    """
+
+    tokens = content.split()
+    if not tokens:
+        return 0.0
+    return sum(1 for token in tokens if len(token) > threshold) / len(tokens)
+
+
+def single_line_repeat_ratio(content: str) -> float:
+    """Share of the document taken by its most repeated substantive line.
+
+    Blank lines, comments and delimiter-only lines are normal formatting in
+    real code. Including them would reject ordinary JavaScript or Ruby files
+    simply because ``}`` or ``end`` occurs often.
+    """
+
+    lines = [
+        line.strip()
+        for line in content.splitlines()
+        if line.strip() and not _is_comment_line(line) and re.search(r"\w", line)
+    ]
+    if not lines:
+        return 0.0
+    return Counter(lines).most_common(1)[0][1] / len(lines)
+
+
+def third_party_notice(content: str) -> str | None:
+    """Return the matched vendored/copied-code notice in the file header."""
+
+    match = _THIRD_PARTY_NOTICE_RE.search(content[:2000])
+    return match.group(0) if match else None
 
 _MINIFIED_OR_LOCK_RE = re.compile(
     r"(\.min\.(js|css|ts)$|\.bundle\.js$|\.pb\.go$|_pb2\.py$|\.gen\.(py|go|ts|rs)$|"
@@ -425,6 +615,7 @@ class QualityScorer:
         max_bytes: int = 512_000,
         max_line_length: int = 1000,
         min_complexity: int = 1,
+        apply_code_floors: bool = True,
     ) -> tuple[bool, str]:
         if not content:
             return False, "empty"
@@ -444,6 +635,12 @@ class QualityScorer:
         if any(marker in head_lower for marker in _GENERATED_MARKERS):
             return False, "generated_header"
 
+        if path and _NON_CODE_NAMES_RE.search(Path(path.split(":")[-1]).name):
+            return False, "non_code_file"
+
+        if third_party_notice(content):
+            return False, "third_party_notice"
+
         lines = content.split("\n")
         num_lines = len(lines)
         if num_lines < min_lines or num_lines > max_lines:
@@ -455,8 +652,27 @@ class QualityScorer:
             return False, "minified_line_length"
 
         alnum = sum(1 for ch in content[:4000] if ch.isalnum())
-        if alnum / max(len(content[:4000]), 1) < 0.15:
+        if alnum / max(len(content[:4000]), 1) < QUALITY_FLOOR["min_alnum_ratio"]:
             return False, "low_alnum_ratio"
+
+        if apply_code_floors and language not in STRUCTURE_ONLY_LANGUAGES:
+            # Documentation, configuration and structured-data slices are judged
+            # by size and structure; code-specific floors would reject them.
+            # Tests get a lower line floor because a focused five-line test is
+            # more useful than a hundred lines of repetitive module boilerplate.
+            is_test = classify_real_slice(path, language, content) == "tests"
+            min_code_lines = 4 if is_test else int(QUALITY_FLOOR["min_nonblank_lines"])
+            if significant_lines(content) < min_code_lines:
+                return False, "too_few_code_lines"
+
+            if code_line_ratio(content) < QUALITY_FLOOR["min_code_line_ratio"]:
+                return False, "prose_heavy"
+
+            if long_token_ratio(content) > QUALITY_FLOOR["max_long_token_ratio"]:
+                return False, "long_token_soup"
+
+            if len(lines) >= 20 and single_line_repeat_ratio(content) > QUALITY_FLOOR["max_single_line_repeat"]:
+                return False, "repeated_line_boilerplate"
 
         if language == "python":
             try:
@@ -846,6 +1062,10 @@ class DataProcessor:
             max_lines=self.max_lines,
             max_bytes=self.max_length,
             min_complexity=eff_complexity,
+            # ``min_quality=0`` is the existing diagnostic/fixture mode: retain
+            # safety, licence, syntax and dedup checks but do not impose the
+            # stricter code-shape floors that the quality threshold disables.
+            apply_code_floors=self.min_quality > 0.0,
         )
         if not ok:
             self.stats["filtered_hard_quality"] += 1

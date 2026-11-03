@@ -96,6 +96,87 @@ Each slice ships with a mechanical check rather than a claim:
 - Real code: `scripts/fetch_real_corpus.py --heldout_dir` keeps repository-level
   holdouts out of the tokenizer/shard pipeline (`HeldoutRegistry`).
 
+## Real-backbone scale and availability
+
+The 18B-token training budget is a subsample, not the ingestion target. The
+capacity plan asks for **30B filtered, unique, permissive tokens** so the builder
+can select 18B without scraping the bottom of the quality distribution:
+
+```bash
+python -m dataset.ingestion_plan
+python -m dataset.ingestion_plan --json > /tmp/ingestion-plan.json
+```
+
+With the documented funnel (81% licence, 45% quality, 82% dedup, 95% after the
+held-out split), that means processing about **105.65B candidate tokens / 380.4
+GB of source**. The equivalent GitHub repository-size footprint is about 1.98
+TB after accounting for history and non-source files; that is a procurement
+estimate, not another token-filtering stage. Every survival fraction has roughly
+a factor-of-two error bar until a large fetch measures it.
+
+Two ingestion paths have different roles:
+
+- **The Stack v2 / StarCoderData** supply the bulk through the streaming path in
+  `scripts/build_real_dataset.py`. The plan currently assigns it about 22.87B
+  surviving tokens (80.53B candidate tokens).
+- **Pinned GitHub + PyPI + npm** supply licence-verified diversity, real tests,
+  issues/PRs and docs through `scripts/fetch_real_corpus.py`.
+
+`docs/corpus/repo_inventory.json` is the checked-in 2026-11-03 GitHub snapshot:
+1,075 unique candidates, 869 permissively licensed, no missing or unreachable
+repositories, and an estimated 73,258 MB / 20.349B pre-filter source tokens.
+Applying only quality, dedup and held-out survival gives about 7.13B tokens.
+PyPI/npm availability is deliberately not counted in that conservative floor.
+The estimate is `0.35 × GitHub size_kb`; it is not a measurement of downloaded
+tarballs and must not be presented as one.
+
+Refresh or statically validate the source list before a long run:
+
+```bash
+python scripts/source_inventory.py --offline
+python scripts/source_inventory.py --workers 12 --json docs/corpus/repo_inventory.json
+```
+
+The network audit is advisory pruning only. GitHub's `NOASSERTION` is not a
+fetch-time rejection: the archive's own LICENCE text is still classified
+fail-closed, and unknown or copyleft licences never enter training.
+
+### Quality and de-duplication at scale
+
+The real-code filter rejects vendored/generated/minified files, lockfiles and
+packaging metadata, third-party file headers, prose masquerading as code,
+long-token/base64 soup, repeated-line boilerplate, invalid Python and files
+below the complexity floor. Focused test files have a lower line floor, and
+Markdown/config/data languages are not forced to look like executable code.
+`min_quality=0` remains a diagnostic relaxed mode; it does **not** relax licence,
+syntax, held-out or de-duplication safety checks.
+
+Use the SQLite-backed exact + MinHash index for a real ingestion. It keeps RAM
+approximately flat, reopens after interruption, and records exact/near duplicate
+counts in the manifest:
+
+```bash
+python scripts/fetch_real_corpus.py \
+    --output_dir data/corpus_v1/real_jsonl \
+    --heldout_dir data/corpus_v1/heldout \
+    --dedup_index data/corpus_v1/fetch_dedup.sqlite
+
+python -m dataset.ingestion_plan \
+    --audit data/corpus_v1/real_jsonl/manifest.json \
+    --scope curated
+```
+
+The audit exits non-zero and names the shortfall (surviving-token scale,
+language coverage, missing dedup/held-out evidence, abnormal duplicate rate, or
+too few sources). `--scope curated` uses the curated allocation; the default
+`combined` scope checks the full 30B requirement. A small smoke manifest is
+expected to fail either scope.
+
+When combining curated JSONL with The Stack, pass a **new, empty** index such as
+`build_dedup.sqlite`. Do not reuse `fetch_dedup.sqlite`: that index already
+contains every fetched document, so rebuilding from those JSONL files would
+correctly classify all of them as duplicates.
+
 ## Building shards
 
 ```bash

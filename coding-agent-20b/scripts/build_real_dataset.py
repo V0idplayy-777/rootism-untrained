@@ -41,11 +41,13 @@ from dataset.production_processor import (
     HeldoutRegistry,
     ProductionShardBuilder,
 )
+from dataset.dedup_index import DedupIndex
 from scripts.fetch_real_corpus import (
     CorpusWriter,
     HeldoutWriter,
     classify_license_text,
     is_heldout_document,
+    merged_github_repos,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -272,6 +274,7 @@ class DatasetBuilder:
         min_quality: float = 0.25,
         dedup_threshold: float = 0.85,
         seed: int = 42,
+        dedup_index_path: str | Path | None = None,
     ):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -287,6 +290,16 @@ class DatasetBuilder:
             dedup_threshold=dedup_threshold,
             heldout=self.heldout,
         )
+        # At real-corpus scale the in-RAM signature index is the limiting factor,
+        # so the builder can hand both filters a SQLite-backed index that keeps
+        # RAM flat and survives across runs.
+        self.dedup_index = (
+            DedupIndex(dedup_index_path, threshold=dedup_threshold, namespace="train")
+            if dedup_index_path is not None
+            else None
+        )
+        if self.dedup_index is not None:
+            self.processor.dedup = self.dedup_index
 
     def build(
         self,
@@ -308,7 +321,11 @@ class DatasetBuilder:
             heldout=self.heldout,
             seed=self.seed,
         )
-        jsonl_writer = CorpusWriter(Path(emit_jsonl_dir)) if emit_jsonl_dir else None
+        jsonl_writer = (
+            CorpusWriter(Path(emit_jsonl_dir), dedup_index=self.dedup_index)
+            if emit_jsonl_dir
+            else None
+        )
         heldout_writer = HeldoutWriter(self.heldout_dir)
 
         per_source_docs: Counter[str] = Counter()
@@ -384,11 +401,21 @@ class DatasetBuilder:
         if heldout_writer.rows:
             heldout_writer.flush()
 
+        dedup_stats = self.dedup_index.stats() if self.dedup_index is not None else None
+        processor_stats = self.processor.get_stats()
+        if self.dedup_index is not None:
+            self.dedup_index.close()
+
         corpus_manifest = shard_builder.finalize(
             extra_metadata={
                 "target_tokens": target_tokens,
                 "subsample_rate": subsample_rate,
-                "processor_stats": self.processor.get_stats(),
+                "dedup_backend": (
+                    "dataset.dedup_index.DedupIndex (sqlite)" if dedup_stats else
+                    "dataset.production_processor.Deduplicator (in-memory)"
+                ),
+                "dedup": dedup_stats or {},
+                "processor_stats": processor_stats,
                 "ingested_sources": dict(per_source_docs),
                 "configured_datasets": [
                     asdict(DATASETS[n]) for n in (dataset_names or []) if n in DATASETS
@@ -412,6 +439,12 @@ def main() -> int:
     parser.add_argument("--subsample_rate", type=float, default=1.0)
     parser.add_argument("--languages", type=str, default=None)
     parser.add_argument("--max_samples", type=int, default=None)
+    parser.add_argument(
+        "--dedup_index",
+        type=str,
+        default=None,
+        help="SQLite dedup index path; required in practice for billion-token ingestion",
+    )
     args = parser.parse_args()
 
     from model.tokenizer import CodeTokenizer
@@ -427,6 +460,7 @@ def main() -> int:
         tokenizer,
         seq_length=args.seq_length,
         heldout_dir=args.heldout_dir,
+        dedup_index_path=args.dedup_index,
     )
     manifest = builder.build(
         dataset_names=dataset_names,
