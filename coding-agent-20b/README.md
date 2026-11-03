@@ -5,6 +5,7 @@ agent tools/sandbox, retrieval + long-session state, security data/eval,
 evaluation, staged training and serving.
 
 - Model card: `MODEL_CARD.md` · Eval protocol: `docs/EVAL_PROTOCOL.md` · Repro: `docs/REPRODUCIBILITY.md`
+- **Training speed / VRAM:** `../docs/TRAINING_OPTIMIZATIONS.md` · quality gate: `python scripts/verify_no_quality_loss.py` · benchmark: `python scripts/benchmark_training.py`
 - Capability gaps and how each is addressed/measured: `docs/CAPABILITY_GAPS.md`
 - Idea → live app in four commands: `docs/QUICKSTART.md` · No lock-in / eject: `docs/EJECT.md`
 - Install: `pip install -r requirements.txt` (dev: `requirements-dev.txt`)

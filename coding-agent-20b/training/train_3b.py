@@ -23,6 +23,11 @@ import torch
 from dataset.processor import MemoryMappedDataset
 from model.config_3b import get_3b_config
 from model.model import CodingAgentModel
+from training.optimizations import (
+    apply_model_optimizations,
+    model_parameter_count,
+    resolve_offload,
+)
 from training.schedules import cosine_lr
 
 
@@ -190,6 +195,7 @@ def build_3b_model_config(config: dict):
     model_config.use_gradient_checkpointing = config["deepspeed"]["activation_checkpointing"]
     model_config.deepspeed_stage = config["deepspeed"]["stage"]
     model_config.mixed_precision = config["training"]["precision"]
+    apply_model_optimizations(model_config, config)
     return model_config
 
 
@@ -240,22 +246,34 @@ class TokenBatchStream:
             raise ValueError("invalid saved dataset position")
         self._order = None
 
-    def _sequence(self, index: int) -> np.ndarray:
+    def _write_sequence(self, index: int, out: np.ndarray) -> None:
+        """Copy one sequence straight into a preallocated int64 batch row.
+
+        The reference version built a list of uint32 pieces, concatenated
+        them, cast to int64, and then stacked B such arrays.  Writing directly
+        into the final buffer removes one concatenate and one full-batch copy
+        per micro-batch, with identical token values and identical ordering.
+        """
         start = index * self.sequence_length
         end = start + self.sequence_length
         shard = bisect_right(self.dataset.shard_offsets, start) - 1
-        pieces = []
+        pos = 0
         while start < end:
             shard_end = self.dataset.shard_offsets[shard + 1]
             stop = min(end, shard_end)
-            pieces.append(
-                self.dataset.shards[shard][
-                    start - self.dataset.shard_offsets[shard] : stop - self.dataset.shard_offsets[shard]
-                ]
-            )
+            offset = self.dataset.shard_offsets[shard]
+            out[pos : pos + (stop - start)] = self.dataset.shards[shard][
+                start - offset : stop - offset
+            ]
+            pos += stop - start
             start = stop
             shard += 1
-        return np.concatenate(pieces).astype(np.int64, copy=False)
+
+    def _sequence(self, index: int) -> np.ndarray:
+        """Kept for callers/tests that want a single sequence."""
+        out = np.empty(self.sequence_length, dtype=np.int64)
+        self._write_sequence(index, out)
+        return out
 
     def __iter__(self):
         return self
@@ -273,7 +291,9 @@ class TokenBatchStream:
         start = self.batch_in_epoch * global_micro_batch + self.rank * self.batch_size
         indices = self._order[start : start + self.batch_size]
         self.batch_in_epoch += 1
-        batch = np.stack([self._sequence(int(index)) for index in indices])
+        batch = np.empty((self.batch_size, self.sequence_length), dtype=np.int64)
+        for row, index in enumerate(indices):
+            self._write_sequence(int(index), batch[row])
         return torch.from_numpy(batch)
 
 
@@ -491,6 +511,33 @@ def train_3b(args, config: dict) -> PretrainState:
     )
     plan = build_training_plan(config, world_size, getattr(args, "max_steps", None))
     model_config = build_3b_model_config(config)
+
+    # CPU offload is the most expensive ZeRO-Infinity feature.  Now that the
+    # logits activation peak is gone, the 3B state often fits on the GPU; drop
+    # offload only when a measured VRAM budget says it is safe.  This changes
+    # *where* states live, never their values or the optimiser maths.
+    off_optimizer, off_param, offload_reason = resolve_offload(
+        config,
+        world_size,
+        model_parameter_count(model_config),
+        plan.micro_batch_size,
+        plan.sequence_length,
+        model_config.vocab_size,
+        model_config.num_hidden_layers,
+        model_config.hidden_size,
+    )
+    if (off_optimizer, off_param) != (
+        config["deepspeed"].get("offload_optimizer", True),
+        config["deepspeed"].get("offload_param", True),
+    ):
+        config = copy.deepcopy(config)
+        config["deepspeed"]["offload_optimizer"] = off_optimizer
+        config["deepspeed"]["offload_param"] = off_param
+    if rank == 0:
+        logger.info("3B offload policy: %s (optimizer=%s, params=%s)",
+                    offload_reason, off_optimizer, off_param)
+        logger.info("3B execution optimisations: %s", model_config.optimization_summary())
+
     ds_path = resolve_deepspeed_path(args.config, config["deepspeed"]["config_file"])
     ds_config = build_deepspeed_config(json.loads(ds_path.read_text()), config, plan, model_config.hidden_size)
 

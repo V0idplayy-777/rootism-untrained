@@ -28,7 +28,8 @@
     "activation_checkpointing": true,
     "stage3_max_live_parameters": 500000000,
     "stage3_max_reuse_distance": 500000000,
-    "config_file": "configs/ds_config_zero3.json"
+    "config_file": "configs/ds_config_zero3.json",
+    "offload_policy": "auto"
   },
   "data": {
     "data_dir": "data/processed",
@@ -53,6 +54,25 @@
   "evaluation": {
     "eval_tokens": 10000000,
     "eval_batch_size": 8,
-    "metrics": ["loss", "perplexity", "token_accuracy"]
+    "metrics": [
+      "loss",
+      "perplexity",
+      "token_accuracy"
+    ]
+  },
+  "optimizations": {
+    "fast_kernels": true,
+    "share_rope_tables": true,
+    "skip_redundant_position_ids": true,
+    "fuse_mlp_down_projection": true,
+    "sync_free_moe": true,
+    "native_gqa_sdpa": true,
+    "fused_linear_cross_entropy": true,
+    "loss_chunk_tokens": 0,
+    "loss_chunk_budget_bytes": 201326592,
+    "disable_flops_profiler": true,
+    "disable_cpu_activation_checkpointing": true,
+    "preserve_bf16_communication": true,
+    "auto_offload": true
   }
 }

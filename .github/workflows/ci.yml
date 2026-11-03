@@ -8,6 +8,7 @@ jobs:
     defaults: { run: { working-directory: coding-agent-20b } }
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # the quality gate needs the pristine model blob
       - uses: actions/setup-python@v5
         with: { python-version: "3.11", cache: pip }
       - name: Install (CPU torch for CI, plus optional app/test deps)
@@ -16,6 +17,10 @@ jobs:
           pip install "tokenizers>=0.19" GitPython requests
           pip install "fastapi>=0.111" "uvicorn>=0.30" "httpx>=0.27" flask
           pip install torch==2.3.1 --index-url https://download.pytorch.org/whl/cpu
+      - name: Quality gate — optimisations must not change model quality
+        run: python scripts/verify_no_quality_loss.py
+      - name: Training optimisation savings (measured + projected)
+        run: python scripts/benchmark_training.py --iters 5
       - name: Unit tests (model forward, tokenizer, agent parsing, sandbox, packing, eval metrics)
         run: python -m pytest tests/ -q
       - name: CLI smoke (no model, no network)

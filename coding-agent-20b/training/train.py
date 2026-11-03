@@ -40,6 +40,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from dataset.processor import MemoryMappedDataset
 from model.config import CodingAgentConfig, get_1b_config, get_7b_config, get_20b_config
 from model.model import CodingAgentModel
+from training.optimizations import (
+    apply_model_optimizations,
+    model_parameter_count,
+    resolve_offload,
+    tune_deepspeed_config,
+)
 
 try:
 
@@ -241,37 +247,85 @@ def create_model(config: CodingAgentConfig) -> CodingAgentModel:
     return model
 
 
+def resolve_batch_settings(
+    config: dict[str, Any], world_size: int
+) -> tuple[int, int, int]:
+    """Resolve ``(micro_batch, accumulation, train_batch_size)``.
+
+    The shipped recipe stores ``gradient_accumulation_steps: "auto"``.  The
+    reference implementation multiplied that string into
+    ``train_batch_size``, which raised TypeError before a single step ran.
+    DeepSpeed wants accumulation over the *whole* DP world, exactly as the
+    well-tested 3B planner does it.
+    """
+    batching = config["batching"]
+    micro = int(batching["micro_batch_size_per_gpu"])
+    global_batch = int(batching["global_batch_size"])
+    configured = batching.get("gradient_accumulation_steps", "auto")
+    global_micro = micro * world_size
+    if global_batch % global_micro:
+        raise ValueError(
+            f"global_batch_size={global_batch} must be divisible by "
+            f"micro_batch_size_per_gpu * world_size={global_micro}"
+        )
+    accumulation = global_batch // global_micro
+    if configured != "auto" and int(configured) != accumulation:
+        raise ValueError(
+            f"gradient_accumulation_steps must be 'auto' or {accumulation}, got {configured!r}"
+        )
+    if micro <= 0 or accumulation <= 0:
+        raise ValueError("batch sizes must be positive")
+    return micro, accumulation, global_batch
+
+
 def initialize_deepspeed(
     model: CodingAgentModel,
     config: dict[str, Any],
     ds_config_path: str,
     args: argparse.Namespace,
+    world_size: int,
 ):
-    """
-    Initialize DeepSpeed engine with ZeRO-3, mixed precision,
-    and activation checkpointing.
-    """
+    """Initialize DeepSpeed with ZeRO-3, bf16 and one LR schedule."""
 
     with open(ds_config_path) as f:
 
-        ds_config = json.load(f)
+        ds_config = tune_deepspeed_config(json.load(f), config)
 
     training_config = config.get("training", {})
 
-    batching_config = config.get("batching", {})
+    micro_batch, accumulation, train_batch_size = resolve_batch_settings(config, world_size)
 
-    ds_config["train_micro_batch_size_per_gpu"] = batching_config.get(
-        "micro_batch_size_per_gpu", 2
+    ds_config["train_micro_batch_size_per_gpu"] = micro_batch
+
+    ds_config["gradient_accumulation_steps"] = accumulation
+
+    ds_config["train_batch_size"] = train_batch_size
+
+    # ZeRO-Infinity's CPU offload is by far the slowest part of a step.  Once
+    # the logits activation peak is gone, small models frequently fit without
+    # it.  Decide from measured free VRAM: identical states, different address
+    # space only.
+    off_optimizer, off_param, offload_reason = resolve_offload(
+        config,
+        world_size,
+        model_parameter_count(model.config),
+        micro_batch,
+        int(config["batching"]["sequence_length"]),
+        model.config.vocab_size,
+        model.config.num_hidden_layers,
+        model.config.hidden_size,
     )
-
-    ds_config["gradient_accumulation_steps"] = batching_config.get(
-        "gradient_accumulation_steps", 1
-    )
-
-    ds_config["train_batch_size"] = (
-        ds_config["train_micro_batch_size_per_gpu"]
-        * ds_config["gradient_accumulation_steps"]
-        * args.num_gpus
+    zero = ds_config.setdefault("zero_optimization", {})
+    for key, enabled in (("offload_optimizer", off_optimizer), ("offload_param", off_param)):
+        if enabled:
+            zero.setdefault(key, {"device": "cpu", "pin_memory": True})
+        else:
+            zero.pop(key, None)
+    logging.getLogger(__name__).info(
+        "Offload policy: %s (optimizer=%s params=%s)",
+        offload_reason,
+        off_optimizer,
+        off_param,
     )
 
     if "optimizer" in ds_config:
@@ -280,19 +334,10 @@ def initialize_deepspeed(
             "learning_rate", 3e-4
         )
 
-    if "scheduler" in ds_config:
-
-        total_steps = config.get("training", {}).get("total_steps", 100000)
-
-        warmup_steps = config.get("training", {}).get("warmup_steps", 2000)
-
-        ds_config["scheduler"]["params"]["warmup_num_steps"] = warmup_steps
-
-        ds_config["scheduler"]["params"]["total_num_steps"] = total_steps
-
-        ds_config["scheduler"]["params"]["warmup_max_lr"] = training_config.get(
-            "learning_rate", 3e-4
-        )
+    # Exactly ONE cosine schedule: the loop sets lr on optimizer.param_groups
+    # at each optimiser step.  Leaving DeepSpeed's WarmupDecayLR in the config
+    # would step a second, conflicting schedule on every micro-batch.
+    ds_config.pop("scheduler", None)
 
     precision = training_config.get("precision", "bf16")
 
@@ -335,7 +380,7 @@ def evaluate(
 
     model.eval()
 
-    total_loss = 0.0
+    total_loss = None
 
     total_tokens = 0
 
@@ -351,17 +396,17 @@ def evaluate(
 
         labels = batch["labels"].to(device)
 
-        if hasattr(model, "module"):
-
-            output = model.module(input_ids=input_ids, labels=labels)
-
-        else:
-
-            output = model(input_ids=input_ids, labels=labels)
+        # Call the *engine*, not ``model.module``: ZeRO-3 installs its
+        # parameter-gather hooks on the engine, so bypassing it leaves the
+        # weights partitioned.  Accumulate on-device and synchronise once,
+        # instead of one .item() (GPU->CPU stall) per eval batch.
+        output = model(input_ids=input_ids, labels=labels)
 
         loss = output.loss if hasattr(output, "loss") else output[0]
 
-        total_loss += loss.item() * labels.numel()
+        weighted = loss.detach().float() * labels.numel()
+
+        total_loss = weighted if total_loss is None else total_loss + weighted
 
         total_tokens += labels.numel()
 
@@ -369,7 +414,11 @@ def evaluate(
 
     model.train()
 
-    avg_loss = total_loss / max(total_tokens, 1)
+    avg_loss = (
+        (total_loss / max(total_tokens, 1)).item()
+        if total_loss is not None
+        else float("inf")
+    )
 
     perplexity = math.exp(min(avg_loss, 20))
 
@@ -557,11 +606,15 @@ def train(args: argparse.Namespace):
 
     model_config.deepspeed_stage = config["deepspeed"]["stage"]
 
+    active_optimizations = apply_model_optimizations(model_config, config)
+
     if rank == 0:
 
         model_config.print_summary()
 
         logger.info(f"World size: {world_size} GPUs")
+
+        logger.info(f"Execution optimisations: {active_optimizations}")
 
     logger.info("Creating model...")
 
@@ -601,7 +654,7 @@ def train(args: argparse.Namespace):
     logger.info(f"Initializing DeepSpeed with config: {ds_config_path}")
 
     model_engine, optimizer, _scheduler = initialize_deepspeed(
-        model, config, ds_config_path, args
+        model, config, ds_config_path, args, world_size
     )
 
     device = (
@@ -689,11 +742,9 @@ def train(args: argparse.Namespace):
 
     model_engine.train()
 
-    tokens_per_batch = (
-        config["batching"]["micro_batch_size_per_gpu"] * seq_length * world_size
-    )
+    micro_batch, grad_accum_steps, _ = resolve_batch_settings(config, world_size)
 
-    grad_accum_steps = config["batching"]["gradient_accumulation_steps"]
+    tokens_per_batch = micro_batch * seq_length * world_size
 
     train_iter = iter(train_loader)
 
@@ -701,23 +752,11 @@ def train(args: argparse.Namespace):
 
     max_steps = args.max_steps or total_steps
 
+    # Detached on-device loss window: no GPU->CPU synchronisation on the hot
+    # path.  The reference loop called loss.item() on *every* micro-batch.
+    loss_window: list[torch.Tensor] = []
+
     while state.step < max_steps:
-
-        try:
-
-            batch = next(train_iter)
-
-        except StopIteration:
-
-            state.epoch += 1
-
-            train_iter = iter(train_loader)
-
-            batch = next(train_iter)
-
-        input_ids = batch["input_ids"].to(device)
-
-        labels = batch["labels"].to(device)
 
         lr = lr_scheduler.get_lr(state.step)
 
@@ -725,33 +764,57 @@ def train(args: argparse.Namespace):
 
             param_group["lr"] = lr
 
-        output = model_engine(input_ids=input_ids, labels=labels)
+        micro_losses = []
 
-        loss = output.loss if hasattr(output, "loss") else output[0]
+        for _ in range(grad_accum_steps):
 
-        loss = loss / grad_accum_steps
+            try:
 
-        model_engine.backward(loss)
+                batch = next(train_iter)
 
-        if (state.step + 1) % grad_accum_steps == 0:
+            except StopIteration:
+
+                state.epoch += 1
+
+                train_iter = iter(train_loader)
+
+                batch = next(train_iter)
+
+            input_ids = batch["input_ids"].to(device)
+
+            labels = batch["labels"].to(device)
+
+            output = model_engine(input_ids=input_ids, labels=labels)
+
+            loss = output.loss if hasattr(output, "loss") else output[0]
+
+            micro_losses.append(loss.detach().float())
+
+            # DeepSpeed divides the loss by gradient_accumulation_steps in
+            # backward() itself.  The reference loop divided it *again* and
+            # only called step() at the boundary, which silently shrank the
+            # effective LR by the accumulation factor.  One backward + one
+            # step per micro-batch is DeepSpeed's documented contract and is
+            # exactly what the well-tested 3B planner does.
+            model_engine.backward(loss)
 
             model_engine.step()
 
         state.step += 1
 
-        state.tokens_processed += tokens_per_batch
+        state.tokens_processed += tokens_per_batch * grad_accum_steps
 
-        loss_value = loss.item() * grad_accum_steps
+        step_loss = torch.stack(micro_losses).mean()
 
-        state.train_loss_history.append(loss_value)
+        loss_window.append(step_loss)
 
         if state.step % config["logging"]["log_every_steps"] == 0 and rank == 0:
 
             elapsed = time.time() - step_start_time
 
-            tokens_per_sec = (
-                tokens_per_batch * config["logging"]["log_every_steps"] / elapsed
-            )
+            logged_tokens = tokens_per_batch * grad_accum_steps * config["logging"]["log_every_steps"]
+
+            tokens_per_sec = logged_tokens / max(elapsed, 1e-9)
 
             step_start_time = time.time()
 
@@ -759,13 +822,14 @@ def train(args: argparse.Namespace):
 
             state.throughput_history.append(throughput)
 
-            recent_losses = state.train_loss_history[-100:]
+            # ONE synchronisation per logging interval, not one per micro-batch.
+            loss_value = step_loss.item()
 
-            avg_loss = sum(recent_losses) / len(recent_losses)
+            avg_loss = torch.stack(loss_window[-100:]).mean().item()
+
+            state.train_loss_history.append(loss_value)
 
             elapsed_total = time.time() - state.start_time
-
-            elapsed_total / 3600
 
             steps_remaining = max_steps - state.step
 
@@ -827,7 +891,9 @@ def train(args: argparse.Namespace):
 
         logger.info(f"Total tokens processed: {state.tokens_processed / 1e9:.2f}B")
 
-        logger.info(f"Final train loss: {state.train_loss_history[-1]:.4f}")
+        if state.train_loss_history:
+
+            logger.info(f"Final train loss: {state.train_loss_history[-1]:.4f}")
 
         if state.val_loss_history:
 

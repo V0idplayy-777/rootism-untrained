@@ -82,6 +82,50 @@ class CodingAgentConfig:
 
     max_seq_length: int = 8192
 
+    # ------------------------------------------------------------------
+    # Pure-execution optimisations (see model/fast_ops.py).  NONE of these
+    # change the function computed by the model, the parameters, the data,
+    # the optimiser or the LR schedule.  ``fast_kernels=False`` restores the
+    # original reference code path for A/B quality verification.
+    # ------------------------------------------------------------------
+    fast_kernels: bool = True
+
+    # Fine-grained switches (all subordinate to ``fast_kernels``).  They exist
+    # so every optimisation can be A/B-verified independently, and so a user
+    # who requires *bitwise-identical bf16 gradients* can turn off the one
+    # algebraic reassociation in the list (``fuse_mlp_down_projection``).
+    share_rope_tables: bool = True
+    skip_redundant_position_ids: bool = True
+    fuse_mlp_down_projection: bool = True
+    sync_free_moe: bool = True
+    native_gqa_sdpa: bool = True
+
+    # Chunked LM-head cross-entropy.  Off by default because it makes
+    # ModelOutput.logits None during training (no code path needs logits when
+    # labels are supplied, but inference/introspection callers do).  Both
+    # training recipes turn it on explicitly.
+    fused_linear_cross_entropy: bool = False
+
+    # 0 = auto-size the chunk to fit ``loss_chunk_budget_bytes``.
+    loss_chunk_tokens: int = 0
+
+    loss_chunk_budget_bytes: int = 192 * 1024 * 1024
+
+    def optimization_summary(self) -> dict:
+        """Report the enabled execution-only optimisations (for logs/tests)."""
+        on = self.fast_kernels
+        return {
+            "fast_kernels": on,
+            "shared_rope_tables": on and self.share_rope_tables,
+            "dtype_native_rope": on and self.share_rope_tables,
+            "no_redundant_position_ids": on and self.skip_redundant_position_ids,
+            "fused_mlp_down_projection": on and self.fuse_mlp_down_projection,
+            "sync_free_moe": on and self.sync_free_moe,
+            "native_gqa_sdpa": on and self.native_gqa_sdpa,
+            "fused_linear_cross_entropy": on and self.fused_linear_cross_entropy,
+            "loss_chunk_tokens": self.loss_chunk_tokens,
+        }
+
     def __post_init__(self):
 
         assert (
