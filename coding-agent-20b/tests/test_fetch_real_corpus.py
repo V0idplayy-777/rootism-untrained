@@ -548,9 +548,6 @@ def test_pypi_and_npm_fetchers_read_their_metadata(monkeypatch):
     assert blob == npm_tarball
 
 
-# --------------------------------------------------------------------------- #
-# Curated expansion: the backbone has to actually cover the languages it claims
-# --------------------------------------------------------------------------- #
 
 
 def test_the_expansion_covers_every_required_language():
@@ -578,8 +575,6 @@ def test_the_expansion_covers_every_required_language():
     missing = sorted(required - set(inventory))
     assert not missing, f"curated expansion has no sources for {missing}"
 
-    # every expanded entry must map to a language that has an availability budget,
-    # otherwise its files are extracted and immediately discarded
     unbudgeted = sorted(
         {
             language
@@ -620,9 +615,6 @@ def test_extra_extensions_and_budgets_are_wired_into_the_fetcher():
         assert language in frc.LANGUAGE_BUDGETS, f"{language} has no availability budget"
 
 
-# --------------------------------------------------------------------------- #
-# Disk-backed dedup at scale
-# --------------------------------------------------------------------------- #
 
 
 def test_run_fetch_can_use_the_disk_dedup_index(tmp_path, transport, monkeypatch):
@@ -632,7 +624,6 @@ def test_run_fetch_can_use_the_disk_dedup_index(tmp_path, transport, monkeypatch
     monkeypatch.setattr(frc, "LANGUAGE_BUDGETS", {"python": 4_000_000, "markdown": 200_000})
     monkeypatch.setattr(frc, "fetch_github_issues_and_prs", lambda *a, **k: [])
 
-    # two archives that ship the same module under different paths
     first = github_archive()
     second = make_tar(
         {
@@ -712,9 +703,6 @@ def test_rows_match_the_trainer_schema_contract(tmp_path, transport, monkeypatch
     assert "missing:quality_score" in frc.validate_row_schema(broken)
 
 
-# --------------------------------------------------------------------------- #
-# Honest availability accounting
-# --------------------------------------------------------------------------- #
 
 
 def test_budget_saturation_is_reported_as_availability_not_as_a_drop(tmp_path, transport, monkeypatch):
@@ -723,8 +711,6 @@ def test_budget_saturation_is_reported_as_availability_not_as_a_drop(tmp_path, t
     monkeypatch.setattr(
         frc, "GITHUB_REPOS", [("demo/first", "python"), ("demo/second", "python")]
     )
-    # both archives are byte-identical, so the second contributes nothing new:
-    # it must report *why*, and after de-duplication the budget is still open.
     monkeypatch.setattr(frc, "LANGUAGE_BUDGETS", {"python": 1_000, "markdown": 1})
     monkeypatch.setattr(frc, "fetch_github_issues_and_prs", lambda *a, **k: [])
     transport(

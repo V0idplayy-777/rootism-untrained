@@ -160,8 +160,6 @@ Operators should read the runbook before changing the retry budget.
 
 
 def test_min_quality_zero_keeps_the_existing_relaxed_mode():
-    # This fixture is intentionally short and repetitive. The safety and syntax
-    # gates still run, but the strict code-shape floors are disabled as before.
     content = 'def f(x):\n    """doc"""\n    # comment\n    return x + 1\n' * 3
     processor = DataProcessor(min_quality=0.0, languages=["python"])
     assert processor.process_document(content, "a.py", "MIT") is not None

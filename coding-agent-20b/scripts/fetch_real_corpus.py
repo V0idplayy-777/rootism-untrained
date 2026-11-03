@@ -150,23 +150,14 @@ LANGUAGE_BUDGETS: dict[str, int] = {
     "diff": 20_000_000,
 }
 
-# Curated expansion (see ``scripts/corpus_sources.py``): additional repositories,
-# package-manager names, languages, extensions and availability budgets. Every
-# added archive still goes through the same fail-closed licence gate.
 EXTENSIONS.update(corpus_sources.EXTRA_EXTENSIONS)
 LANGUAGE_BUDGETS.update(corpus_sources.EXTRA_LANGUAGE_BUDGETS)
 
-# The curated expansion is bound to module-level names (rather than read from
-# ``corpus_sources`` inside the functions) so tests and deployments can narrow
-# the fetch by rebinding a list, exactly like ``GITHUB_REPOS``.
 EXTRA_GITHUB_REPOS: list[tuple[str, str]] = list(corpus_sources.EXTRA_GITHUB_REPOS)
 LONG_TAIL_GITHUB_REPOS: list[tuple[str, str]] = list(corpus_sources.LONG_TAIL_GITHUB_REPOS)
 EXTRA_PYPI_PACKAGES: list[str] = list(corpus_sources.EXTRA_PYPI_PACKAGES)
 EXTRA_NPM_PACKAGES: list[str] = list(corpus_sources.EXTRA_NPM_PACKAGES)
 
-# The exact row contract the trainer consumes: ``scripts/build_corpus_v1.py`` ->
-# ``dataset.production_processor.ProductionShardBuilder`` reads these keys and
-# nothing else is allowed to be required.
 REQUIRED_ROW_FIELDS: tuple[str, ...] = (
     "content",
     "language",
@@ -673,9 +664,6 @@ class CorpusWriter:
         self.sources: Counter[str] = Counter()
         self.quality_sum = 0.0
         self.hasher = hashlib.sha256()
-        # ``Deduplicator`` keeps signatures in RAM and is fine for a few hundred
-        # thousand files; ``DedupIndex`` is the SQLite-backed path used for a
-        # real backbone where the index would not fit in memory.
         self.dedup_index: DedupIndex | None = dedup_index
         self.dedup: Any = dedup_index if dedup_index is not None else Deduplicator(
             threshold=dedup_threshold
@@ -683,8 +671,6 @@ class CorpusWriter:
 
     def duplicate(self, content: str, doc_id: str = "") -> bool:
         key = doc_id or hashlib.sha256(content[:256].encode("utf-8", "ignore")).hexdigest()[:20]
-        # ``self.dedup`` is rebound by ``run_fetch`` when a shared index is used,
-        # so always dispatch on the attribute, never on the constructor argument.
         if self.dedup_index is not None:
             is_duplicate, _reason = self.dedup_index.check_and_add(content, key)
         else:
@@ -1088,8 +1074,6 @@ def build_jobs(
             }
         )
 
-    # Interleave the families: one job from each language, largest deficit
-    # first, round-robin until every family is exhausted.
     for family in families:
         family["deficit"] = budgets.get(family["language"], 0) / max(len(family["jobs"]), 1)
 
@@ -1110,7 +1094,6 @@ def build_jobs(
     if only:
         ordered = [job for job in ordered if only in job["id"]]
     if target_chars is not None and target_chars > 0:
-        # approximate: 1 job ~ per-source fraction of the language budget
         ordered = ordered[: max(1, int(target_chars / 2_000_000))]
     return ordered
 
@@ -1238,7 +1221,6 @@ def run_fetch(
             if res is not None:
                 fetched[job["id"]] = res
 
-    # ``fetched`` is consumed below; snapshot the accounting before any pop().
     fetched_count = len(fetched)
     skipped_completed_count = sum(1 for job in jobs if job["id"] in done_sources)
 
@@ -1279,9 +1261,6 @@ def run_fetch(
                 continue
 
             if all(totals[lang] >= budgets.get(lang, 0) for lang in {d["language"] for d in docs}):
-                # Every language this archive offers is already at budget: this is
-                # an availability measurement, not a drop. Recording it separately
-                # keeps "we have enough X" distinct from "X was filtered out".
                 log_source(
                     source_id,
                     "budget-saturated",

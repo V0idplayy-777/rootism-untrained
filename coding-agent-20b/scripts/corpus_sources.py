@@ -17,7 +17,6 @@ Scala follow; SQL, shell, Lua, Dart, Elixir and Haskell trail.
 
 from __future__ import annotations
 
-# Extra extension -> language mappings beyond fetch_real_corpus.EXTENSIONS.
 EXTRA_EXTENSIONS: dict[str, str] = {
     ".lua": "lua",
     ".dart": "dart",
@@ -36,9 +35,6 @@ EXTRA_EXTENSIONS: dict[str, str] = {
     ".proto": "protobuf",
 }
 
-# Additional language budgets (characters of source, before tokenisation).
-# These are *availability* targets, not the training mixture: the mixture
-# decides how many tokens are sampled from each language.
 EXTRA_LANGUAGE_BUDGETS: dict[str, int] = {
     "scss": 3_000_000,
     "lua": 6_000_000,
@@ -56,10 +52,7 @@ EXTRA_LANGUAGE_BUDGETS: dict[str, int] = {
 }
 
 # ~190 additional permissively licensed repositories. Chosen for dense, real
-# engineering code (libraries, frameworks, tooling, tests) in the languages the
-# 3B model is expected to write.
 EXTRA_GITHUB_REPOS: list[tuple[str, str]] = [
-    # Validated against the GitHub API by ``scripts/source_inventory.py``; the
     # fetch still re-classifies every archive's LICENSE text fail-closed.
     ("python/cpython", "python"), ("django/django", "python"),
     ("encode/django-rest-framework", "python"), ("fastapi/full-stack-fastapi-template", "python"),
@@ -438,8 +431,6 @@ EXTRA_GITHUB_REPOS: list[tuple[str, str]] = [
 ]
 
 
-# Long-tail languages: enough dense, permissive engineering code to make the
-# coverage report honest for the languages a general coding agent still meets.
 LONG_TAIL_GITHUB_REPOS: list[tuple[str, str]] = [
     ("nvim-lua/plenary.nvim", "lua"), ("folke/lazy.nvim", "lua"),
     ("nvim-telescope/telescope.nvim", "lua"), ("openresty/lua-resty-core", "lua"),

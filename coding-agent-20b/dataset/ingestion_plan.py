@@ -29,14 +29,6 @@ from typing import Any
 
 from dataset.production_processor import PERMISSIVE_LICENSES
 
-# --------------------------------------------------------------------------- #
-# Funnel assumptions
-# --------------------------------------------------------------------------- #
-#
-# Every number below is a *fraction of the previous stage*. Licence coverage and
-# repository availability come from the checked-in inventory; quality and dedup
-# survival are planning priors until a large fetch measures them. They are
-# deliberately conservative and separately configurable.
 
 BYTES_PER_TOKEN = 3.6
 """Real code tokenises at ~3.1-3.6 bytes/token with the in-repo BPE; 3.6 is the
@@ -76,9 +68,6 @@ TRAIN_SUBSAMPLE = 0.60
 enough real code that >>18B tokens survive filtering, then subsample to budget.
 0.60 means the target is 30B tokens of unique, filtered, permissive code."""
 
-# Language weights for the availability target. This is *not* the training
-# mixture (`dataset.mixture.DEFAULT_MIXTURE`); it is how the raw corpus is
-# expected to be distributed when it is fetched by budget-priority order.
 LANGUAGE_TARGETS: dict[str, float] = {
     "python": 0.20,
     "typescript": 0.12,
@@ -161,7 +150,6 @@ class IngestionPlan:
         default_factory=lambda: dict(LANGUAGE_TARGETS)
     )
 
-    # -- core arithmetic ---------------------------------------------------
     @property
     def required_surviving_tokens(self) -> int:
         """Filtered, unique, permissive tokens the fetch must produce."""
@@ -201,7 +189,6 @@ class IngestionPlan:
 
         return math.ceil(self.required_surviving_tokens / max(self.tokens_per_repo, 1))
 
-    # -- split across the two ingestion paths ------------------------------
     @property
     def github_surviving_tokens(self) -> int:
         """Surviving tokens the curated GitHub/PyPI/npm path can contribute.
@@ -333,9 +320,6 @@ class IngestionPlan:
         return len(frc.merged_github_repos())
 
 
-# --------------------------------------------------------------------------- #
-# Post-fetch audit
-# --------------------------------------------------------------------------- #
 
 
 @dataclass

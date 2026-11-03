@@ -46,7 +46,6 @@ def test_exact_duplicates_are_caught_and_survive_a_reopen(tmp_path):
     with DedupIndex(path) as index:
         assert index.check_and_add(MODULE, "a") == (False, "")
         assert index.check_and_add(MODULE, "b") == (True, "exact")
-        # whitespace-only differences normalise to the same document
         assert index.check_and_add(MODULE.replace("\n", "\r\n"), "c") == (True, "exact")
         assert index.count() == 1
 
@@ -78,7 +77,6 @@ def test_near_duplicates_are_reported_with_their_reason():
     with DedupIndex(":memory:") as index:
         index.check_and_add(MODULE, "base")
 
-        # docstring rewritten in one function: still the same document
         lines = MODULE.split("\n")
         variant = list(lines)
         variant[6] = '    """Return value transformed by step 1 - rewritten by a fork."""'
@@ -86,11 +84,9 @@ def test_near_duplicates_are_reported_with_their_reason():
         assert duplicate is True, "a rewritten docstring is a copy, not a variant"
         assert reason == "near"
 
-        # trailing whitespace on every line normalises away entirely
         reflowed = "\n".join(f"{line}   " for line in lines)
         assert index.check_and_add(reflowed, "reflowed") == (True, "exact")
 
-        # a genuinely different document is kept
         unrelated = "\n".join(f"class Other{i}:\n    pass\n" for i in range(40))
         assert index.check_and_add(unrelated, "other") == (False, "")
 

@@ -27,8 +27,6 @@ def healthy_manifest(**overrides):
     base = {
         "corpus_version": "corpus-v1-real",
         "documents": 250_000,
-        # 30B surviving tokens: intentionally below the ~105B candidate-input
-        # requirement, because fetch manifests count documents that survived.
         "chars": 108_000_000_000,
         "unique_sources": 640,
         "per_language": {
@@ -156,12 +154,9 @@ def test_plan_serialises_and_names_the_sources_it_depends_on():
     )
     assert set(payload["sources"]) == {"the-stack-v2", "curated-github-pypi-npm"}
     assert "caveat" in payload
-    json.dumps(payload)  # must be manifest-diffable
+    json.dumps(payload)
 
 
-# --------------------------------------------------------------------------- #
-# The audit
-# --------------------------------------------------------------------------- #
 
 
 def test_a_healthy_fetch_passes_every_audit_finding():

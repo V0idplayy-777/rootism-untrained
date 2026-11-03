@@ -353,9 +353,6 @@ _VENDORED_PATH_PARTS = frozenset(
     }
 )
 
-# Filenames that are configuration, lockfiles or packaging metadata rather than
-# code. They clear a line-count floor and score non-zero on structure, so they
-# need an explicit name check instead of another content heuristic.
 _NON_CODE_NAMES_RE = re.compile(
     r"(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|package\.json|tsconfig.*\.json|"
     r"Cargo\.lock|Cargo\.toml|poetry\.lock|Pipfile\.lock|Pipfile|pyproject\.toml|"
@@ -366,9 +363,6 @@ _NON_CODE_NAMES_RE = re.compile(
     re.I,
 )
 
-# Vendored third-party code is often *not* inside a directory called "vendor":
-# it is a single file whose header credits another project, sometimes under a
-# different licence. Keeping it would smuggle a non-permissive file into an
 # otherwise permissively licensed repository.
 _THIRD_PARTY_NOTICE_RE = re.compile(
     r"(this file (?:is|was) (?:part of|taken from|copied from|derived from)|"
@@ -377,19 +371,6 @@ _THIRD_PARTY_NOTICE_RE = re.compile(
     re.I,
 )
 
-# --------------------------------------------------------------------------- #
-# Hard quality floors for real code (Corpus v1, task 4)
-# --------------------------------------------------------------------------- #
-#
-# These are filters, not scores: each one can reject a document, and each exists
-# because a real corpus contained a million of them.
-#
-# - short files carry almost no signal and dominate dedup pressure (every
-#   package ships a three-line __init__.py);
-# - prose-heavy files (READMEs, notebooks, YAML) pass a line floor but teach
-#   nothing about code;
-# - minified/generated output survives the average-line-length check when it is
-#   wrapped, so it is caught by long-token soup and repeated-line boilerplate.
 
 QUALITY_FLOOR: dict[str, float] = {
     "min_nonblank_lines": 8,
@@ -402,8 +383,6 @@ QUALITY_FLOOR: dict[str, float] = {
     "max_long_token_ratio": 0.30,
 }
 
-# Languages judged by size and structure only: the code-specific floors below
-# would reject every one of them.
 STRUCTURE_ONLY_LANGUAGES: frozenset[str] = frozenset(
     {"markdown", "yaml", "toml", "diff", "html", "css", "scss", "sql", "protobuf", "graphql"}
 )
@@ -656,10 +635,6 @@ class QualityScorer:
             return False, "low_alnum_ratio"
 
         if apply_code_floors and language not in STRUCTURE_ONLY_LANGUAGES:
-            # Documentation, configuration and structured-data slices are judged
-            # by size and structure; code-specific floors would reject them.
-            # Tests get a lower line floor because a focused five-line test is
-            # more useful than a hundred lines of repetitive module boilerplate.
             is_test = classify_real_slice(path, language, content) == "tests"
             min_code_lines = 4 if is_test else int(QUALITY_FLOOR["min_nonblank_lines"])
             if significant_lines(content) < min_code_lines:
@@ -1062,9 +1037,6 @@ class DataProcessor:
             max_lines=self.max_lines,
             max_bytes=self.max_length,
             min_complexity=eff_complexity,
-            # ``min_quality=0`` is the existing diagnostic/fixture mode: retain
-            # safety, licence, syntax and dedup checks but do not impose the
-            # stricter code-shape floors that the quality threshold disables.
             apply_code_floors=self.min_quality > 0.0,
         )
         if not ok:

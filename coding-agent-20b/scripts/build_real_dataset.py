@@ -290,9 +290,6 @@ class DatasetBuilder:
             dedup_threshold=dedup_threshold,
             heldout=self.heldout,
         )
-        # At real-corpus scale the in-RAM signature index is the limiting factor,
-        # so the builder can hand both filters a SQLite-backed index that keeps
-        # RAM flat and survives across runs.
         self.dedup_index = (
             DedupIndex(dedup_index_path, threshold=dedup_threshold, namespace="train")
             if dedup_index_path is not None

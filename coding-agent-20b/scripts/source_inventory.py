@@ -46,16 +46,9 @@ logger = logging.getLogger("source-inventory")
 
 PERMISSIVE = set(frc.PERMISSIVE_LICENSES)
 
-# codeload serves the working tree compressed. Measured on real archives the
-# extracted source is roughly on the order of the repository's reported size;
-# we deliberately use a conservative fraction so the availability estimate is
-# not a fantasy number.
 TARBALL_FRACTION_OF_REPO_SIZE = 0.35
 BYTES_PER_TOKEN = 3.6
 
-# Languages the 3B model is expected to write, in priority order. These are
-# *availability* floors: docs, yaml, toml and diffs are harvested as side
-# products of these repositories, so they are not availability-critical.
 REQUIRED_CODE_LANGUAGES: frozenset[str] = frozenset(
     {
         "python",
@@ -131,8 +124,6 @@ def static_audit() -> dict[str, Any]:
         for r, _ in corpus_sources.EXTRA_GITHUB_REPOS + corpus_sources.LONG_TAIL_GITHUB_REPOS
     ]
     # A slug repeated inside one list is a maintenance bug. A slug that appears
-    # in both core and expanded is harmless (merged_repos() de-duplicates it)
-    # and is reported separately as overlap.
     duplicates = sorted({slug for slug, count in Counter(expanded).items() if count > 1})
     overlap_with_core = sorted(set(core) & set(expanded))
 

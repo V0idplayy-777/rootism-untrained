@@ -98,7 +98,6 @@ def shingle_hashes(content: str, *, max_shingles: int = MAX_SHINGLES) -> np.ndar
     if unique.size <= max_shingles:
         return unique
 
-    # Keep ~max_shingles shingles by testing low bits of the hash itself.
     bits = 1
     while (unique.size >> bits) > max_shingles:
         bits += 1
@@ -266,8 +265,6 @@ class DedupIndex:
         self._pending_docs: list[tuple[str, str, str, bytes]] = []
         self._pending_bands: list[tuple[str, int, int, str]] = []
         self._pending_digests: set[str] = set()
-        # band key -> signatures of documents that are added but not yet flushed,
-        # so a duplicate arriving inside the same batch is still caught.
         self._pending_signatures: dict[tuple[int, int], list[bytes]] = {}
 
         self.total_checked = 0
@@ -275,7 +272,6 @@ class DedupIndex:
         self.near_duplicates = 0
         self._band_probes = 0
 
-    # -- lifecycle ---------------------------------------------------------
     def __enter__(self) -> "DedupIndex":
         return self
 
@@ -316,8 +312,6 @@ class DedupIndex:
         self._pending_digests.clear()
         self._pending_signatures.clear()
 
-    # -- core --------------------------------------------------------------
-    # -- compatibility with ``production_processor.Deduplicator`` -----------
     def is_duplicate(self, doc_id: str, content: str, *, remember: bool = True) -> bool:
         """``Deduplicator.is_duplicate``-compatible wrapper.
 
@@ -409,7 +403,6 @@ class DedupIndex:
             self.flush()
         return False, ""
 
-    # -- reporting ---------------------------------------------------------
     def stats(self) -> dict[str, Any]:
         removed = self.exact_duplicates + self.near_duplicates
         return {

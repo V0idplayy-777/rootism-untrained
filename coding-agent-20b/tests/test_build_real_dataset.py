@@ -246,7 +246,6 @@ def test_builder_uses_the_disk_dedup_index_for_large_ingestion(tmp_path):
     """The scale path: RAM stays flat, duplicates are caught across files."""
 
     real = tmp_path / "real"
-    # 30 genuinely distinct modules: each has a unique set of statement shapes
     statement_shapes = [
         "    total = 0\n    for item in items:\n        total += item\n    return total\n",
         "    seen = set()\n    for item in items:\n        if item not in seen:\n            seen.add(item)\n    return seen\n",
@@ -268,7 +267,6 @@ def test_builder_uses_the_disk_dedup_index_for_large_ingestion(tmp_path):
         {"content": modules[i], "path": f"pkg/m{i}.py", "license": "MIT", "language": "python"}
         for i in range(30)
     ]
-    # the same document re-published under a second path (a fork/vendored drop)
     rows += [
         {"content": modules[i], "path": f"copied/m{i}.py", "license": "MIT", "language": "python"}
         for i in range(10)
@@ -288,10 +286,6 @@ def test_builder_uses_the_disk_dedup_index_for_large_ingestion(tmp_path):
     manifest = builder.build(local_jsonl_dir=real, target_tokens=1_000_000, heldout_every=0)
 
     assert index_path.exists()
-    # The index is *near*-duplicate aware: a synthetic module built from eight
-    # shared statement shapes is legitimately similar to its siblings, so a
-    # couple of extra drops here are correct behaviour, not a leak. What must
-    # hold is that the ten byte-identical copies are gone and only exact ones.
     assert 18 <= manifest["total_documents"] <= 30
     dedup = manifest["dedup"]
     duplicates = dedup["exact_duplicates"] + dedup["near_duplicates"]
