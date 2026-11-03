@@ -53,6 +53,27 @@ If a builder wants a different ceiling, pass `max_share` explicitly — the
 default is a hard 0.05 and `validate_synthetic_budget()` fails loudly on
 mis-configuration.
 
+### How the cap is shared between slices
+
+The allowance is not first-come-first-served. `build_corpus_v1.build()` admits
+synthetic rows in **rounds**, each slice claiming a share of the allowance
+proportional to its planned mixture weight: every slice gets its round-1 share
+before any slice starts round 2. Rows that would cross either the slice share or
+the global allowance are dropped and counted in
+`manifest.synthetic.dropped_rows`, never silently admitted.
+
+Two consequences worth knowing:
+
+- A high-volume slice cannot starve the others. `security-sft` has ~300
+  candidate rows; before this rule it consumed the whole allowance and six
+  slices never appeared in the corpus at all.
+- There is a presence floor: a slice may always admit one document if the
+  global allowance can afford it, so a slice can never vanish because the real
+  backbone happened to be small. Presence beats exact proportions.
+
+`instruction-sft` is hybrid: the tokens are real licensed files, only the task
+framing is generated, so it is emitted outside the synthetic allowance.
+
 ## Slice grounding
 
 Each slice ships with a mechanical check rather than a claim:
