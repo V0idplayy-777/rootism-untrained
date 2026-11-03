@@ -23,17 +23,33 @@ anneal on tests/issues/PRs/docs (plus security and distribution-shift sources)
 
 Data: permissive-license code (SPDX gate in `dataset/production_processor.py`,
 reused by the tokenizer corpus sampler), MinHash-LSH dedup, attention-aware
-packing (`dataset/packing.py`), mixture in `dataset/mixture.py`:
-`the-stack-code 0.50 · issues 0.06 · prs 0.08 · tests 0.08 · docs 0.06 ·
-instruction 0.08 · security 0.03 (×3) · creative 0.03 (×2) · instruction-induction
-0.03 · recovery 0.02 · project-scaffold 0.015 (×1.5) · repair-trace 0.015 (×2)`
-(weights sum to 1.00; the last two are the multi-file and fail->fix->green sources).
+packing (`dataset/packing.py`), frozen Corpus v1 mixture in `dataset/mixture.py`
+(13 slices, weights sum to 1.00; 73% real / 6% hybrid / 21% synthetic by
+document share):
+`the-stack-code 0.48 · tests 0.07 · github-prs 0.07 · github-issues 0.06 ·
+instruction-sft 0.06 · docs-and-comments 0.05 · app-sft 0.05 ·
+repair-trace-sft 0.04 · security-sft 0.03 · app-repair-sft 0.03 ·
+app-preference-dpo 0.02 · recovery-sft 0.02 · project-scaffold-sft 0.02`
+(upsampling: security ×3, repair-trace ×2.5, app-sft ×2.5, app-repair ×2.5).
+
+**Model-generated text is capped at 5% of corpus tokens**
+(`dataset.mixture.synthetic_token_budget`, enforced row-wise by
+`dataset.augmentation.cap_rows`): the 21% synthetic document share is a
+sampling mix, not a token budget. 18B tokens → 900M synthetic ceiling; the
+current plan is 1.05%.
+
+Verified slice contents — 114 CWE-tagged security pairs (28 categories, 46
+CWEs, 14 languages), 75 fail→diagnose→fix traces in 7 languages, 65
+pytest-verified multi-file apps (18 held out), 372-pattern catalogue, and 8
+real-code induction task shapes. `python scripts/corpus_report.py --strict`
+recomputes every number above and fails if any invariant regresses.
 
 - **Security** (`dataset/security_data.py`): curated CWE-tagged safe/vulnerable
   pairs with review/repair/implement SFT rows and DPO preference pairs.
-- **Distribution shift** (`dataset/augmentation.py`): phrasing styles, ten
+- **Distribution shift** (`dataset/augmentation.py`): phrasing styles,
   cross-domain task families with acceptance criteria, spec/design/implement
-  ladders, and clarification tasks for underspecified requests.
+  ladders, clarification tasks for underspecified requests, and
+  constraint-conflict/recovery/dialogue rows — all inside the 5% cap.
 
 Checkpoints are atomic + SHA-256 verified (`training/checkpoint.py`); recovery
 policy in `training/monitor.py`.

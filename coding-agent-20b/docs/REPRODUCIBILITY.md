@@ -21,6 +21,10 @@
    Security (`dataset/security_data.py`) and distribution-shift
    (`dataset/augmentation.py`) sources are seeded and deterministic; record the
    seed and the upsampling factors from `configs/pipeline.json`.
+   `python scripts/corpus_report.py --strict --json --out data/corpus_v1/report.json`
+   writes the per-slice report (sizes, languages, held-out shares, synthetic
+   token plan) and exits non-zero if any Corpus v1 invariant regresses — archive
+   that JSON with the run. Recipe details: `docs/CORPUS_V1.md`.
 6. Training: `configs/pipeline.json` + `training/train_production.py`; seeds via
    `utils.set_seed`; checkpoints carry SHA-256 manifests (verify before resume).
 7. Agent sessions: `ProductionAgent(state_path=...)` writes atomic JSON state on

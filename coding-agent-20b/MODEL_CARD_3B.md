@@ -88,20 +88,45 @@ apply the source upsampling factors itself. Prepare the shards with the desired
 mixture before launch; model quality still needs evaluation after training.
 
 The intended data preparation uses permissive-license code (SPDX gate in
-`dataset/production_processor.py`), deduplication, and the mixture in
-`dataset/mixture.py`. Apply those checks before sharding: the 3B trainer reads
-flat token IDs and does not enforce licenses or use document-boundary attention
-masks from `dataset/packing.py`. The configured source weights are:
-`the-stack-code 0.50 · issues 0.06 · prs 0.08 · tests 0.08 · docs 0.06 ·
-instruction 0.08 · security 0.03 (×3) · creative 0.03 (×2) · instruction-induction
-0.03 · recovery 0.02 · project-scaffold 0.015 (×1.5) · repair-trace 0.015 (×2)`
-(weights sum to 1.00; the last two are the multi-file and fail->fix->green sources).
+`dataset/production_processor.py`), deduplication, and the frozen Corpus v1
+mixture in `dataset/mixture.py`. Apply those checks before sharding: the 3B
+trainer reads flat token IDs and does not enforce licenses or use
+document-boundary attention masks from `dataset/packing.py`.
+
+**Corpus v1 mixture** (13 frozen slices, weights sum to 1.00; 73% real / 6%
+hybrid / 21% synthetic by document share):
+
+`the-stack-code 0.48 · tests 0.07 · github-prs 0.07 · github-issues 0.06 ·
+instruction-sft 0.06 · docs-and-comments 0.05 · app-sft 0.05 ·
+repair-trace-sft 0.04 · security-sft 0.03 · app-repair-sft 0.03 ·
+app-preference-dpo 0.02 · recovery-sft 0.02 · project-scaffold-sft 0.02`
+(upsampling: security ×3, repair-trace ×2.5, app-sft ×2.5, app-repair ×2.5).
+
+**Synthetic token cap.** The 21% synthetic *document* share is a sampling mix,
+not a token budget: model-generated text is capped at **5% of the corpus**.
+`dataset.mixture.synthetic_token_budget()` converts the cap into tokens
+(18B → 900M ceiling; the current plan is 1.05%), `dataset.augmentation.cap_rows()`
+trims augmented rows deterministically (seed 42) to stay under it, and both
+`configs/training_config*.json` data blocks record the cap. Report the numbers
+with `python scripts/corpus_report.py --strict`.
+
+What each verified slice contains (all reproducible via `scripts/corpus_report.py`):
+
+| Slice | Content | Grounding |
+| --- | --- | --- |
+| `security-sft` | 114 CWE-tagged safe/vulnerable pairs, 28 categories, 46 CWEs, 14 languages → review/repair/implement SFT + DPO | every vulnerable sample must trip `evaluation/security_eval.py`; safe samples must stay clean |
+| `repair-trace-sft` | 75 fail→diagnose→minimal-diff→green traces in 7 languages (python/js/ts/go/rust/java/sql) | python fixes are `ast.parse`-checked; rejected patches always differ from both buggy and fixed |
+| `app-sft`, `app-repair-sft`, `app-preference-dpo` | 65 multi-file product blueprints (25–28 files each) → SFT/preference/repair/taste rows | all 65 render a project whose generated pytest suite passes (`--verify`, 65/65); 18 blueprints held out |
+| `project-scaffold-sft` | generic starters (fastapi-react, nextjs-fullstack, flask-htmx, cli-tool, discord-bot, static-site) | rendered tree + run command + tests |
+| `instruction-sft` | real-corpus induction in **8** task shapes (docstring→code, signature→body, code→explanation, test→contract, example→implementation, imports→module, error-branches→tests, docstring→contract tests) + phrasing/cross-domain augmentation | every row carries `source_path` + SPDX license; rejected licenses never appear |
+| `recovery-sft` | tool-failure classification and changed-approach recovery | failure class + anti-pattern recorded per row |
 
 - **Security** (`dataset/security_data.py`): curated CWE-tagged safe/vulnerable
   pairs with review/repair/implement SFT rows and DPO preference pairs.
-- **Distribution shift** (`dataset/augmentation.py`): phrasing styles, ten
+- **Distribution shift** (`dataset/augmentation.py`): phrasing styles,
   cross-domain task families with acceptance criteria, spec/design/implement
-  ladders, and clarification tasks for underspecified requests.
+  ladders, clarification tasks for underspecified requests, and
+  constraint-conflict / recovery / dialogue rows — all inside the 5% cap.
 
 The 3B pretrainer saves sharded DeepSpeed checkpoints in `checkpoints-3b/`
 (all ranks participate). Checkpoints record the global token count, data
