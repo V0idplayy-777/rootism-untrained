@@ -30,10 +30,47 @@
     "offload_policy": "auto"
   },
   "data": {
-    "data_dir": "data/processed",
+    "data_dir": "data/corpus_v1/shards_20b",
+    "mixture_source": "dataset/mixture.DEFAULT_MIXTURE",
+    "mixture": {
+      "the-stack-code": 0.48,
+      "github-issues": 0.06,
+      "github-prs": 0.07,
+      "tests": 0.07,
+      "docs-and-comments": 0.05,
+      "instruction-sft": 0.06,
+      "security-sft": 0.03,
+      "repair-trace-sft": 0.04,
+      "app-sft": 0.05,
+      "app-repair-sft": 0.03,
+      "app-preference-dpo": 0.02,
+      "recovery-sft": 0.02,
+      "project-scaffold-sft": 0.02
+    },
+    "upsample": {
+      "security-sft": 3.0,
+      "repair-trace-sft": 2.5,
+      "app-sft": 2.5,
+      "app-repair-sft": 2.5
+    },
     "num_workers": 4,
     "prefetch_factor": 2,
-    "pin_memory": true
+    "pin_memory": true,
+    "synthetic_budget": {
+      "synthetic_token_cap": 0.05,
+      "synthetic_token_slices": [
+        "security-sft",
+        "repair-trace-sft",
+        "app-sft",
+        "app-repair-sft",
+        "app-preference-dpo",
+        "recovery-sft",
+        "project-scaffold-sft"
+      ],
+      "synthetic_token_plan_share": 0.0105,
+      "synthetic_document_share": 0.21,
+      "drop_policy": "downsample synthetic slices deterministically (seed 42) before writing shards"
+    }
   },
   "checkpointing": {
     "save_dir": "checkpoints",

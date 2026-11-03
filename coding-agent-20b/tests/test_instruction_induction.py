@@ -181,3 +181,134 @@ def test_stats(corpus):
     stats = InstructionInduction(corpus, max_files=10).stats()
     assert stats["files"] >= 2
     assert "MIT" in stats["licenses"]
+
+
+EXAMPLE_MODULE = '''"""Rotate a signing key and keep old signatures verifiable.
+
+The helper keeps the previous key for one rotation so tokens minted with it
+still validate, then drops it. Every rotation is appended to an audit trail.
+"""
+
+import hmac
+import json
+import time
+from hashlib import sha256
+
+
+class KeyRing:
+    """Two-slot signing key ring with an audit trail."""
+
+    def __init__(self, path: str) -> None:
+        self.path = path
+        self.current = b"k1"
+        self.previous = None
+
+    def rotate(self, key: bytes) -> bool:
+        """Swap in a new signing key.
+
+        Example:
+            >>> ring.rotate(b"k2")
+            True
+        Returns:
+            True when the new key is active.
+        Raises:
+            ValueError: when the key is empty.
+        """
+        if not key:
+            raise ValueError("key must not be empty")
+        self.previous = self.current
+        self.current = key
+        try:
+            with open(self.path, "a", encoding="utf-8") as handle:
+                handle.write(json.dumps({"at": time.time()}) + "\\n")
+                handle.flush()
+        except OSError:
+            pass
+        return True
+
+    def sign(self, payload: bytes) -> str:
+        """Sign a payload with the current key and return the hex digest."""
+        return hmac.new(self.current, payload, sha256).hexdigest()
+'''
+
+
+KEYRING_TEST = '''"""Behavioural tests for the signing key ring."""
+
+import pytest
+
+from pkg.keyring import KeyRing
+
+
+def test_rotate_rejects_empty_key(tmp_path):
+    ring = KeyRing(str(tmp_path / "audit.jsonl"))
+    with pytest.raises(ValueError):
+        ring.rotate(b"")
+
+
+def test_rotate_keeps_previous_key(tmp_path):
+    ring = KeyRing(str(tmp_path / "audit.jsonl"))
+    ring.rotate(b"k2")
+    assert ring.previous == b"k1"
+'''
+
+
+@pytest.fixture()
+def example_corpus(tmp_path):
+    write_shard(
+        tmp_path,
+        "python-0",
+        [
+            {"path": "pkg/keyring.py", "content": EXAMPLE_MODULE, "license": "MIT"},
+            {"path": "tests/test_keyring.py", "content": KEYRING_TEST, "license": "MIT"},
+        ],
+    )
+    return tmp_path
+
+
+def test_example_to_implementation_quotes_the_example(example_corpus):
+    rows = InstructionInduction(example_corpus, max_files=5).docstring_example_to_implementation()
+    assert rows
+    row = rows[0]
+    assert row["category"] == "induced_example_to_implementation"
+    assert "ring.rotate" in row["instruction"]
+    assert "yield" not in row["output"].split("def ")[0]
+    assert row["metadata"]["function"] == "rotate"
+    assert row["difficulty"] in {"beginner", "intermediate", "advanced", "expert"}
+
+
+def test_imports_to_module_lists_exact_imports(example_corpus):
+    rows = InstructionInduction(example_corpus, max_files=5).imports_to_module()
+    assert rows
+    row = rows[0]
+    assert row["category"] == "induced_imports_to_module"
+    for module in ("hmac", "json", "time", "hashlib"):
+        assert module in row["metadata"]["imports"]
+        assert module in row["instruction"]
+    assert row["output"].startswith('"""')
+
+
+def test_error_branches_to_tests_covers_each_handler(example_corpus):
+    rows = InstructionInduction(example_corpus, max_files=5).error_branches_to_tests()
+    assert rows
+    row = rows[0]
+    assert row["category"] == "induced_error_branches_to_tests"
+    assert ["OSError"] in [list(h) for h in row["metadata"]["handlers"]]
+    assert "OSError" in row["output"]
+    assert "pytest.raises" in row["output"]
+
+
+def test_contract_to_tests_mirrors_documented_promises(example_corpus):
+    rows = InstructionInduction(example_corpus, max_files=5).docstring_to_contract_tests()
+    assert rows
+    row = rows[0]
+    assert row["category"] == "induced_contract_to_tests"
+    assert any(p.startswith("Raises:") for p in row["metadata"]["promises"])
+    assert "ValueError" in row["instruction"]
+    assert "record must be" not in row["instruction"]
+
+
+def test_generate_reaches_at_least_eight_task_types(example_corpus):
+    rows = InstructionInduction(example_corpus, max_files=5).generate(count=12)
+    assert len({r["category"] for r in rows}) >= 8
+    stats = InstructionInduction(example_corpus, max_files=5).stats()
+    assert len(stats["shapes"]) >= 8

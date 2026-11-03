@@ -19,9 +19,12 @@ row is deterministic for a given seed and records its provenance.
 from __future__ import annotations
 
 import hashlib
+import math
 import random
 from dataclasses import dataclass, field
 from typing import Iterable
+
+from .repair_traces_extra import EXTRA_CURATED
 
 #: (id, task, buggy code, fixed code, failure output, diagnosis, rejected patch)
 CURATED: list[tuple[str, str, str, str, str, str, str]] = [
@@ -263,11 +266,12 @@ class RepairExample:
     diagnosis: str
     rejected: str
     source: str = "curated"
+    language: str = "python"
 
     def prompt(self) -> str:
         return (
             f"Task: {self.task}\n\n"
-            f"Current code:\n```python\n{self.buggy}```\n\n"
+            f"Current code:\n```{self.language}\n{self.buggy}```\n\n"
             f"Test output:\n{self.failure}\n\n"
             "Make the smallest change that makes the behaviour correct. Do not weaken or delete tests."
         )
@@ -275,7 +279,7 @@ class RepairExample:
     def answer(self) -> str:
         return (
             f"Diagnosis: {self.diagnosis}\n\n"
-            f"```python\n{self.fixed}```\n\n"
+            f"```{self.language}\n{self.fixed}```\n\n"
             "Verify by re-running the failing test, then the full suite."
         )
 
@@ -287,6 +291,7 @@ class RepairExample:
             "metadata": {
                 "source": self.source,
                 "kind": "repair",
+                "language": self.language,
                 "has_test_evidence": True,
                 "verified": self.source == "recorded",
                 "verified_by": "test-suite" if self.source == "recorded" else "curated-pair",
@@ -298,10 +303,11 @@ class RepairExample:
             "id": self.bug_id,
             "prompt": self.prompt(),
             "chosen": self.answer(),
-            "rejected": f"```python\n{self.rejected}```",
+            "rejected": f"```{self.language}\n{self.rejected}```",
             "metadata": {
                 "source": self.source,
                 "kind": "repair-dpo",
+                "language": self.language,
                 "rejected_reason": "plausible patch that still fails the test (or weakens it)",
             },
         }
@@ -316,19 +322,34 @@ class RepairTraceGenerator:
     examples: list[RepairExample] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        if self.include_curated and not self.examples:
-            for bug_id, task, buggy, fixed, failure, diagnosis, rejected in CURATED:
-                self.examples.append(
-                    RepairExample(
-                        bug_id=bug_id,
-                        task=task,
-                        buggy=buggy,
-                        fixed=fixed,
-                        failure=failure,
-                        diagnosis=diagnosis,
-                        rejected=rejected,
-                    )
+        if not self.include_curated or self.examples:
+            return
+        for bug_id, task, buggy, fixed, failure, diagnosis, rejected in CURATED:
+            self.examples.append(
+                RepairExample(
+                    bug_id=bug_id,
+                    task=task,
+                    buggy=buggy,
+                    fixed=fixed,
+                    failure=failure,
+                    diagnosis=diagnosis,
+                    rejected=rejected,
+                    language="python",
                 )
+            )
+        for bug_id, language, task, buggy, fixed, failure, diagnosis, rejected in EXTRA_CURATED:
+            self.examples.append(
+                RepairExample(
+                    bug_id=bug_id,
+                    task=task,
+                    buggy=buggy,
+                    fixed=fixed,
+                    failure=failure,
+                    diagnosis=diagnosis,
+                    rejected=rejected,
+                    language=language,
+                )
+            )
 
     def add_trace(self, trace: dict, *, bug_id: str | None = None) -> int:
         """Record a real VerificationLoop transcript (skips runs that never went green)."""
@@ -368,16 +389,24 @@ class RepairTraceGenerator:
 
         rows = self.to_sft_rows()
         rows.sort(key=lambda row: hashlib.sha256(row["id"].encode()).hexdigest())
-        cut = max(1, int(len(rows) * heldout_ratio)) if len(rows) > 3 else 0
+        # ceil, so a 15% request never silently rounds down below the contract
+        cut = (
+            max(1, math.ceil(len(rows) * heldout_ratio))
+            if len(rows) > 3
+            else 0
+        )
         return rows[cut:], rows[:cut]
 
     def stats(self) -> dict:
         sources: dict[str, int] = {}
+        languages: dict[str, int] = {}
         for example in self.examples:
             sources[example.source] = sources.get(example.source, 0) + 1
+            languages[example.language] = languages.get(example.language, 0) + 1
         return {
             "examples": len(self.examples),
             "by_source": sources,
+            "by_language": languages,
             "sft_rows": len(self.to_sft_rows()),
             "dpo_rows": len(self.to_dpo_rows()),
             "bug_ids": [example.bug_id for example in self.examples],

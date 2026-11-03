@@ -1,14 +1,15 @@
-"""
-Main Dataset Generator - Orchestrates Creation of the Full Training Dataset.
+"""Supplementary Synthetic Slice Generator (minority slices & unit-test fixtures).
 
-Generates a massive, diverse code dataset from scratch using:
-1. Code template engine (multi-language code samples)
-2. Instruction-following data
-3. Combinatorial expansion for scale
-4. Fill-in-the-middle (FIM) training data
-5. Repository-level context data
+IMPORTANT — Corpus v1 Production Note:
+Pretraining and midtraining corpora are NOT generated from templates. Production
+training shards are built by ``scripts/build_corpus_v1.py`` and
+``dataset/production_processor.py``, where 73% of tokens come from real
+permissively licensed source code, issues, PRs, test suites, and technical
+documentation (fetched via ``scripts/fetch_real_corpus.py`` /
+``scripts/build_real_dataset.py``).
 
-Target: 300B+ tokens for training a 20B parameter model.
+This module provides supplementary synthetic code, FIM, and instruction helpers
+used only as bounded minority slices alongside real-code instruction induction.
 """
 
 import json
@@ -18,6 +19,7 @@ import random
 from pathlib import Path
 from typing import Any
 
+from .code_pattern_catalog import COMPLEXITIES, DOMAINS
 from .code_templates import (
     CodeSample,
     PythonCodeGenerator,
@@ -773,9 +775,9 @@ class DatasetGenerator:
 
         documents = []
 
-        complexities = ["beginner", "intermediate", "advanced", "expert"]
+        complexities = list(COMPLEXITIES)
 
-        domains = ["algorithms", "data", "web", "systems", "testing"]
+        domains = list(DOMAINS)
 
         for i in range(target):
 
@@ -843,7 +845,7 @@ class DatasetGenerator:
 
         complexities = ["intermediate", "advanced", "expert"]
 
-        domains = ["algorithms", "data", "web", "systems"]
+        domains = list(DOMAINS)
 
         generated = 0
 

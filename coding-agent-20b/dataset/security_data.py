@@ -478,6 +478,49 @@ SECURITY_SAMPLES: list[SecuritySample] = [
 ]
 
 
+from .security_data_extra import ADDITIONAL_SECURITY_SAMPLES  # noqa: E402  (import cycle guard)
+from .security_data_extra_v2 import ADDITIONAL_SECURITY_SAMPLES_V2  # noqa: E402
+
+#: Corpus v1 expands the curated set to 100+ paired samples covering 20+ CWE
+#: classes across Python, JavaScript, TypeScript, Go, Rust, Java, SQL, Shell,
+#: PHP, C#, Ruby, Kubernetes YAML, and Dockerfiles.
+SECURITY_SAMPLES = [*SECURITY_SAMPLES, *ADDITIONAL_SECURITY_SAMPLES, *ADDITIONAL_SECURITY_SAMPLES_V2]
+
+#: Samples whose defect is design-level (trust boundary, missing control) rather
+#: than a recognisable sink. The regex/AST scanner cannot see them; the
+#: benchmark still scores them through the required-safe-pattern check.
+STATIC_UNDETECTABLE: frozenset[str] = frozenset(
+    {
+        "ssrf",
+        "ssrf-allowlist",
+        "js-prototype-pollution-merge",
+        "cors-credential-wildcard",
+        "csrf-state-change",
+        "header-injection-crlf",
+        "integrity-unsigned-update",
+        "redirect-open",
+        "secret-management-env",
+        "log-injection-newlines",
+        "nonce-reuse-aead",
+        "shell-word-splitting",
+        "shell-env-secret-leak",
+        "php-sql-concat",
+        "ruby-yaml-load",
+        "k8s-secret-in-env-literal",
+        "java-implicit-oauth",
+        "go-sql-concat",
+        "go-goroutine-unbounded",
+        "rust-path-traversal",
+        "rust-hardcoded-secret",
+        "ts-unsafe-any-cast",
+        "python-assert-authorization",
+        "python-csv-formula-injection",
+        "python-request-timeout",
+        "python-insecure-cookie",
+    }
+)
+
+
 def _split_of(sample_id: str) -> str:
     """Deterministic train/held-out split (~20% held out), stable across runs."""
     import hashlib

@@ -1,14 +1,14 @@
-"""
-Generate and Process the Complete Training Dataset.
+"""Supplementary Synthetic Fixture Generator (deprecated as primary corpus builder).
 
-This script:
-1. Generates millions of code samples, instruction pairs, and FIM data
-2. Tokenizes everything with the code-optimized BPE tokenizer
-3. Splits into train/val/test
-4. Creates binary shards for efficient training
+WARNING — Do NOT use this script to build production 3B or 20B pretraining shards.
+Production Corpus v1 shards are built from real permissively licensed code plus
+verified minority synthetic slices via:
 
-Usage:
-    python scripts/generate_dataset.py --output_dir data/processed --target_samples 500000
+    python scripts/fetch_real_corpus.py --output_dir data/corpus_v1/real_jsonl --heldout_dir data/corpus_v1/heldout
+    python scripts/build_corpus_v1.py --real_dir data/corpus_v1/real_jsonl --heldout_dir data/corpus_v1/heldout --output_dir data/corpus_v1/shards_3b
+
+This script remains available only for tiny offline CI smoke fixtures and
+supplementary synthetic slice inspection.
 """
 
 import argparse
@@ -38,15 +38,16 @@ def setup_logging():
 def generate_sample_corpus_for_tokenizer(num_samples: int = 50000) -> list:
     """Generate a sample corpus for training the BPE tokenizer."""
 
+    from dataset.code_pattern_catalog import COMPLEXITIES, DOMAINS
     from dataset.code_templates import PythonCodeGenerator
 
     gen = PythonCodeGenerator()
 
     texts = []
 
-    complexities = ["beginner", "intermediate", "advanced", "expert"]
+    complexities = list(COMPLEXITIES)
 
-    domains = ["algorithms", "data", "web", "systems", "testing"]
+    domains = list(DOMAINS)
 
     for i in range(num_samples):
 
