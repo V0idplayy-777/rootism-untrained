@@ -49,15 +49,6 @@ import torch
 import torch.nn.functional as F
 from torch.utils.checkpoint import checkpoint
 
-# ---------------------------------------------------------------------------
-# Shared RoPE tables
-# ---------------------------------------------------------------------------
-# The original implementation built a separate (cos, sin) pair *per layer*.
-# With 60 layers x 8192 positions x 128 dims x 2 tables x 4 bytes that is
-# ~503 MB of duplicated, immutable VRAM; at 32768 positions it is ~2.0 GB.
-# Every layer uses an identical table, so one cached pair is sufficient.
-# Tables are also stored in the compute dtype, which removes a full [B,S,D]
-# cast in every layer on every forward.
 
 _ROPE_TABLES: dict[tuple, tuple[torch.Tensor, torch.Tensor]] = {}
 _ROPE_TABLE_LIMIT = 12
@@ -96,9 +87,6 @@ def clear_rope_tables() -> None:
     _ROPE_TABLES.clear()
 
 
-# ---------------------------------------------------------------------------
-# GQA-aware SDPA
-# ---------------------------------------------------------------------------
 @lru_cache(maxsize=1)
 def sdpa_supports_gqa() -> bool:
     """PyTorch >= 2.5 accepts ``enable_gqa`` in scaled_dot_product_attention."""
@@ -151,7 +139,6 @@ def sdpa(
                 enable_gqa=True,
             )
         except (TypeError, RuntimeError):
-            # Some backend/mask combinations do not implement native GQA.
             pass
     if num_kv_groups > 1:
         key = repeat_kv(key, num_kv_groups)
@@ -166,9 +153,6 @@ def sdpa(
     )
 
 
-# ---------------------------------------------------------------------------
-# Chunked (fused) linear cross-entropy
-# ---------------------------------------------------------------------------
 def resolve_chunk_tokens(
     num_tokens: int,
     vocab_size: int,
@@ -205,14 +189,6 @@ def _chunk_cross_entropy(
     reuse-distance cache keeps the head gathered across all chunks of a step.
     """
     logits = lm_head(hidden_chunk)
-    # Reproduce F.cross_entropy(logits, labels, reduction='mean') *exactly*:
-    #   log_softmax in the logits dtype (PyTorch uses fp32 opmath internally
-    #   but rounds the result back to bf16) -> nll_loss -> divide by N.
-    # We only widen the *nll accumulation* to fp32 and divide by N outside,
-    # which removes the bf16 rounding of the final scalar.  Because
-    # log_softmax_backward consumes the same rounded bf16 log_probs, the
-    # gradient w.r.t. logits (and therefore w.r.t. hidden states and the LM
-    # head weights) is BITWISE IDENTICAL to the reference CE.
     log_probs = F.log_softmax(logits, dim=-1)
     return F.nll_loss(
         log_probs.float(),
@@ -261,11 +237,7 @@ def fused_linear_cross_entropy(
         return hidden_states.sum() * 0.0
 
     vocab_size = lm_head.weight.shape[0]
-    shifted_labels = labels[:, 1:]  # view: no big copy
-    # A GPU tensor, not a Python int: no device synchronisation.  CE's mean
-    # reduction divides by the number of non-ignored targets; we do the same.
-    # No clamp: when every target is ignored F.cross_entropy returns NaN and
-    # so do we (silently returning 0 would hide a broken data batch).
+    shifted_labels = labels[:, 1:]
     normalizer = (shifted_labels != ignore_index).sum().to(torch.float32)
     chunk = resolve_chunk_tokens(
         batch * (seq_len - 1),
@@ -289,20 +261,12 @@ def fused_linear_cross_entropy(
                     normalizer,
                     ignore_index,
                     use_reentrant=False,
-                    preserve_rng_state=False,  # no RNG-based ops in a CE chunk
+                    preserve_rng_state=False,
                 )
             )
-    # Sum in fp32 (matching CE's opmath accumulation) and return in the
-    # logits dtype, exactly like F.cross_entropy does.  This makes the
-    # reported loss bitwise-identical to the reference AND keeps the
-    # gradients bitwise-identical, while the intermediate full [B,S,V]
-    # tensor is still never allocated.
     return torch.stack([term.float() for term in terms]).sum().to(hidden_states.dtype)
 
 
-# ---------------------------------------------------------------------------
-# Analytic accounting (used by the benchmark/report, not by training)
-# ---------------------------------------------------------------------------
 def logits_activation_bytes(
     batch: int,
     seq_len: int,
@@ -320,14 +284,10 @@ def logits_activation_bytes(
     """
     tokens = max(batch * (seq_len - 1), 0)
     if not fused:
-        # bf16 logits + bf16 contiguous shift + bf16 log-softmax + bf16 grad
-        # for both logits and shift copy.
         return tokens * vocab_size * bytes_per_element * 5
     chunk = resolve_chunk_tokens(
         tokens, vocab_size, bytes_per_element, chunk_tokens, budget_bytes
     )
-    # one chunk's bf16 logits + fp32 logits + fp32 log-softmax + fp32 grad,
-    # plus a bounded fp32 scalar chain
     return min(tokens, chunk) * vocab_size * (bytes_per_element + 12) + 64 * 1024
 
 

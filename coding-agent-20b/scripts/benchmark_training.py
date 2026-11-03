@@ -52,11 +52,6 @@ from training.optimizations import (  # noqa: E402
     zero3_state_bytes_per_gpu,
 )
 
-# Explicit, editable hardware profiles.  Sources: NVIDIA A100 datasheet and
-# published spec tables -- 40GB is HBM2 @1,555 GB/s, 80GB SXM is HBM2e
-# @2,039 GB/s, 80GB PCIe is HBM2e @1,935 GB/s.  All three have the SAME
-# 312 TFLOP/s dense BF16 tensor throughput and identical CUDA/Tensor cores.
-# See https://www.nvidia.com/content/dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf
 GiB = 1024 ** 3
 GPU_PROFILES: dict[str, dict] = {
     "a100-40gb": {
@@ -79,21 +74,18 @@ GPU_PROFILES: dict[str, dict] = {
     },
 }
 DEFAULT_GPU = "a100-80gb"
-GPU_SYNC_SECONDS = 20e-6  # conservative cost of one device->host sync
-PCIE_BYTES_PER_SECOND = 25e9  # ~effective PCIe 4.0 x16 per GPU, for offload
-VRAM_SAFETY_FACTOR = 0.85  # leave room for fragmentation / CUDA context
-# ``6*N*T / FLOPS`` assumes 100% model-FLOPs utilisation.  Real large-model
-# training is closer to 40-50%; we report that more realistic figure too.
+GPU_SYNC_SECONDS = 20e-6
+PCIE_BYTES_PER_SECOND = 25e9
+VRAM_SAFETY_FACTOR = 0.85
 REALISTIC_MFU = 0.45
 
-# Scaled-down but structurally identical model: same ops, real vocab scale.
 BENCH_VOCAB = 32768
 BENCH_HIDDEN = 128
 BENCH_INTERMEDIATE = 256
 BENCH_LAYERS = 2
 BENCH_SEQ = 256
 BENCH_BATCH = 2
-BENCH_CHUNK = 128  # == auto chunk at the real vocab 128256 / 192 MiB budget
+BENCH_CHUNK = 128
 
 
 def bench_config(mode: str) -> CodingAgentConfig:
@@ -158,8 +150,6 @@ def mlp_microbenchmark(iters: int = 20) -> dict:
     """
     from model.model import SwiGLUMLP
 
-    # Identical weights, identical MoE path; the ONLY difference is
-    # fuse_mlp_down_projection (two down_proj GEMMs -> one).
     cfg = bench_config("optimized")
     cfg.fused_linear_cross_entropy = False
     reference_mlp = SwiGLUMLP(cfg, use_moe=True, num_experts=4, top_k=2)
@@ -209,7 +199,6 @@ def worker(mode: str, iters: int) -> dict:
     labels = ids.clone()
 
     saved = saved_bytes(model, ids, labels)
-    # warm up outside the timed region
     step_times(model, ids, labels, 2)
     times = step_times(model, ids, labels, iters)
     del model
@@ -261,20 +250,14 @@ def projection(name: str, cfg: CodingAgentConfig, micro_batch: int, seq_len: int
         hidden_size=cfg.hidden_size,
     )
     tokens = micro_batch * seq_len
-    # HBM traffic for the logits path: write logits, write the contiguous shift
-    # copy, write log-softmax, read for backward, write grad-logits, read grad.
     traffic_before = report["logits_before_bytes"] * 6
     traffic_after = report["logits_after_bytes"] * 6
     traffic_saved = max(traffic_before - traffic_after, 0)
     ce_time_saved = traffic_saved / hbm
 
-    # Fused down-projection removes one [tokens, intermediate] x
-    # [intermediate, hidden] GEMM (fwd + 2 backward GEMMs) per layer.
     gemm_flops = 6 * tokens * cfg.intermediate_size * cfg.hidden_size * cfg.num_hidden_layers
     gemm_time_saved = gemm_flops / flops
 
-    # Sync-free MoE: reference does `if not token_mask.any()` once per expert
-    # per layer (a device->host sync), removed in the fast path.
     syncs_removed = 4 * cfg.num_hidden_layers
     sync_time_saved = syncs_removed * GPU_SYNC_SECONDS
 
@@ -282,16 +265,13 @@ def projection(name: str, cfg: CodingAgentConfig, micro_batch: int, seq_len: int
     estimated_saving = ce_time_saved + gemm_time_saved + sync_time_saved
     optimized_step_seconds = max(baseline_step_seconds - estimated_saving, 1e-9)
     state = report["state_bytes_per_gpu"]
-    # ZeRO-3 all-gather bucket (2e8 bf16 elements => 400 MB) stays resident.
     gather_bucket_bytes = 2 * int(2e8) * 2
-    # Every micro-batch in the whole run saves the same time.
     global_tokens_per_micro_batch = tokens * world_size
     total_micro_batches = total_tokens / global_tokens_per_micro_batch
     total_optimizer_steps = total_tokens / (global_batch_size * seq_len)
 
-    # ---- VRAM feasibility on this specific A100 variant ----
     vram_budget = int(vram * VRAM_SAFETY_FACTOR)
-    gathered = int(2 * params / world_size)  # one layer's gathered bf16 params
+    gathered = int(2 * params / world_size)
     no_offload_need = state + report["activations_after_bytes"] + gathered
     with_offload_need = report["activations_after_bytes"] + gather_bucket_bytes
     offload_needed = no_offload_need > vram_budget
@@ -299,12 +279,8 @@ def projection(name: str, cfg: CodingAgentConfig, micro_batch: int, seq_len: int
     fits = final_need <= vram_budget
     baseline_need = state + report["activations_before_bytes"] + gathered
 
-    # ---- ZeRO-Infinity CPU-offload overhead (conservative upper bound) ----
     # The shipped recipes hard-code offload_optimizer/offload_param = true.
-    # Our "auto" policy disables it when states+activations fit in VRAM.
     # Model: read + write of the optimizer state once per optimizer step over
-    # PCIe, fully serialised (DeepSpeed actually overlaps it, so this is an
-    # upper bound).
     offload_seconds_per_step = 2 * state / PCIE_BYTES_PER_SECOND
     baseline_offload_hours = total_optimizer_steps * offload_seconds_per_step / 3600
     optimized_offload_hours = baseline_offload_hours if offload_needed else 0.0
@@ -322,9 +298,6 @@ def projection(name: str, cfg: CodingAgentConfig, micro_batch: int, seq_len: int
             "vram_budget_bytes": vram_budget,
             "vram_final_need_bytes": final_need,
             "vram_shortfall_bytes": max(final_need - vram_budget, 0),
-            # Halving micro_batch and doubling grad accumulation keeps the
-            # effective global batch (and therefore the learning problem)
-            # identical while halving per-GPU activations.
             "vram_with_half_micro_batch_bytes": (
                 report["activations_after_bytes"] // 2 + gather_bucket_bytes
             ),
@@ -352,8 +325,6 @@ def projection(name: str, cfg: CodingAgentConfig, micro_batch: int, seq_len: int
             "total_tokens": total_tokens,
             "global_tokens_per_micro_batch": global_tokens_per_micro_batch,
             "total_micro_batches": total_micro_batches,
-            # Wall-clock on the whole 8-GPU node (all ranks run in parallel),
-            # NOT GPU-hours.  Multiply by world_size for GPU-hours.
             "estimated_baseline_full_run_hours": total_micro_batches * baseline_step_seconds / 3600,
             "estimated_optimized_full_run_hours": (
                 total_micro_batches * max(baseline_step_seconds - estimated_saving, 1e-9) / 3600
@@ -408,8 +379,6 @@ def main() -> int:
     print("=" * 84)
     print("  TRAINING OPTIMISATION BENCHMARK (measured + projected)")
     print("=" * 84)
-    # Interleave baseline/optimised runs to cancel out machine-load drift,
-    # then take the median of each mode's medians.
     rounds = 3
     baselines, optimised = [], []
     for _ in range(rounds):
@@ -528,7 +497,6 @@ def main() -> int:
                     "offload overhead is a conservative upper bound assuming zero overlap",
         },
         "measured": measured,
-        # Default (A100 80GB SXM) kept for backwards compatibility.
         "projected": projections_by_gpu.get(DEFAULT_GPU, next(iter(projections_by_gpu.values()))),
         "projected_by_gpu": projections_by_gpu,
     }

@@ -301,10 +301,6 @@ def initialize_deepspeed(
 
     ds_config["train_batch_size"] = train_batch_size
 
-    # ZeRO-Infinity's CPU offload is by far the slowest part of a step.  Once
-    # the logits activation peak is gone, small models frequently fit without
-    # it.  Decide from measured free VRAM: identical states, different address
-    # space only.
     off_optimizer, off_param, offload_reason = resolve_offload(
         config,
         world_size,
@@ -335,8 +331,6 @@ def initialize_deepspeed(
         )
 
     # Exactly ONE cosine schedule: the loop sets lr on optimizer.param_groups
-    # at each optimiser step.  Leaving DeepSpeed's WarmupDecayLR in the config
-    # would step a second, conflicting schedule on every micro-batch.
     ds_config.pop("scheduler", None)
 
     precision = training_config.get("precision", "bf16")
@@ -396,10 +390,6 @@ def evaluate(
 
         labels = batch["labels"].to(device)
 
-        # Call the *engine*, not ``model.module``: ZeRO-3 installs its
-        # parameter-gather hooks on the engine, so bypassing it leaves the
-        # weights partitioned.  Accumulate on-device and synchronise once,
-        # instead of one .item() (GPU->CPU stall) per eval batch.
         output = model(input_ids=input_ids, labels=labels)
 
         loss = output.loss if hasattr(output, "loss") else output[0]
@@ -752,8 +742,6 @@ def train(args: argparse.Namespace):
 
     max_steps = args.max_steps or total_steps
 
-    # Detached on-device loss window: no GPU->CPU synchronisation on the hot
-    # path.  The reference loop called loss.item() on *every* micro-batch.
     loss_window: list[torch.Tensor] = []
 
     while state.step < max_steps:
@@ -790,12 +778,6 @@ def train(args: argparse.Namespace):
 
             micro_losses.append(loss.detach().float())
 
-            # DeepSpeed divides the loss by gradient_accumulation_steps in
-            # backward() itself.  The reference loop divided it *again* and
-            # only called step() at the boundary, which silently shrank the
-            # effective LR by the accumulation factor.  One backward + one
-            # step per micro-batch is DeepSpeed's documented contract and is
-            # exactly what the well-tested 3B planner does.
             model_engine.backward(loss)
 
             model_engine.step()
@@ -822,7 +804,6 @@ def train(args: argparse.Namespace):
 
             state.throughput_history.append(throughput)
 
-            # ONE synchronisation per logging interval, not one per micro-batch.
             loss_value = step_loss.item()
 
             avg_loss = torch.stack(loss_window[-100:]).mean().item()

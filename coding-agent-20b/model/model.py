@@ -63,8 +63,6 @@ class RotaryEmbedding(nn.Module):
 
         self.fast_kernels = fast_kernels
 
-        # Largest position that generation may ask for (KV-cache budget).
-        # Only consulted when explicit ``position_ids`` are supplied.
         self.max_seq_len = max(max_position_embeddings, cache_seq_len)
 
         inv_freq = 1.0 / (theta ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
@@ -100,18 +98,10 @@ class RotaryEmbedding(nn.Module):
 
         self.register_buffer("inv_freq", inv_freq, persistent=False)
 
-        # ``register_buffer`` makes Module.to(dtype) round inv_freq down to
-        # bf16, which would permanently change the RoPE wavelengths.  Keep a
-        # plain (unregistered) fp32 copy for every fast-path cache rebuild;
-        # Module._apply never touches plain attributes.  This preserves the
-        # original fp32 frequencies exactly under mixed-precision training.
         self._inv_freq_fp32 = inv_freq.detach().clone()
 
         if fast_kernels:
 
-            # One immutable table shared by every layer.  Plain attributes
-            # (not buffers) so Module._apply / .to() cannot fan the shared
-            # tensor out into one copy per layer.
             self.cos_cached, self.sin_cached = rope_tables(
                 self._inv_freq_fp32,
                 max_position_embeddings,
@@ -170,21 +160,14 @@ class RotaryEmbedding(nn.Module):
             cos, sin tensors of shape [batch, seq_len, 1, dim]
         """
 
-        # ``x`` is [B, heads, seq, head_dim]; the sequence dimension is -2.
-        # The legacy code used shape[1] here, which is the head count -- it
-        # only worked because CodingAgentModel.forward always supplied an
-        # explicit position_ids.  Using -2 is correct for both layouts.
         seq_len = x.shape[-2]
 
         if not self.fast_kernels:
 
-            required = seq_len  # original behaviour (cache built at init)
+            required = seq_len
 
         elif position_ids is not None:
 
-            # Explicit (possibly KV-cache-offset) positions can address any
-            # position in the declared context window, so make sure the
-            # shared table covers it.
             required = max(seq_len, self.max_seq_len)
 
         else:
@@ -199,8 +182,6 @@ class RotaryEmbedding(nn.Module):
                 or self.cos_cached.device != x.device
             ):
 
-                # Tables are already in the compute dtype, so the old
-                # per-layer ``cos.to(x.dtype)`` copy disappears entirely.
                 self._build_cache(required, x.dtype, x.device)
 
         elif required > self.cos_cached.shape[0]:
@@ -545,17 +526,12 @@ class SwiGLUMLP(nn.Module):
         up = self.up_proj(x)
 
         if not self.fast_kernels:
-            # Reference path (byte-for-byte the original implementation).
             mlp_output = self.down_proj(gate * up)
             if self.use_moe:
                 moe_output = self.down_proj(self.moe(x))
                 return mlp_output + 0.5 * moe_output
             return mlp_output
 
-        # down_proj is a bias-free linear map, so W(a+b) = W a + W b.  The
-        # reference path ran that GEMM twice (once for SwiGLU, once for MoE)
-        # and kept both [B,S,H] results.  One GEMM computes the identical
-        # function; no parameter, activation value or gradient is dropped.
         fused = gate * up
         if self.use_moe:
             fused.add_(self.moe(x), alpha=0.5)
@@ -622,7 +598,6 @@ class MoEExperts(nn.Module):
         )
 
         if not self.fast_kernels:
-            # Reference path (byte-for-byte the original implementation).
             for expert_idx in range(self.num_experts):
                 routing_mask = indices_flat == expert_idx
                 token_mask = routing_mask.any(dim=-1)
@@ -637,20 +612,12 @@ class MoEExperts(nn.Module):
 
             return expert_outputs.view(batch_size, seq_len, self.intermediate_size)
 
-        # Same sparse routing, same expert outputs and same weighting, but:
-        #  * the [T, top_k, num_experts] routing mask is built once instead of
-        #    once per expert;
-        #  * the per-expert ``if not token_mask.any():`` is gone.  On CUDA that
-        #    `if` forces a device->host synchronisation for *every* expert of
-        #    *every* layer (240 per step on the 20B model).  Empty routed sets
-        #    are handled correctly by indexing / Linear, so skipping the check
-        #    changes nothing numerically.
         expert_ids = torch.arange(self.num_experts, device=x.device)
-        is_selected = indices_flat.unsqueeze(-1) == expert_ids  # [T, k, E]
-        token_mask = is_selected.any(dim=1)  # [T, E]
+        is_selected = indices_flat.unsqueeze(-1) == expert_ids
+        token_mask = is_selected.any(dim=1)
         expert_weights_all = (weights_flat.unsqueeze(-1) * is_selected).sum(
             dim=1
-        )  # [T, E]
+        )
 
         for expert_idx in range(self.num_experts):
             routing = token_mask[:, expert_idx]
@@ -943,12 +910,6 @@ class CodingAgentModel(nn.Module):
 
             hidden_states = self.embed_tokens(input_ids)
 
-        # During training there is no KV cache, so the positions are always
-        # 0..S-1.  Building a [B, S] position_ids tensor makes RoPE gather a
-        # [B, S, D] cos/sin copy in EVERY layer; passing None lets RoPE use a
-        # zero-copy view of the shared table instead.  Identical values.
-        # With a KV cache (generation) or explicit position_ids we keep the
-        # original gather path so packed / offset positions stay exact.
         needs_position_ids = (
             position_ids is None
             and (
@@ -1032,10 +993,6 @@ class CodingAgentModel(nn.Module):
 
         loss = None
 
-        # Chunked CE is used whenever a loss is requested on a grad-enabled
-        # path (training AND eval -- the 20B eval batch is also far too large
-        # to materialise [B,S,V] logits).  Introspection / verification
-        # callers run under torch.no_grad() and still receive full logits.
         use_fused_loss = (
             labels is not None
             and torch.is_grad_enabled()
@@ -1045,10 +1002,6 @@ class CodingAgentModel(nn.Module):
 
         if use_fused_loss:
 
-            # Identical loss, but the [B, S, V] logits tensor (and its
-            # contiguous shift copy, log-softmax workspace and gradient) is
-            # never allocated.  This is the single biggest VRAM and
-            # memory-bandwidth saving in training.
             loss = fused_linear_cross_entropy(
                 hidden_states,
                 labels,

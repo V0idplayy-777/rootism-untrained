@@ -512,10 +512,6 @@ def train_3b(args, config: dict) -> PretrainState:
     plan = build_training_plan(config, world_size, getattr(args, "max_steps", None))
     model_config = build_3b_model_config(config)
 
-    # CPU offload is the most expensive ZeRO-Infinity feature.  Now that the
-    # logits activation peak is gone, the 3B state often fits on the GPU; drop
-    # offload only when a measured VRAM budget says it is safe.  This changes
-    # *where* states live, never their values or the optimiser maths.
     off_optimizer, off_param, offload_reason = resolve_offload(
         config,
         world_size,

@@ -29,8 +29,6 @@ from model.fast_ops import (
     resolve_chunk_tokens,
 )
 
-# Defaults are applied to ANY recipe, so both the 3B and 20B training entry
-# points get the fast path even if a user supplies a custom config.
 DEFAULT_OPTIMIZATIONS: dict[str, Any] = {
     "fast_kernels": True,
     "share_rope_tables": True,
@@ -41,7 +39,6 @@ DEFAULT_OPTIMIZATIONS: dict[str, Any] = {
     "fused_linear_cross_entropy": True,
     "loss_chunk_tokens": 0,
     "loss_chunk_budget_bytes": 192 * 1024 * 1024,
-    # DeepSpeed hygiene (no effect on the maths):
     "disable_flops_profiler": True,
     "disable_cpu_activation_checkpointing": True,
     "preserve_bf16_communication": True,
@@ -109,9 +106,6 @@ def tune_deepspeed_config(ds_config: dict, recipe: dict) -> dict:
     return result
 
 
-# ---------------------------------------------------------------------------
-# VRAM-aware offload choice
-# ---------------------------------------------------------------------------
 def model_parameter_count(model_config) -> int:
     """Exact parameter count of ``CodingAgentModel(model_config)``.
 
@@ -129,7 +123,7 @@ def model_parameter_count(model_config) -> int:
     vocab = model_config.vocab_size
     attention = hidden * heads * head_dim + 2 * hidden * kv_heads * head_dim + heads * head_dim * hidden
     mlp = 3 * hidden * intermediate
-    moe = 4 * hidden * intermediate + hidden * 4 + 4  # experts + router (bias)
+    moe = 4 * hidden * intermediate + hidden * 4 + 4
     per_layer = attention + mlp + moe + 2 * hidden
     return 2 * vocab * hidden + layers * per_layer + hidden
 
@@ -160,8 +154,8 @@ def activation_bytes_per_gpu(
     With gradient checkpointing, live activations are one layer's boundary
     tensors plus a bounded recompute window; the logits/CE tensors dominate.
     """
-    boundary = micro_batch * seq_len * hidden_size * 2 * layers  # saved inputs
-    recompute = micro_batch * seq_len * hidden_size * 2 * 4  # one layer window
+    boundary = micro_batch * seq_len * hidden_size * 2 * layers
+    recompute = micro_batch * seq_len * hidden_size * 2 * 4
     logits = logits_activation_bytes(
         micro_batch,
         seq_len,
@@ -226,7 +220,6 @@ def resolve_offload(
         loss_chunk_tokens=settings["loss_chunk_tokens"],
         budget_bytes=settings["loss_chunk_budget_bytes"],
     )
-    # Working set: gathered ZeRO-3 params for one layer + comm buckets.
     gathered = int(2 * params / max(world_size, 1))
     need = states + activations + gathered
     budget = int(free_vram_bytes * safety_factor)
@@ -245,9 +238,6 @@ def resolve_offload(
     )
 
 
-# ---------------------------------------------------------------------------
-# Reporting helpers
-# ---------------------------------------------------------------------------
 def savings_report(
     *,
     name: str,

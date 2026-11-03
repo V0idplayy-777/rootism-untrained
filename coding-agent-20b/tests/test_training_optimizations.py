@@ -61,9 +61,6 @@ def _tiny(**flags):
     return cfg
 
 
-# ---------------------------------------------------------------------------
-# Quality gate
-# ---------------------------------------------------------------------------
 def test_quality_gate_passes():
     gate = _load_gate()
     ok, checks = gate.run_all(quick=True)
@@ -81,8 +78,6 @@ def test_architecture_and_precision_not_reduced():
         summary = apply_model_optimizations(cfg, {})
         assert summary["fused_linear_cross_entropy"] is True
         assert cfg.mixed_precision == "bf16"
-    # The fast path must not introduce quantisation or reduced-precision
-    # flags.  Inspect the AST (ignoring docstrings) so prose cannot trip it.
     import ast
 
     tree = ast.parse((ROOT / "model" / "fast_ops.py").read_text())
@@ -97,9 +92,6 @@ def test_architecture_and_precision_not_reduced():
         )
 
 
-# ---------------------------------------------------------------------------
-# Kernel-level exactness
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("dtype", [torch.float32, torch.bfloat16])
 @pytest.mark.parametrize("chunk", [1, 3, 8, 64])
 def test_fused_ce_matches_full_logits_cross_entropy(dtype, chunk):
@@ -109,7 +101,7 @@ def test_fused_ce_matches_full_logits_cross_entropy(dtype, chunk):
     hidden_states = torch.randn(batch, seq, hidden, dtype=dtype, requires_grad=True)
     ref_hidden = hidden_states.detach().clone().requires_grad_(True)
     labels = torch.randint(0, vocab, (batch, seq))
-    labels[0, :3] = -100  # prompt masking / padding
+    labels[0, :3] = -100
 
     full_logits = head(ref_hidden)[..., :-1, :].contiguous()
     reference = torch.nn.functional.cross_entropy(
@@ -121,8 +113,6 @@ def test_fused_ce_matches_full_logits_cross_entropy(dtype, chunk):
     assert abs(reference.item() - fused.item()) <= 0.04
     reference.backward()
     fused.backward()
-    # CE's own bf16 log-softmax rounding is reproduced exactly; only the
-    # chunked GEMM accumulation order can differ (fp32: ~1e-7).
     rel = (
         (ref_hidden.grad.float() - hidden_states.grad.float()).pow(2).sum()
         / ref_hidden.grad.float().pow(2).sum()
@@ -205,7 +195,7 @@ def test_long_context_beyond_native_max_position_matches_reference():
     fast = CodingAgentModel(fast_cfg)
     fast.load_state_dict(state)
 
-    seq = 96  # 3x the declared native context
+    seq = 96
     ids = torch.randint(0, 71, (2, seq))
     labels = ids.clone()
     pos = torch.arange(seq).unsqueeze(0).expand(2, -1).contiguous()
@@ -215,7 +205,6 @@ def test_long_context_beyond_native_max_position_matches_reference():
     assert torch.allclose(a.logits, b.logits, atol=1e-5, rtol=1e-5)
     assert abs(a.loss.item() - b.loss.item()) < 1e-5
 
-    # Training omits position_ids entirely (implicit 0..S-1).
     c = fast(input_ids=ids, labels=labels)
     assert torch.allclose(a.logits, c.logits, atol=1e-5, rtol=1e-5)
     assert abs(a.loss.item() - c.loss.item()) < 1e-5
@@ -236,8 +225,6 @@ def test_fused_ce_only_hides_logits_on_the_grad_enabled_loss_path():
     ids = torch.randint(0, cfg.vocab_size, (2, 8))
     labels = ids.clone()
 
-    # Introspection / verification callers (torch.no_grad) always get logits,
-    # in either mode.
     for training in (True, False):
         model.train(training)
         with torch.no_grad():
@@ -245,11 +232,8 @@ def test_fused_ce_only_hides_logits_on_the_grad_enabled_loss_path():
                 2, 8, cfg.vocab_size
             )
 
-    # Inference (no labels) always returns logits.
     assert model(input_ids=ids).logits.shape == (2, 8, cfg.vocab_size)
 
-    # Training AND eval-with-labels both use the memory-bounded path: the 20B
-    # eval batch is far too large to materialise [B,S,V] logits.
     for training in (True, False):
         model.train(training)
         out = model(input_ids=ids, labels=labels)
@@ -266,9 +250,6 @@ def test_strict_mode_is_bitwise_identical_in_bfloat16():
     assert result["grad_tensors_bitwise"] == result["grad_tensors"]
 
 
-# ---------------------------------------------------------------------------
-# Training wiring
-# ---------------------------------------------------------------------------
 def test_20b_auto_gradient_accumulation_resolves():
     recipe = json.loads((ROOT / "configs" / "training_config.json").read_text())
     micro, accumulation, global_batch = resolve_batch_settings(recipe, 8)
@@ -285,7 +266,7 @@ def test_deepspeed_tuning_removes_precision_and_overhead_footguns():
     assert "communication_data_type" not in tuned
     assert tuned["flops_profiler"]["enabled"] is False
     assert tuned["activation_checkpointing"]["cpu_checkpointing"] is False
-    assert template["flops_profiler"]["enabled"] is False  # input unchanged
+    assert template["flops_profiler"]["enabled"] is False
 
 
 def test_both_training_recipes_enable_fast_path_without_changing_hyperparameters():
@@ -328,9 +309,7 @@ def test_offload_policy_is_safe_and_deterministic():
         world_size=8, params=4_310_000_000, micro_batch=1, seq_len=4096,
         vocab_size=128256, layers=20, hidden_size=3072,
     )
-    # Plenty of VRAM -> offload disabled (fast).
     assert resolve_offload(recipe, free_vram_bytes=80 * 1024**3, **kwargs)[:2] == (False, False)
-    # Tiny VRAM -> offload kept (lean).
     assert resolve_offload(recipe, free_vram_bytes=2 * 1024**3, **kwargs)[:2] == (True, True)
     explicit = copy.deepcopy(recipe)
     explicit["deepspeed"]["offload_policy"] = "off"
@@ -354,16 +333,12 @@ def test_a100_40gb_and_80gb_projections_are_consistent():
                            512, gpu_key=gpu_key)
         large = projection("20B", get_20b_config(), 2, 32768, 300_000_000_000,
                            2048, gpu_key=gpu_key)
-        # 3B fits everywhere and no longer needs CPU offload.
         assert small["fits_in_vram"] and not small["offload_needed"]
         assert small["full_run_after_hours_incl_offload"] < small["full_run_before_hours_incl_offload"]
-        # The original 20B recipe could never fit; ours fits both 80GB cards,
-        # but not the 40GB one at micro_batch=2.
         assert not large["baseline_fits_in_vram"]
         assert large["fits_in_vram"] is (gpu_key != "a100-40gb")
         assert large["full_run_hours_saved_incl_offload"] > 1000
         assert large["logits_after_bytes"] < large["logits_before_bytes"] * 0.01
-    # Slower HBM -> the memory-traffic optimisation saves MORE time.
     p40 = projection("3B", get_3b_config(), 1, 4096, 18_000_000_000, 512,
                      gpu_key="a100-40gb")
     p80 = projection("3B", get_3b_config(), 1, 4096, 18_000_000_000, 512,

@@ -197,8 +197,6 @@ def train(args: argparse.Namespace):
 
         ds_config_path = Path(args.config).parent / "ds_config_zero3.json"
 
-        # Same flags as train.py: no fp16 gradient communication, no per-step
-        # FLOPs profiler overhead, no host-side activation checkpoints.
         ds_config = tune_deepspeed_config(
             json.loads(ds_config_path.read_text()), config_dict
         )

@@ -47,19 +47,13 @@ from model.fast_ops import clear_rope_tables  # noqa: E402
 from model.model import CodingAgentModel  # noqa: E402
 from training.optimizations import model_parameter_count  # noqa: E402
 
-# Tolerances.  fp32 is effectively exact; bf16 has ~3 decimal digits, so a
-# 1% relative L2 difference is well inside one dtype rounding step.
 FP32_LOSS_ATOL = 1e-5
 FP32_GRAD_REL = 1e-5
-BF16_LOSS_ATOL = 0.04  # < 1.5 bf16 ULP at a loss of ~5
+BF16_LOSS_ATOL = 0.04
 BF16_GRAD_REL = 0.02
 FUSED_LOSS_ATOL = 0.04
 FUSED_GRAD_REL = 0.02
 
-# Git blob of the ORIGINAL, pre-optimisation model/model.py.  Pinning the
-# blob (instead of using HEAD) means this gate still compares against the real
-# upstream implementation after these changes are committed.  If the blob is
-# not available (e.g. a shallow clone) the check is reported as SKIP.
 PRISTINE_MODEL_BLOB = "88823f43007674bae84ddf29000a4bf9cd1fe0bd"
 
 
@@ -146,7 +140,7 @@ def parity(dtype, *, fused=False, strict=False, seed=5) -> dict:
     torch.manual_seed(seed)
     ids = torch.randint(0, 97, (2, 24))
     labels = ids.clone()
-    labels[0, :5] = -100  # exercise ignore_index / prompt masking
+    labels[0, :5] = -100
     reference, optimised = build_pair(
         dtype, fast=True, fused=fused, strict=strict, seed=seed
     )
@@ -172,7 +166,6 @@ def pristine_parity(dtype) -> dict | None:
         module = types.ModuleType(module_name)
         module.__package__ = "model"
         module.__file__ = "<pristine model/model.py>"
-        # dataclasses looks the class up in sys.modules by __module__.
         previous = sys.modules.get(module_name)
         sys.modules[module_name] = module
         try:
@@ -303,7 +296,6 @@ def recipe_invariants() -> list[str]:
     if json.loads((ROOT / "configs" / "training_config.json").read_text())["batching"]["sequence_length"] != 32768:
         problems.append("20B sequence_length changed")
 
-    # Architecture is byte-for-byte the same as the published configs.
     for name, cfg in (("3B", get_3b_config()), ("20B", get_20b_config())):
         keys = ("vocab_size", "hidden_size", "intermediate_size", "num_hidden_layers",
                 "num_attention_heads", "num_kv_heads", "max_position_embeddings",
@@ -341,7 +333,6 @@ def run_all(quick: bool = False) -> tuple[bool, list[str]]:
             f"{r['grad_tensors']} gradient tensors",
         )
 
-    # Independent baseline: the actual pre-optimisation upstream source.
     for dtype, tol_loss, tol_grad in (
         (torch.float32, FP32_LOSS_ATOL, FP32_GRAD_REL),
         (torch.bfloat16, FUSED_LOSS_ATOL, FUSED_GRAD_REL),
@@ -400,8 +391,6 @@ def run_all(quick: bool = False) -> tuple[bool, list[str]]:
         )
 
         bt = trajectory(steps=20, dtype=torch.bfloat16)
-        # bf16 loss values are quantised to 1/32 increments; one ULP of
-        # divergence is unavoidable and is NOT a quality difference.
         passed = (
             abs(bt["mean_loss_delta"]) < 0.02
             and bt["max_loss_delta"] <= 0.03125 * 1.01
@@ -419,7 +408,6 @@ def run_all(quick: bool = False) -> tuple[bool, list[str]]:
     record("learning problem unchanged", not problems, "; ".join(problems) or
            "token budgets, LR/schedule, betas, weight decay, precision, seed, seq lengths, architectures all unchanged")
 
-    # No state-dict drift: exact analytic count matches an instantiated model.
     tiny = CodingAgentModel(_config(fast_kernels=False))
     actual = sum(p.numel() for p in tiny.parameters())
     record("parameter count untouched", actual == model_parameter_count(tiny.config),
