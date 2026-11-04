@@ -1,7 +1,7 @@
 # CodingAgent-20B — pinned production dependencies (Python >=3.10,<3.13)
 # Install: pip install -r requirements.txt   (GPU) / requirements.txt + torch CPU index (CI)
 # Core
-torch==2.3.1
+torch==2.15.0
 numpy==1.26.4
 
 # DeepSpeed (ZeRO-3, mixed precision, activation checkpointing)
