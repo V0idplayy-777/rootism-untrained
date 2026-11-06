@@ -152,13 +152,16 @@ def mlp_microbenchmark(iters: int = 20) -> dict:
 
     cfg = bench_config("optimized")
     cfg.fused_linear_cross_entropy = False
-    reference_mlp = SwiGLUMLP(cfg, use_moe=True, num_experts=4, top_k=2)
+    cfg.use_moe = True
+    cfg.moe_num_experts = 4
+    cfg.moe_top_k = 2
+    reference_mlp = SwiGLUMLP(cfg)
     state = {k: v.clone() for k, v in reference_mlp.state_dict().items()}
     models = {}
     for mode in ("reference", "fused"):
         cfg.fuse_mlp_down_projection = mode == "fused"
         clear_rope_tables()
-        mlp = SwiGLUMLP(cfg, use_moe=True, num_experts=4, top_k=2)
+        mlp = SwiGLUMLP(cfg)
         mlp.load_state_dict(state)
         models[mode] = mlp
 

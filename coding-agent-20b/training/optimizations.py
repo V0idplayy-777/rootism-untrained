@@ -109,23 +109,13 @@ def tune_deepspeed_config(ds_config: dict, recipe: dict) -> dict:
 def model_parameter_count(model_config) -> int:
     """Exact parameter count of ``CodingAgentModel(model_config)``.
 
-    ``CodingAgentConfig.total_parameters()`` omits the 4 MoE experts and the
-    router in every block, so the live model is larger than the headline
-    "3B"/"20B" figure.  Use this for honest VRAM accounting.  It is verified
-    against an actually-instantiated tiny model in the test-suite.
+    Delegates to ``CodingAgentConfig.total_parameters()``, which now counts
+    MoE experts and the router only when ``use_moe=True`` (the named 3B/20B
+    configs ship with ``use_moe=False`` so their live sizes match the
+    advertised 2.55B / 24.98B). Verified against an actually-instantiated
+    tiny model in the test-suite.
     """
-    hidden = model_config.hidden_size
-    intermediate = model_config.intermediate_size
-    heads = model_config.num_attention_heads
-    kv_heads = model_config.num_kv_heads
-    head_dim = model_config.head_dim
-    layers = model_config.num_hidden_layers
-    vocab = model_config.vocab_size
-    attention = hidden * heads * head_dim + 2 * hidden * kv_heads * head_dim + heads * head_dim * hidden
-    mlp = 3 * hidden * intermediate
-    moe = 4 * hidden * intermediate + hidden * 4 + 4
-    per_layer = attention + mlp + moe + 2 * hidden
-    return 2 * vocab * hidden + layers * per_layer + hidden
+    return model_config.total_parameters()
 
 
 def zero3_state_bytes_per_gpu(params: int, world_size: int) -> int:

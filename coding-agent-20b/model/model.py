@@ -493,21 +493,29 @@ class GroupedQueryAttention(nn.Module):
 
 class SwiGLUMLP(nn.Module):
     """
-    SwiGLU MLP layer.
+    SwiGLU MLP layer, with an OPTIONAL Mixture-of-Experts up-projection path.
 
-    SwiGLU(x) = (xW₁ ⊙ SiLU(xW_gate)) · W₂
+    Dense path (use_moe=False, the default for the named 20B/3B configs):
+        SwiGLU(x) = (SiLU(x W_gate) ⊙ (x W_up)) · W_down
 
-    This outperforms standard ReLU/GELU MLPs for language models.
+    MoE path (use_moe=True):
+        h = SiLU(x W_gate) ⊙ (x W_up) + 0.5 * MoE_route(x)     # in intermediate space
+        y = h · W_down
+    The experts are additional up-projections (hidden -> intermediate) whose
+    routed outputs are added into the SwiGLU activation stream before the
+    shared down-projection. This keeps the residual path clean and makes MoE
+    a strict superset of the dense model (an ablated expert weight matrix
+    recovers the dense forward pass).
     """
 
-    def __init__(self, config: CodingAgentConfig, use_moe: bool = True, num_experts: int = 4, top_k: int = 2):
+    def __init__(self, config: CodingAgentConfig):
         super().__init__()
 
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size
-        self.use_moe = use_moe
-        self.num_experts = num_experts
-        self.top_k = top_k
+        self.use_moe = bool(getattr(config, "use_moe", False))
+        self.num_experts = int(getattr(config, "moe_num_experts", 4))
+        self.top_k = int(getattr(config, "moe_top_k", 2))
         self.fast_kernels = (
             getattr(config, "fast_kernels", True)
             and getattr(config, "fuse_mlp_down_projection", True)
@@ -518,23 +526,28 @@ class SwiGLUMLP(nn.Module):
         self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
         self.act_fn = nn.SiLU()
 
-        if use_moe:
-            self.moe = MoEExperts(config, num_experts=num_experts, top_k=top_k)
+        if self.use_moe:
+            self.moe = MoEExperts(
+                config, num_experts=self.num_experts, top_k=self.top_k
+            )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         gate = self.act_fn(self.gate_proj(x))
         up = self.up_proj(x)
 
-        if not self.fast_kernels:
-            mlp_output = self.down_proj(gate * up)
-            if self.use_moe:
-                moe_output = self.down_proj(self.moe(x))
-                return mlp_output + 0.5 * moe_output
-            return mlp_output
-
+        # Dense SwiGLU in intermediate space.
         fused = gate * up
+
+        # Add (in intermediate space) the routed expert up-projections, then
+        # apply the shared down_proj ONCE. This is the same regardless of
+        # fast_kernels; the fast path just fuses the add.
         if self.use_moe:
-            fused.add_(self.moe(x), alpha=0.5)
+            expert_out = self.moe(x)
+            if self.fast_kernels:
+                fused.add_(expert_out, alpha=0.5)
+            else:
+                fused = fused + 0.5 * expert_out
+
         return self.down_proj(fused)
 
 
@@ -655,7 +668,9 @@ class TransformerBlock(nn.Module):
             config.hidden_size, eps=config.rms_norm_eps
         )
 
-        self.mlp = SwiGLUMLP(config, use_moe=True, num_experts=4, top_k=2)
+        # MoE settings come from the config (default: disabled) so the 20B/3B
+        # named configs land on their advertised parameter counts.
+        self.mlp = SwiGLUMLP(config)
 
     def forward(
         self,

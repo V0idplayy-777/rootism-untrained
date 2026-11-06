@@ -54,13 +54,19 @@ Trade-offs vs 20B:
   micro-batch of 1 per GPU, and a shorter pretrain target (18B vs 300B tokens)
   -- see configs/training_config_3b.json.
 
-Parameter breakdown (vocab 128256, 20-layer primary):
+Parameter breakdown (vocab 128256, 20-layer primary, dense SwiGLU — MoE disabled):
 
 - Embeddings (token + LM head counted as *2): 0.788B
-- Per-layer: attn 22.02M (Q 9.44M + KV 3.15M + O 9.44M) + MLP 66.06M + norms
-  -> ~88.1M/layer
+- Per-layer: attn 22.02M (Q 9.44M + KV 3.15M + O 9.44M) + dense MLP 66.06M
+  (gate+up+down) + norms -> ~88.1M/layer
 - 20 layers -> 1.76B transformer + 0.79B embeddings = 2.550B (primary)
 - 26 layers -> 2.29B transformer + 0.79B embeddings = 3.078B (deep variant)
+
+MoE (Mixture of Experts) is OPT-IN. Setting ``use_moe=True`` with 4 experts
+adds ~88.1M parameters per layer (4 extra up-projections + a router) and
+would inflate the 20-layer model to ~4.31B. The primary 3B / 20B configs
+ship with ``use_moe=False`` so their live PyTorch parameter counts match
+the headline 2.55B / 24.98B figures.
 
 Verification:
 

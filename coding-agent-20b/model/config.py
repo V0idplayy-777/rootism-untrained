@@ -10,10 +10,17 @@ Architecture decisions:
 - Uses SwiGLU activation (better than GELU/ReLU for LLMs)
 - Uses Grouped Query Attention (GQA) for efficient inference
 - Sliding window attention for long contexts
+
+Note on MoE:
+- Mixture-of-Experts is OPT-IN (use_moe=False by default). Enabling it adds
+  ``moe_num_experts`` extra up-projections and a router per FFN layer, which
+  substantially grows the parameter count. The named 3B and 20B configs
+  (``get_3b_config``, ``get_20b_config``) ship with use_moe=False so their
+  actual PyTorch parameter counts match their reported 2.55B / 24.98B sizes.
 """
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -33,6 +40,16 @@ class CodingAgentConfig:
     num_kv_heads: int = 8
 
     head_dim: int = 128
+
+    # ---- Mixture of Experts (opt-in) ----------------------------------------
+    # When use_moe=True, each FFN layer adds `moe_num_experts` expert
+    # up-projections (hidden -> intermediate) and a linear router
+    # (hidden -> moe_num_experts). Expert outputs are routed with top-k
+    # gating and added to the SwiGLU activation stream before the shared
+    # down-projection. Defaults keep the named 20B / 3B configs honest.
+    use_moe: bool = False
+    moe_num_experts: int = 4
+    moe_top_k: int = 2
 
     max_position_embeddings: int = 8192
 
@@ -123,10 +140,23 @@ class CodingAgentConfig:
 
         self.head_dim = self.hidden_size // self.num_attention_heads
 
-    def total_parameters(self) -> int:
-        """Estimate total parameter count."""
+        if self.use_moe:
+            assert self.moe_num_experts >= 1, "moe_num_experts must be >= 1"
+            assert 1 <= self.moe_top_k <= self.moe_num_experts, (
+                f"moe_top_k ({self.moe_top_k}) must be in [1, moe_num_experts ({self.moe_num_experts})]"
+            )
 
-        embed_params = self.vocab_size * self.hidden_size * 2
+    def total_parameters(self) -> int:
+        """Estimate total parameter count.
+
+        Matches ``sum(p.numel() for p in model.parameters())`` for a model
+        built with this config: it counts the dense attention + SwiGLU MLP,
+        both RMSNorms per layer, the final norm, embed + LM head, and, when
+        ``use_moe`` is True, the expert up-projections and the router
+        (including its bias).
+        """
+
+        embed_params = self.vocab_size * self.hidden_size * 2  # embed_tokens + lm_head (untied)
 
         q_proj = self.hidden_size * self.num_attention_heads * self.head_dim
 
@@ -136,14 +166,27 @@ class CodingAgentConfig:
 
         attn_params = q_proj + kv_proj + o_proj
 
+        # Dense SwiGLU: gate_proj, up_proj, down_proj (all bias=False).
         mlp_params = (
             self.hidden_size * self.intermediate_size * 2
             + self.intermediate_size * self.hidden_size
         )
 
-        norm_params = 2 * self.hidden_size
+        # Optional MoE: `moe_num_experts` up-proj experts (h->i, no bias)
+        # plus a router Linear(h, num_experts) which has both weight and bias.
+        moe_params = 0
+        if self.use_moe:
+            if self.moe_num_experts < 1:
+                raise ValueError("moe_num_experts must be >= 1 when use_moe=True")
+            if not 1 <= self.moe_top_k <= self.moe_num_experts:
+                raise ValueError("moe_top_k must be in [1, moe_num_experts]")
+            expert_params = self.moe_num_experts * self.hidden_size * self.intermediate_size
+            router_params = self.hidden_size * self.moe_num_experts + self.moe_num_experts
+            moe_params = expert_params + router_params
 
-        layer_params = attn_params + mlp_params + norm_params
+        norm_params = 2 * self.hidden_size  # input + post-attn RMSNorm per layer
+
+        layer_params = attn_params + mlp_params + moe_params + norm_params
 
         total_transformer = self.num_hidden_layers * layer_params
 
@@ -205,6 +248,11 @@ class CodingAgentConfig:
         print(f"  Head Dimension:        {self.head_dim}")
 
         print(f"  Intermediate Size:     {self.intermediate_size}")
+
+        if self.use_moe:
+            print(f"  MoE:                   enabled ({self.moe_num_experts} experts, top-{self.moe_top_k})")
+        else:
+            print(f"  MoE:                   disabled (dense SwiGLU)")
 
         print(f"  Vocabulary Size:       {self.vocab_size:,}")
 
@@ -294,77 +342,6 @@ def get_20b_16k_config() -> CodingAgentConfig:
         rope_scaling_type="yarn",
         rope_scaling_factor=2.0,
         original_max_position_embeddings=8192,
-    )
-
-
-def get_20b_64k_config() -> CodingAgentConfig:
-    """20B with YaRN x8 for 64k windows (long files, multi-file diffs).
-
-    Honest caveat: 64k via YaRN is an extrapolation, not native long-context
-    training. Expect degradation on tasks needing precise recall across the
-    middle of the window; retrieval + repo maps (agent/repo_context.py) remain
-    the primary mechanism, with 64k as headroom for a few large files.
-    """
-
-    return CodingAgentConfig(
-        vocab_size=128256,
-        hidden_size=6144,
-        intermediate_size=16384,
-        num_hidden_layers=60,
-        num_attention_heads=48,
-        num_kv_heads=8,
-        max_position_embeddings=65536,
-        sliding_window=8192,
-        rope_theta=500000.0,
-        rope_scaling_type="yarn",
-        rope_scaling_factor=8.0,
-        original_max_position_embeddings=8192,
-        kv_cache_max_tokens=65536,
-    )
-
-
-def get_20b_16k_config() -> CodingAgentConfig:
-    """20B with YaRN-scaled RoPE for 16k agent trajectories (train 8k, extend 2x)."""
-
-    return CodingAgentConfig(
-        vocab_size=128256,
-        hidden_size=6144,
-        intermediate_size=16384,
-        num_hidden_layers=60,
-        num_attention_heads=48,
-        num_kv_heads=8,
-        max_position_embeddings=16384,
-        sliding_window=4096,
-        rope_theta=500000.0,
-        rope_scaling_type="yarn",
-        rope_scaling_factor=2.0,
-        original_max_position_embeddings=8192,
-    )
-
-
-def get_20b_64k_config() -> CodingAgentConfig:
-    """20B with YaRN x8 for 64k windows (long files, multi-file diffs).
-
-    Honest caveat: 64k via YaRN is an extrapolation, not native long-context
-    training. Expect degradation on tasks needing precise recall across the
-    middle of the window; retrieval + repo maps (agent/repo_context.py) remain
-    the primary mechanism, with 64k as headroom for a few large files.
-    """
-
-    return CodingAgentConfig(
-        vocab_size=128256,
-        hidden_size=6144,
-        intermediate_size=16384,
-        num_hidden_layers=60,
-        num_attention_heads=48,
-        num_kv_heads=8,
-        max_position_embeddings=65536,
-        sliding_window=8192,
-        rope_theta=500000.0,
-        rope_scaling_type="yarn",
-        rope_scaling_factor=8.0,
-        original_max_position_embeddings=8192,
-        kv_cache_max_tokens=65536,
     )
 
 

@@ -160,11 +160,11 @@ def test_shared_rope_tables_are_identical_to_the_original_and_survive_bfloat16()
 
 def test_fused_mlp_and_sync_free_moe_match_reference_outputs():
     torch.manual_seed(2)
-    ref_cfg = _tiny(fast_kernels=False)
-    reference = SwiGLUMLP(ref_cfg, use_moe=True, num_experts=4, top_k=2)
+    ref_cfg = _tiny(fast_kernels=False, use_moe=True, moe_num_experts=4, moe_top_k=2)
+    reference = SwiGLUMLP(ref_cfg)
     state = {k: v.clone() for k, v in reference.state_dict().items()}
-    fast_cfg = _tiny(fast_kernels=True)
-    fast = SwiGLUMLP(fast_cfg, use_moe=True, num_experts=4, top_k=2)
+    fast_cfg = _tiny(fast_kernels=True, use_moe=True, moe_num_experts=4, moe_top_k=2)
+    fast = SwiGLUMLP(fast_cfg)
     fast.load_state_dict(state)
     x = torch.randn(2, 8, ref_cfg.hidden_size, requires_grad=True)
     x_ref = x.detach().clone().requires_grad_(True)
