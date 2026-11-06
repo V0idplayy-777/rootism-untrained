@@ -86,6 +86,46 @@ def test_kv_cache_trim_and_yarn_config():
 
 
 @requires_torch
+def test_dense_configs_match_advertised_parameter_counts():
+    """The named 3B and 20B configs must land on their reported sizes.
+
+    Regression guard: MoE used to be hardcoded on in SwiGLUMLP, which
+    silently doubled per-layer params (3B -> 4.31B, 20B -> 49.14B).
+    """
+    from model.config import get_20b_config
+    from model.config_3b import get_3b_config, get_3b_26l_config
+
+    cfg3 = get_3b_config()
+    assert abs(cfg3.total_parameters() / 1e9 - 2.55) < 0.01, (
+        f"3B primary drifted: {cfg3.total_parameters()/1e9:.3f}B"
+    )
+
+    cfg3d = get_3b_26l_config()
+    assert 3.0 < cfg3d.total_parameters() / 1e9 < 3.15, (
+        f"3B deep drifted: {cfg3d.total_parameters()/1e9:.3f}B"
+    )
+
+    cfg20 = get_20b_config()
+    assert abs(cfg20.total_parameters() / 1e9 - 24.98) < 0.05, (
+        f"20B drifted: {cfg20.total_parameters()/1e9:.3f}B"
+    )
+
+    # Both named configs must be dense (MoE off) to hit the advertised sizes.
+    assert cfg3.use_moe is False
+    assert cfg20.use_moe is False
+
+
+@requires_torch
+def test_total_parameters_matches_pytorch_count(tiny_model):
+    """config.total_parameters() must equal sum(p.numel())."""
+    cfg = tiny_model.config
+    actual = sum(p.numel() for p in tiny_model.parameters())
+    assert cfg.total_parameters() == actual, (
+        f"estimator {cfg.total_parameters():,} != pytorch {actual:,}"
+    )
+
+
+@requires_torch
 def test_samplers_keep_valid_distribution():
 
     from model.generation import (
