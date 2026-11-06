@@ -110,7 +110,6 @@ def test_dense_configs_match_advertised_parameter_counts():
         f"20B drifted: {cfg20.total_parameters()/1e9:.3f}B"
     )
 
-    # Both named configs must be dense (MoE off) to hit the advertised sizes.
     assert cfg3.use_moe is False
     assert cfg20.use_moe is False
 

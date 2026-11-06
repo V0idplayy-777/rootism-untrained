@@ -535,12 +535,8 @@ class SwiGLUMLP(nn.Module):
         gate = self.act_fn(self.gate_proj(x))
         up = self.up_proj(x)
 
-        # Dense SwiGLU in intermediate space.
         fused = gate * up
 
-        # Add (in intermediate space) the routed expert up-projections, then
-        # apply the shared down_proj ONCE. This is the same regardless of
-        # fast_kernels; the fast path just fuses the add.
         if self.use_moe:
             expert_out = self.moe(x)
             if self.fast_kernels:
@@ -668,8 +664,6 @@ class TransformerBlock(nn.Module):
             config.hidden_size, eps=config.rms_norm_eps
         )
 
-        # MoE settings come from the config (default: disabled) so the 20B/3B
-        # named configs land on their advertised parameter counts.
         self.mlp = SwiGLUMLP(config)
 
     def forward(

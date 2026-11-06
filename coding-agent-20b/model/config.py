@@ -41,12 +41,6 @@ class CodingAgentConfig:
 
     head_dim: int = 128
 
-    # ---- Mixture of Experts (opt-in) ----------------------------------------
-    # When use_moe=True, each FFN layer adds `moe_num_experts` expert
-    # up-projections (hidden -> intermediate) and a linear router
-    # (hidden -> moe_num_experts). Expert outputs are routed with top-k
-    # gating and added to the SwiGLU activation stream before the shared
-    # down-projection. Defaults keep the named 20B / 3B configs honest.
     use_moe: bool = False
     moe_num_experts: int = 4
     moe_top_k: int = 2
@@ -156,7 +150,7 @@ class CodingAgentConfig:
         (including its bias).
         """
 
-        embed_params = self.vocab_size * self.hidden_size * 2  # embed_tokens + lm_head (untied)
+        embed_params = self.vocab_size * self.hidden_size * 2
 
         q_proj = self.hidden_size * self.num_attention_heads * self.head_dim
 
@@ -166,14 +160,11 @@ class CodingAgentConfig:
 
         attn_params = q_proj + kv_proj + o_proj
 
-        # Dense SwiGLU: gate_proj, up_proj, down_proj (all bias=False).
         mlp_params = (
             self.hidden_size * self.intermediate_size * 2
             + self.intermediate_size * self.hidden_size
         )
 
-        # Optional MoE: `moe_num_experts` up-proj experts (h->i, no bias)
-        # plus a router Linear(h, num_experts) which has both weight and bias.
         moe_params = 0
         if self.use_moe:
             if self.moe_num_experts < 1:
@@ -184,7 +175,7 @@ class CodingAgentConfig:
             router_params = self.hidden_size * self.moe_num_experts + self.moe_num_experts
             moe_params = expert_params + router_params
 
-        norm_params = 2 * self.hidden_size  # input + post-attn RMSNorm per layer
+        norm_params = 2 * self.hidden_size
 
         layer_params = attn_params + mlp_params + moe_params + norm_params
 
