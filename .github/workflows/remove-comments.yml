@@ -20,13 +20,13 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Uncomment Tool
-        run: pip install uncomment
-
       - name: Strip All Comments
         run: |
-          # Recursively strips comments from all .py files in the repository
-          uncomment . --exclude ".github/**"
+          # Recursively strips comments from all .py files in the repository.
+          # The in-repo stripper is stdlib-only, so the job needs no PyPI install
+          # and no runtime binary download (which used to fail with HTTP 504).
+          python .github/scripts/strip_comments.py . --exclude ".github/**"
+          python .github/scripts/strip_comments.py . --exclude ".github/**" --check
 
       - name: Commit and Push Cleaned Code
         uses: stefanzweifel/git-auto-commit-action@v5
