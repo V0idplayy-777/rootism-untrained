@@ -97,3 +97,18 @@ def test_exclusion_glob_matches_directories_and_files():
     assert matches(".github/workflows/ci.yml", ".github/**")
     assert matches("nested/.github/scripts/tool.py", "**/.github/**")
     assert not matches("coding-agent-20b/model/model.py", ".github/**")
+
+
+def test_iter_python_files_skips_excluded_and_cache_directories(tmp_path):
+    (tmp_path / "coding-agent-20b").mkdir()
+    (tmp_path / "coding-agent-20b" / "keep.py").write_text("x = 1\n", encoding="utf-8")
+    (tmp_path / ".github" / "scripts").mkdir(parents=True)
+    (tmp_path / ".github" / "scripts" / "skip.py").write_text("x = 1\n", encoding="utf-8")
+    (tmp_path / "__pycache__").mkdir()
+    (tmp_path / "__pycache__" / "skip.py").write_text("x = 1\n", encoding="utf-8")
+
+    found = sorted(
+        path.relative_to(tmp_path).as_posix()
+        for path in MODULE["_iter_python_files"](tmp_path, (".github/**", ".git/**"))
+    )
+    assert found == ["coding-agent-20b/keep.py"]
