@@ -91,7 +91,6 @@ SPECIAL_TOKENS = {
     "<|retrieval|>": 68,
     "<|file_chunk|>": 69,
     "<|diff|>": 70,
-    # Review / safety / uncertainty channels.
     "<|review|>": 71,
     "<|security|>": 72,
     "<|uncertain|>": 73,

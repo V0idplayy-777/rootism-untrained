@@ -331,7 +331,6 @@ def initialize_deepspeed(
             "learning_rate", 3e-4
         )
 
-    # Exactly ONE cosine schedule: the loop sets lr on optimizer.param_groups
     ds_config.pop("scheduler", None)
 
     precision = training_config.get("precision", "bf16")
@@ -753,7 +752,6 @@ def train(args: argparse.Namespace):
 
         current_length = seq_length_at(state.step, curriculum)
         if current_length != active_seq_length:
-            # Repartition the same flat token stream into windows at this length.
             train_dataset = MemoryMappedDataset(data_dir, split="train", seq_length=current_length)
             train_loader = StreamingDataLoader(
                 train_dataset, batch_size=micro_batch, rank=rank, world_size=world_size,

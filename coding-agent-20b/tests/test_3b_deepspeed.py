@@ -53,7 +53,7 @@ def test_real_zero3_accumulation_checkpoint_and_resume(tmp_path, monkeypatch):
         template = json.loads((ROOT / "configs" / "ds_config_zero3.json").read_text())
         ds_config = build_deepspeed_config(template, recipe, plan, hidden_size=16)
         ds_config["zero_optimization"]["overlap_comm"] = False
-        ds_config.pop("optimizer")  # A native CPU optimizer avoids a CUDA/C++ build in this test.
+        ds_config.pop("optimizer")
 
         data = tmp_path / "data"
         data.mkdir()

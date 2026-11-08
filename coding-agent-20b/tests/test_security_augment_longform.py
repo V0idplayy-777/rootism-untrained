@@ -30,7 +30,6 @@ from model.longform import (
 )
 
 
-# Security data + evaluation
 
 
 def test_curated_security_samples_are_paired_and_valid_python():
@@ -56,8 +55,6 @@ def test_curated_security_samples_are_paired_and_valid_python():
         assert sample.category in REQUIRED_PATTERNS, sample.category
 
 
-# in SecurityBenchmark instead of by the static scanner. The canonical list lives
-# in ``dataset.security_data`` so the dataset and the test cannot drift apart.
 from dataset.security_data import STATIC_UNDETECTABLE  # noqa: E402
 
 

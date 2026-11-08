@@ -281,8 +281,6 @@ def build(
         token_counts[doc.slice_name] += tokens
         doc_counts[doc.slice_name] += 1
 
-    # high-volume slice (security has ~300 rows) eat the whole budget and
-    # silently starve the rest — a composition bug, not a size constraint.
     pending: dict[str, list[Document]] = {}
     for doc in synthetic_documents(apps=apps, include_apps=include_apps):
         pending.setdefault(doc.slice_name, []).append(doc)

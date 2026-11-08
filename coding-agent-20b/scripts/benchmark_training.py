@@ -282,8 +282,6 @@ def projection(name: str, cfg: CodingAgentConfig, micro_batch: int, seq_len: int
     fits = final_need <= vram_budget
     baseline_need = state + report["activations_before_bytes"] + gathered
 
-    # The shipped recipes hard-code offload_optimizer/offload_param = true.
-    # Model: read + write of the optimizer state once per optimizer step over
     offload_seconds_per_step = 2 * state / PCIE_BYTES_PER_SECOND
     baseline_offload_hours = total_optimizer_steps * offload_seconds_per_step / 3600
     optimized_offload_hours = baseline_offload_hours if offload_needed else 0.0

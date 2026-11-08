@@ -255,7 +255,6 @@ def create_app(workspace: str | Path = ".", model_url: str | None = None) -> Fas
         if not verify_result.ok and not payload.force:
             human = humanize(verify_result.failure_signal())
             return {"ok": False, "stage": "verify", "error": human.title, "human": human.to_dict(), "verify": verify_result.to_dict(), "scaffold": scaffold_result.to_dict()}
-        # 3 review
         review_result = CodeCritic(threshold=80).review(root)
         if not review_result.ok and not payload.force:
             return {"ok": False, "stage": "review", "error": f"Review needs work (score {review_result.score})", "human": {"title": "Review needs work", "plain": review_result.summary(), "next_steps": ["Fix the noted findings, then Ship it again"]}, "review": review_result.to_dict()}
@@ -275,7 +274,6 @@ def create_app(workspace: str | Path = ".", model_url: str | None = None) -> Fas
             data["plain_success"] = data["plain"]
         return data
 
-    # ----------------------------------------------------------------- preview
     @app.get("/api/preview")
     def preview_status() -> dict:
         return preview.status()

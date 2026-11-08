@@ -330,7 +330,6 @@ class ScaffoldGenerator:
                 fixed = self._auto_fix_critic_findings(review)
                 if fixed:
                     result.warnings.append(f"auto-fixed {len(fixed)} critic findings")
-                    # re-review
                     review2 = critic.review(self.root)
                     if review2.ok:
                         result.warnings.append(f"critic now passing: {review2.score}/100")

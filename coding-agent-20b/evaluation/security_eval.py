@@ -56,7 +56,6 @@ class Rule:
     flags: int = re.IGNORECASE
 
 
-# only a bug because it is a *literal* shared between runs, and a nested
 
 
 @dataclass(frozen=True)

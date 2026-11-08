@@ -196,7 +196,6 @@ def cmd_ship(args) -> int:
     elif not verify.ok:
         _say("Tests failed but --force given, continuing...")
 
-    # 3. Review
     _say("→ Reviewing...")
     critic = CodeCritic(threshold=getattr(args, "threshold", 80) or 80)
     review = critic.review(root)

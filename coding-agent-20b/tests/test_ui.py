@@ -95,7 +95,6 @@ def test_runtime_does_not_scaffold_over_existing_project(tmp_path):
     assert (tmp_path / "existing.py").read_text() == "VALUE = 1\n"
 
 
-# --------------------------------------------------------------------- preview
 def test_preview_serves_static_site(tmp_path):
     static_site(tmp_path)
     manager = PreviewManager(tmp_path)

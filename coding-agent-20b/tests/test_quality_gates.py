@@ -211,7 +211,7 @@ def test_built_corpus_passes_the_gates_we_can_meet_at_this_size(tmp_path):
 
     assert not by_name["coverage"].ok
     assert "github-issues" in by_name["coverage"].detail
-    assert by_name["mixture"].ok  # rebalance brings this small fixture within tolerance
+    assert by_name["mixture"].ok
     assert not report.ok
 
 

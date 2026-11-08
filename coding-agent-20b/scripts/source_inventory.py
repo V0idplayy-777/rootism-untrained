@@ -123,7 +123,6 @@ def static_audit() -> dict[str, Any]:
         r.split("@", 1)[0]
         for r, _ in corpus_sources.EXTRA_GITHUB_REPOS + corpus_sources.LONG_TAIL_GITHUB_REPOS
     ]
-    # A slug repeated inside one list is a maintenance bug. A slug that appears
     duplicates = sorted({slug for slug, count in Counter(expanded).items() if count > 1})
     overlap_with_core = sorted(set(core) & set(expanded))
 

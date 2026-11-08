@@ -209,14 +209,12 @@ class DeployEngine:
                 return False, f"green gate blocked: tests failed ({run.command}, exit {run.exit_code}): {run.failure_signal()[:400]}", details
         except Exception as exc:  # noqa: BLE001
             details["verify_error"] = str(exc)
-        # Run review
         try:
             from quality.critic import CodeCritic
 
             review = CodeCritic(threshold=self.green_threshold).review(self.root)
             details["review"] = {"ok": review.ok, "score": review.score, "threshold": review.threshold, "findings": len(review.findings)}
             if not review.ok:
-                # Allow archive provider to pass review gate (it's a portable artifact, not public URL)
                 if getattr(self, "requested_provider", None) == "archive" or self.config().provider == "archive":
                     details["review_skipped"] = "archive provider: review gate is advisory only"
                 else:
@@ -248,7 +246,6 @@ class DeployEngine:
             result.notes.append(warning)
             self._log(f"note: {warning}")
 
-        # Green gate: refuse deploy unless verify+review pass (row 1)
         if not self.dry_run and self.require_green and not self.force:
             ok, reason, gate_details = self._check_green_gate()
             result.meta["green_gate"] = gate_details

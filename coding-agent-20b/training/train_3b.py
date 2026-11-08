@@ -179,7 +179,6 @@ def build_deepspeed_config(template: dict, config: dict, plan: TrainingPlan, hid
             "weight_decay": train["weight_decay"],
         }
     )
-    # One cosine schedule is applied at optimizer-step boundaries in the loop.
     result.pop("scheduler", None)
     result.pop("activation_checkpointing", None)
     result.pop("flops_profiler", None)
@@ -483,7 +482,6 @@ def run_3b_training(
                 raise ValueError("3B data stream returned an incomplete micro-batch")
             loss = engine(input_ids=inputs, labels=inputs)
             losses.append(loss.detach().float())
-            # DeepSpeed scales the loss and steps the optimizer at its own
             engine.backward(loss)
             engine.step()
         if getattr(engine, "global_steps", state.step + 1) != state.step + 1:
