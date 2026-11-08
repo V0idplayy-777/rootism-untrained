@@ -55,6 +55,11 @@ FUSED_LOSS_ATOL = 0.04
 FUSED_GRAD_REL = 0.02
 
 PRISTINE_MODEL_BLOB = "88823f43007674bae84ddf29000a4bf9cd1fe0bd"
+PRISTINE_MOE_FLAGS = {
+    "use_moe": True,
+    "moe_num_experts": 4,
+    "moe_top_k": 2,
+}
 
 
 def _config(**flags) -> CodingAgentConfig:
@@ -153,6 +158,11 @@ def pristine_parity(dtype) -> dict | None:
     The reference class is loaded from the pinned git blob, so this is a
     genuinely independent baseline: it cannot accidentally be "fixed" along
     with the optimised code.
+
+    The pinned source predates opt-in MoE: its MLP always constructs a
+    4-expert, top-2 mixture.  Enable the same settings on both configs here so
+    the pristine state_dict can be loaded without changing the current dense
+    default used by the named 3B/20B configs.
     """
     import subprocess
     import types
@@ -180,11 +190,12 @@ def pristine_parity(dtype) -> dict | None:
         return None
 
     torch.manual_seed(5)
-    reference = reference_cls(_config(fast_kernels=False))
+    reference = reference_cls(_config(fast_kernels=False, **PRISTINE_MOE_FLAGS))
     state = {k: v.clone() for k, v in reference.state_dict().items()}
     clear_rope_tables()
     optimised = CodingAgentModel(_config(
-        fast_kernels=True, fused_linear_cross_entropy=True, loss_chunk_tokens=4
+        fast_kernels=True, fused_linear_cross_entropy=True, loss_chunk_tokens=4,
+        **PRISTINE_MOE_FLAGS
     ))
     optimised.load_state_dict(state)
     reference.to(dtype)
