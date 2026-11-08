@@ -1,0 +1,912 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../reference/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+    
+    
+      
+        <title>Training Optimizations - My Python Project Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#quality-neutral-training-acceleration-3b-and-20b" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="My Python Project Documentation" class="md-header__button md-logo" aria-label="My Python Project Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            My Python Project Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Training Optimizations
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="My Python Project Documentation" class="md-nav__button md-logo" aria-label="My Python Project Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    My Python Project Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Training Optimizations
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Training Optimizations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What changed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#proof-that-quality-is-preserved" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proof that quality is preserved
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Proof that quality is preserved">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#boundaries-of-the-proof" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boundaries of the proof
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#measured-savings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measured savings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#projected-savings-on-nvidia-a100" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Projected savings on NVIDIA A100
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reproduce" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproduce
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What changed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#proof-that-quality-is-preserved" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proof that quality is preserved
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Proof that quality is preserved">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#boundaries-of-the-proof" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boundaries of the proof
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#measured-savings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measured savings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#projected-savings-on-nvidia-a100" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Projected savings on NVIDIA A100
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reproduce" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproduce
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="quality-neutral-training-acceleration-3b-and-20b">Quality-neutral training acceleration (3B and 20B)</h1>
+<p>Goal: <strong>blistering speed and very light VRAM, with no model quality loss.</strong></p>
+<p>Everything below changes only <em>how</em> the same arithmetic is executed — kernel
+selection, memory traffic, allocations, host/device synchronisation, tensor
+placement and profiling overhead. Nothing changes the architecture, weights,
+parameter count, loss, data order, token budget, batch composition, optimiser,
+LR schedule, precision format, seed or number of effective optimizer steps.</p>
+<p><strong>No quantisation, no FP8/INT8, no low-rank adapters, no pruning, no expert
+dropping, no approximate attention, no reduced sequence length, no shortened
+schedule.</strong></p>
+<h2 id="what-changed">What changed</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Change</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Chunked fused LM-head cross-entropy</strong> — <code>scripts</code>-independent helper <code>model/fast_ops.py::fused_linear_cross_entropy</code>. Shifts hidden states/labels internally, computes loss in bounded row × sequence chunks under activation checkpointing, and calls the <code>lm_head</code> <strong>module</strong> (not a bare weight) so ZeRO-3 parameter hooks still fire.</td>
+<td>Removes the entire <code>[B, T, V]</code> logits tensor, its contiguous shift copy, its log-softmax workspace and its gradient. This is 78.3 GiB → 219.2 MiB for the 20B recipe.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>fp32-exact chunk loss</strong> — each chunk uses <code>log_softmax</code> in the model dtype, then <code>nll_loss(..., reduction="sum")</code> in fp32, summed in fp32, cast back once.</td>
+<td>Reproduces PyTorch's CE reduction exactly; no bf16 scalar drift across steps (verified over 20 optimizer steps).</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Shared RoPE tables</strong> — one <code>cos</code>/<code>sin</code> table per dtype, reused by every layer (<code>rope_tables</code> cache); the inverse frequency is kept in a private fp32 buffer so <code>.bfloat16()</code> cannot round it.</td>
+<td>Removes <code>layers</code> redundant table builds and one long-lived <code>[T, head_dim]</code> allocation per layer; also fixes a latent bf16 RoPE rounding bug.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Skip redundant <code>position_ids</code></strong> — training no longer materialises <code>[B, T]</code> position ids when they are implicitly <code>0..T-1</code>.</td>
+<td>Removes an allocation and a slice per layer. Generation/KV-cache still passes explicit positions.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>One-GEMM fused SwiGLU down projection</strong> — dense and routed activations are summed <em>before</em> <code>down_proj</code>, so one <code>[T, I]×[I, H]</code> GEMM instead of two.</td>
+<td>Removes one full GEMM (forward + two backward GEMMs) per layer, per micro-batch.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Sync-free MoE</strong> — replaces the per-expert <code>if not token_mask.any()</code> Python branch (a device→host sync) with preallocated dense buffers and a <code>[T, k, E]</code> boolean mask.</td>
+<td>Removes <code>4 × layers</code> GPU→CPU syncs per micro-batch (80 for 3B, 240 for 20B). Identical routing, identical experts, identical output.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Native GQA SDPA</strong> — uses <code>F.scaled_dot_product_attention(..., enable_gqa=True)</code> on torch ≥ 2.5, with a <code>repeat_kv</code> fallback on older torch.</td>
+<td>Removes the materialised <code>[B, H, T, D]</code> key/value expansion.</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>DeepSpeed config tuning</strong> — larger all-gather buckets, <code>communication_data_type=fp16</code> removed (was downcasting bf16 comms), FLOPs profiler / CPU checkpoint profiling / excessive logging disabled, duplicate LR scheduler removed, VRAM-aware optimizer/param offload policy.</td>
+<td>Less host overhead, no fp16 communication downcast, offload only when VRAM is actually tight.</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Data/training-loop hygiene</strong> — preallocated int64 token batches, resolved <code>"auto"</code> gradient accumulation (20B was previously broken), one DeepSpeed backward/step per micro-batch, single loss scaling, on-device loss windows and one sync per log interval, on-device eval loss accumulation.</td>
+<td>Removes allocation churn, redundant <code>.item()</code> syncs and double loss scaling; preserves the effective global batch.</td>
+</tr>
+</tbody>
+</table>
+<p>All flags are independently switchable in <code>configs/training_config*.json</code> under
+<code>"optimizations"</code>. Set any of them to <code>false</code> to fall back to the original
+implementation. <code>fused_linear_cross_entropy</code> is off by default and enabled
+only by the two training recipes.</p>
+<h2 id="proof-that-quality-is-preserved">Proof that quality is preserved</h2>
+<p>Run either:</p>
+<pre><code class="language-bash">python scripts/verify_no_quality_loss.py
+python -m pytest -q tests/test_training_optimizations.py
+</code></pre>
+<p>The gate builds two models with identical weights: one executing the fast
+path, one executing the reference path. It <strong>also</strong> loads the actual
+pre-optimisation upstream <code>model/model.py</code> from a pinned git blob
+(<code>git cat-file blob 88823f4…</code>) and compares against that independent baseline,
+so the reference cannot be accidentally "fixed" together with the optimised
+code. CI runs the gate with <code>fetch-depth: 0</code> so that blob is always available.</p>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>fp32 forward loss / all 48 parameter gradients</td>
+<td>loss Δ <code>4.77e-07</code>, grad rel L2 <code>2.08e-07</code></td>
+</tr>
+<tr>
+<td>bf16 forward loss / all gradients</td>
+<td>loss Δ <code>0</code>, grad rel L2 <code>5.82e-03</code> (bf16 reassociation only)</td>
+</tr>
+<tr>
+<td><strong>vs pristine upstream source</strong>, fp32 (full fast stack + fused CE)</td>
+<td>loss Δ <code>4.77e-07</code>, grad rel L2 <code>2.19e-07</code></td>
+</tr>
+<tr>
+<td><strong>vs pristine upstream source</strong>, bf16</td>
+<td>loss Δ <code>0</code>, grad rel L2 <code>6.34e-03</code></td>
+</tr>
+<tr>
+<td><strong>strict bf16 mode</strong> (<code>fuse_mlp_down_projection=false</code>, fused CE off)</td>
+<td>loss Δ <code>0</code>, grad rel L2 <code>0</code>, <strong>48/48 gradient tensors bitwise identical</strong></td>
+</tr>
+<tr>
+<td>fused CE fp32</td>
+<td>loss Δ <code>4.77e-07</code>, grad rel L2 <code>2.17e-07</code></td>
+</tr>
+<tr>
+<td>fused CE bf16</td>
+<td>loss Δ <code>0</code>, grad rel L2 <code>6.12e-03</code></td>
+</tr>
+<tr>
+<td>greedy generation</td>
+<td>token-for-token identical</td>
+</tr>
+<tr>
+<td>12-step AdamW trajectory, fp32</td>
+<td>mean loss Δ <code>-2.78e-07</code>, final weight rel L2 <code>2.74e-07</code></td>
+</tr>
+<tr>
+<td><strong>20-step AdamW trajectory, bf16</strong> (the real training dtype)</td>
+<td>mean loss Δ <code>+0.00469</code>, max <code>0.03125</code> = one bf16 ULP, final weight rel L2 <code>1.71e-03</code></td>
+</tr>
+<tr>
+<td>recipe invariants</td>
+<td>token budgets, LR/schedule, betas, eps, weight decay, precision, seed, seq lengths, architectures unchanged</td>
+</tr>
+<tr>
+<td>parameter count</td>
+<td><code>179,532</code> measured == analytic, no parameters added or removed</td>
+</tr>
+</tbody>
+</table>
+<p><code>RESULT: PASS — no model quality loss detected</code></p>
+<p>The only numerical differences are floating-point <strong>reassociation</strong> (the fused
+down projection sums two bf16 products before one GEMM) and one-bf16-ULP loss
+rounding. There is no change to the function the network computes. If exact
+bit-for-bit reproducibility is required, set
+<code>"fuse_mlp_down_projection": false</code> and <code>"fused_linear_cross_entropy": false</code>
+— the strict mode above proves that combination is bitwise identical while
+still keeping the RoPE, position-id, MoE-sync and DeepSpeed wins.</p>
+<p>Full <code>pytest -q</code> after the changes has the <strong>same 12 pre-existing failures</strong> as
+the untouched baseline (<code>test_app_generation</code>, <code>test_fast_bpe</code>,
+<code>test_process_provider</code>, <code>test_ui</code> — missing optional Rust/provider/UI
+dependencies). No new failures.</p>
+<h3 id="boundaries-of-the-proof">Boundaries of the proof</h3>
+<ul>
+<li>The sandbox has <strong>no CUDA GPU</strong>, so parity is measured on deterministic tiny
+  CPU models in both fp32 and bf16. The math is device-independent; the
+  GPU-specific paths (native GQA SDPA, DeepSpeed ZeRO-3) are gated by
+  capability and fall back to exactly the reference implementation.</li>
+<li><code>sliding_window</code> and <code>code_graph_bias</code> are ignored by the SDPA branch in the
+  <strong>original HEAD code</strong> as well. Both baseline and optimised models use the
+  same branch, so there is no quality difference. This is a pre-existing
+  modelling limitation, not part of this optimisation.</li>
+<li>Fused CE returns <code>ModelOutput.logits = None</code> <strong>only</strong> on a grad-enabled
+  forward with <code>labels</code> (training <em>and</em> eval, both of which consume only
+  <code>loss</code>; the 20B eval batch is also too large for full logits). Every
+  <code>.logits</code> consumer in the repo (generation, <code>scripts/verify_model.py</code>,
+  <code>training/distillation.py</code>) calls the model without labels or under
+  <code>torch.no_grad()</code>, so it still receives full logits. There is a regression
+  test for this.</li>
+<li>Real ZeRO-3 multi-GPU execution was not run here. <code>stage3_max_reuse_distance</code>
+  is set above the <code>lm_head</code> shard size so the fused CE's repeated <code>lm_head</code>
+  calls reuse the already-gathered parameter. If your DeepSpeed version behaves
+  differently, set <code>"fused_linear_cross_entropy": false</code> for that run.</li>
+<li>The revised 20B recipe uses a 2k → 4k → 8k curriculum, within the
+  native 8k context. The long-context equivalence test remains useful for
+  inference profiles; it does not establish long-context quality.</li>
+</ul>
+<h2 id="measured-savings">Measured savings</h2>
+<p><strong>Historical baseline:</strong> the 20B figures below describe the former 300B/32k
+recipe, not the current 69.83B/8k curriculum. Run the benchmark script again
+for a current 8k upper-length projection.</p>
+<p><code>python scripts/benchmark_training.py</code> runs baseline and optimised in separate
+processes, interleaved three times, on a scaled-down but structurally identical
+model (vocab 32768, 2 layers, seq 256, batch 2, gradient checkpointing on,
+128-token loss chunks). Representative results (saved in
+<code>coding-agent-20b/evaluation/reports/training_optimization_benchmark.json</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Before</th>
+<th>After</th>
+<th>Saving (range over repeated runs)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tensors saved for backward (= live activation memory)</td>
+<td>152,064,500 B (145.0 MiB)</td>
+<td>1,584,640 B (1.5 MiB)</td>
+<td><strong>99.0 %</strong> (stable)</td>
+</tr>
+<tr>
+<td>Peak process RSS</td>
+<td>~766 MB (731 MiB)</td>
+<td>~690–715 MB (656–682 MiB)</td>
+<td><strong>6–10 %</strong></td>
+</tr>
+<tr>
+<td>Median forward+backward step time</td>
+<td>0.21–0.25 s</td>
+<td>0.16–0.18 s</td>
+<td><strong>1.25–1.38× / 20–28 % faster</strong></td>
+</tr>
+<tr>
+<td>SwiGLU MLP block fwd+bwd (isolated)</td>
+<td>0.023–0.028 s</td>
+<td>0.021–0.028 s</td>
+<td><strong>1.02–1.18×</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Timings are the median of three interleaved rounds (both the whole-step and
+the isolated MLP measurements); CPU timings on tiny matrices are noisy, hence
+the ranges. The saved-for-backward count is exact and deterministic. Peak RSS
+only falls ~6–10 % here because PyTorch's runtime and the small weight set
+dominate at this scale; the <strong>activation</strong> saving is 99 %, which is what scales
+with <code>V</code> and <code>T</code> on the real models. Exact numbers from the most recent run are
+in the JSON report.</p>
+<h2 id="projected-savings-on-nvidia-a100">Projected savings on NVIDIA A100</h2>
+<p><code>python scripts/benchmark_training.py --gpu all</code> (use <code>--gpu a100-40gb</code> or
+<code>--gpu a100-80gb</code> for one). Hardware profiles are explicit and editable at the
+top of the script. Both A100 variants have <strong>identical compute</strong> (312 TFLOP/s
+dense bf16) — they differ only in HBM bandwidth and VRAM capacity
+<a href="https://bostondownloads.blob.core.windows.net/downloads/a/d/8/ad8d7991-57f5-4b92-8d58-66f0841e0d2a/NVIDIA-A100-80GB-Datasheet.pdf">NVIDIA A100 datasheet</a>:</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>HBM</th>
+<th>bf16</th>
+<th>VRAM</th>
+<th>Usable @85 %</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A100 40GB (HBM2, SXM/PCIe)</td>
+<td>1.555 TB/s</td>
+<td>312 TFLOP/s</td>
+<td>40 GiB</td>
+<td>34.0 GiB</td>
+</tr>
+<tr>
+<td>A100 80GB SXM (HBM2e)</td>
+<td>2.039 TB/s</td>
+<td>312 TFLOP/s</td>
+<td>80 GiB</td>
+<td>68.0 GiB</td>
+</tr>
+<tr>
+<td>A100 80GB PCIe (HBM2e)</td>
+<td>1.935 TB/s</td>
+<td>312 TFLOP/s</td>
+<td>80 GiB</td>
+<td>68.0 GiB</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Full-run wall-clock on ONE 8-GPU node</strong> (100 % MFU; includes a conservative
+upper-bound estimate of ZeRO-Infinity CPU-offload traffic, which the shipped
+recipes hard-coded ON and our auto policy now disables where VRAM allows):</p>
+<table>
+<thead>
+<tr>
+<th>A100 variant</th>
+<th>3B before → after</th>
+<th>20B before → after</th>
+<th>20B fits?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>40GB</strong></td>
+<td><strong>53.5 h → 43.3 h</strong> (save 10.1 h / 19 %)</td>
+<td><strong>9,853.8 h → 8,591.8 h</strong> (save 1,262 h ≈ 53 d)</td>
+<td><strong>No</strong></td>
+</tr>
+<tr>
+<td><strong>80GB SXM</strong></td>
+<td><strong>53.5 h → 44.0 h</strong> (save 9.4 h / 18 %)</td>
+<td><strong>9,853.8 h → 8,604.0 h</strong> (save 1,250 h ≈ 52 d)</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><strong>80GB PCIe</strong></td>
+<td>53.5 h → 43.9 h (save 9.6 h)</td>
+<td>9,853.8 h → 8,601.9 h (save 1,252 h)</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<p>At a realistic <strong>45 % MFU</strong>: 3B ~5 d → ~4 d; 20B ~912 d → ~796 d.</p>
+<p>Per-model detail on the 80GB SXM node:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>3B (<code>1 × 4096</code>)</th>
+<th>20B (<code>2 × 32768</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logits activation / GPU</td>
+<td>4.9 GiB → 219.2 MiB (<strong>−95.6 %</strong>)</td>
+<td>78.3 GiB → 219.2 MiB (<strong>−99.7 %</strong>)</td>
+</tr>
+<tr>
+<td>Total activation / GPU</td>
+<td>5.5 GiB → 795.2 MiB (<strong>−85.8 %</strong>)</td>
+<td>126.3 GiB → 48.2 GiB (<strong>−61.8 %</strong>)</td>
+</tr>
+<tr>
+<td>Est. VRAM / GPU after</td>
+<td><strong>9.8 GiB</strong> (fits, offload auto-disabled)</td>
+<td><strong>49.0 GiB</strong> (fits, offload kept)</td>
+</tr>
+<tr>
+<td>CPU RAM / GPU for offload</td>
+<td>0 B</td>
+<td>91.5 GiB</td>
+</tr>
+<tr>
+<td>Original recipe VRAM / GPU</td>
+<td>14.5 GiB</td>
+<td><strong>229.3 GiB → OOM</strong></td>
+</tr>
+<tr>
+<td>Est. time / micro-batch</td>
+<td>0.34 s → 0.29 s (15.0 %)</td>
+<td>61.93 s → 54.07 s (12.7 %)</td>
+</tr>
+</tbody>
+</table>
+<p>Time saved per micro-batch = removed logits HBM traffic (15–19 ms / 247–323 ms,
+depending on the card), one fewer GEMM per layer (35 ms / 7.61 s), and 80/240
+removed GPU→CPU syncs (1.6 ms / 4.8 ms).</p>
+<p><strong>Notes specific to A100:</strong></p>
+<ul>
+<li>The <strong>slower memory on the 40GB card means it benefits slightly MORE</strong> from
+  the memory-traffic optimisation: the 3B saving is 10.1 h there vs 9.4 h on
+  the 80GB SXM, and the 20B saving 1,262 h vs 1,250 h.</li>
+<li><strong>20B does not fit on A100 40GB</strong> even after all optimisations: 49.0 GiB vs
+  34.0 GiB usable. Set <code>micro_batch_size_per_gpu: 1</code> with doubled gradient
+  accumulation (identical effective global batch of 2048 — quality-neutral)
+  → ~24.9 GiB/GPU and it fits. Total compute is unchanged, so the time
+  estimates above still hold.</li>
+<li>The original 20B recipe would not have run at all on <em>any</em> of these cards
+  (229 GiB/GPU needed, plus the <code>"auto"</code> accumulation <code>TypeError</code> and the
+  double loss scaling). The fused CE plus state offload is what makes it
+  possible.</li>
+<li>Historically, 300 B tokens on 8 GPUs was a ~2.5-year job. Scale world size
+  instead — ZeRO-3 shards roughly linearly, so 64 GPUs is ~8× faster (~51 d
+  ideal, ~114 d at 45 % MFU). The <strong>percentage</strong> saving is hardware-independent.</li>
+</ul>
+<blockquote>
+<p>The GPU time figures are <strong>estimates</strong> derived from explicit hardware
+constants, not profiled GPU runs (no GPU in this environment). The CPU
+timings and the 99 % activation/RSS reductions are <strong>measured</strong>. These are
+wall-clock hours on the whole node, not GPU-hours (multiply by 8 for
+GPU-hours). <code>6·N·T / FLOPs</code> assumes 100 % MFU, so treat them as lower bounds.</p>
+</blockquote>
+<h2 id="reproduce">Reproduce</h2>
+<pre><code class="language-bash">cd coding-agent-20b
+python scripts/verify_no_quality_loss.py          # quality gate
+python -m pytest -q tests/test_training_optimizations.py
+python scripts/benchmark_training.py              # measured + all A100 projections
+python scripts/benchmark_training.py --gpu a100-40gb   # just the 40GB card
+</code></pre>
+<p>20B:</p>
+<pre><code class="language-bash">python -m training.train --model_size 20B --config configs/training_config.json
+</code></pre>
+<p>3B (remember the launcher's default is 20B):</p>
+<pre><code class="language-bash">python -m training.train --model_size 3B --config configs/training_config_3b.json
+# or: python -m training.train_3b --config configs/training_config_3b.json
+</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>
