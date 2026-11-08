@@ -53,7 +53,7 @@ def cosine_lr(
 def seq_length_at(step: int, schedule: list[tuple] | None = None) -> int:
     """Sequence-length curriculum: short+cheap first, full 8k later."""
 
-    schedule = schedule or [(0, 2048), (2000, 4096), (6000, 8192)]
+    schedule = schedule or [(0, 2048), (644, 4096), (1610, 8192)]
 
     current = schedule[0][1]
 
@@ -64,6 +64,29 @@ def seq_length_at(step: int, schedule: list[tuple] | None = None) -> int:
             current = length
 
     return current
+
+
+def curriculum_steps(token_budget: int, global_batch_size: int, schedule: list) -> int:
+    """Number of complete optimizer steps fitting a token budget, without overshoot."""
+    if not schedule or schedule[0][0] != 0 or global_batch_size <= 0:
+        raise ValueError("curriculum must start at zero and batch size must be positive")
+    previous = -1
+    for start, length in schedule:
+        if start <= previous or length <= 0:
+            raise ValueError("curriculum starts must increase and lengths must be positive")
+        previous = start
+    remaining = token_budget
+    steps = 0
+    for i, (start, length) in enumerate(schedule):
+        cost = global_batch_size * length
+        count = remaining // cost
+        if i + 1 < len(schedule):
+            count = min(count, schedule[i + 1][0] - start)
+        steps += count
+        remaining -= count * cost
+        if i + 1 < len(schedule) and count < schedule[i + 1][0] - start:
+            break
+    return steps
 
 
 @dataclass
@@ -98,14 +121,14 @@ def default_pipeline() -> list[StageConfig]:
     """Continuous pretrain -> mid-train -> SFT -> preference (DPO) pipeline."""
 
     return [
-        StageConfig("pretrain", "pretrain", 3e-4, 3e-5, 2000, 100000, seq_length=8192),
+        StageConfig("pretrain", "pretrain", 3e-4, 3e-5, 84, 4186, seq_length=8192),
         StageConfig(
             "midtrain",
             "midtrain",
             1.5e-4,
             1.5e-5,
-            500,
-            20000,
+            19,
+            775,
             seq_length=8192,
             extra={"anneal_sources": ["tests", "issues", "prs", "docs"]},
         ),
@@ -114,8 +137,8 @@ def default_pipeline() -> list[StageConfig]:
             "sft",
             2e-5,
             2e-6,
-            200,
-            6000,
+            5,
+            155,
             seq_length=8192,
             extra={"mask_prompt_loss": True},
         ),
@@ -124,8 +147,8 @@ def default_pipeline() -> list[StageConfig]:
             "dpo",
             5e-7,
             5e-8,
-            50,
-            1500,
+            1,
+            24,
             seq_length=4096,
             weight_decay=0.0,
             extra={"beta": 0.1, "reference_model": "sft"},

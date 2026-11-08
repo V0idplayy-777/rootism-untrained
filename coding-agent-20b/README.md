@@ -53,8 +53,8 @@ Nothing above needs a GPU or a hosted service. The pieces:
 
 ## Corpus v1
 
-13 frozen slices in `dataset/mixture.py`: 73% real permissively licensed code
-(the Stack v2 / StarCoderData / pinned GitHub), 6% real-derived induction, 21%
+13 frozen slices in `dataset/mixture.py`: 71% real permissively licensed code
+(the Stack v2 / StarCoderData / pinned GitHub), 8% real-derived induction, 21%
 verified synthetic — with model-generated text capped at **5% of tokens**
 (`dataset.mixture.synthetic_token_budget`, `dataset.augmentation.cap_rows`).
 
@@ -120,3 +120,32 @@ synth = LongFormSynthesizer(lambda prompt, n: model.complete(prompt, n),
 result = synth.synthesise("config loader with validation and tests")
 print(result.ok, result.errors)   # compile-checked, with a per-unit trace
 ```
+
+## Revised 20B training budget
+
+The 20B plan is **69.83B tokens total** across pretrain (54.02B), midtrain
+(13.00B), SFT (2.60B), and DPO (0.20B). `configs/pipeline.json` records
+stage budgets using a global batch of 2,048; the pretrain curriculum changes
+from 2,048 to 4,096 at step 644 and to 8,192 at step 1,610. No 16k/32k
+training is budgeted by default. The generic code mixture weight falls from
+48% to 40%, while security, repair, app, preference and recovery weights and
+upsampling are retained. Token shares depend on actual document lengths and
+shard construction; the 5% synthetic cap still applies. Verify the built
+manifest and high-value source coverage: these settings do not guarantee the
+same absolute number of high-value tokens as the old 300B plan.
+
+`training/train.py` implements the curriculum for a **single continuous LM
+run** with the configured total token ceiling; it does not orchestrate the
+separate SFT/DPO stages. The staged pipeline is a recipe, not an automated
+end-to-end launcher. Do not run the full continuous budget and then add those
+stages on top: use stage-specific training and budgets to stay within the total.
+Build a fresh corpus with `--seq_length 8192`; the continuous trainer rewindows
+the flat token stream at each curriculum transition. Resuming restores the
+step and token count but not the exact data-loader position.
+
+A 6NT estimate for approximately 25B parameters and 69.83B tokens on 64 H100
+SXM GPUs at 45% MFU is about 4.3 days of idealized compute. This excludes
+attention overhead, data preparation, evaluations, networking, offload,
+checkpointing and downtime; benchmark the actual cluster before committing to
+a one-month schedule. No claim of unchanged model quality or 2–3× measured
+speedup is implied by this recipe change.

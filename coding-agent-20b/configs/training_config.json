@@ -2,7 +2,7 @@
   "model_name": "CodingAgent-20B",
   "model_size": "20B",
   "training": {
-    "total_tokens": 300000000000,
+    "total_tokens": 69826772992,
     "learning_rate": 0.0003,
     "min_learning_rate": 3e-05,
     "warmup_tokens": 2000000000,
@@ -18,8 +18,22 @@
     "global_batch_size": 2048,
     "micro_batch_size_per_gpu": 2,
     "gradient_accumulation_steps": "auto",
-    "sequence_length": 32768,
-    "long_sequence_length": 32768
+    "sequence_length": 8192,
+    "long_sequence_length": 8192,
+    "sequence_curriculum": [
+      [
+        0,
+        2048
+      ],
+      [
+        644,
+        4096
+      ],
+      [
+        1610,
+        8192
+      ]
+    ]
   },
   "deepspeed": {
     "stage": 3,
@@ -33,12 +47,12 @@
     "data_dir": "data/corpus_v1/shards_20b",
     "mixture_source": "dataset/mixture.DEFAULT_MIXTURE",
     "mixture": {
-      "the-stack-code": 0.48,
+      "the-stack-code": 0.4,
       "github-issues": 0.06,
-      "github-prs": 0.07,
-      "tests": 0.07,
+      "github-prs": 0.09,
+      "tests": 0.11,
       "docs-and-comments": 0.05,
-      "instruction-sft": 0.06,
+      "instruction-sft": 0.08,
       "security-sft": 0.03,
       "repair-trace-sft": 0.04,
       "app-sft": 0.05,

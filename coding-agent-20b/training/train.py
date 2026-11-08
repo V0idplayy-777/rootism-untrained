@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 from dataset.processor import MemoryMappedDataset
+from training.schedules import curriculum_steps, seq_length_at
 from model.config import CodingAgentConfig, get_1b_config, get_7b_config, get_20b_config
 from model.model import CodingAgentModel
 from training.optimizations import (
@@ -691,9 +692,11 @@ def train(args: argparse.Namespace):
 
     tokens_per_step = global_batch_size * seq_length
 
-    total_steps = total_tokens // tokens_per_step
-
-    warmup_steps = training_config["warmup_tokens"] // tokens_per_step
+    curriculum = config["batching"].get("sequence_curriculum", [[0, seq_length]])
+    if any(length > seq_length for _, length in curriculum):
+        raise ValueError("curriculum length exceeds configured maximum")
+    total_steps = curriculum_steps(total_tokens, global_batch_size, curriculum)
+    warmup_steps = curriculum_steps(training_config["warmup_tokens"], global_batch_size, curriculum)
 
     lr_scheduler = CosineDecayWithWarmup(
         max_lr=training_config["learning_rate"],
@@ -740,11 +743,26 @@ def train(args: argparse.Namespace):
 
     step_start_time = time.time()
 
-    max_steps = args.max_steps or total_steps
+    max_steps = min(args.max_steps, total_steps) if args.max_steps else total_steps
+    active_seq_length = None
+    tokens_since_log = 0
 
     loss_window: list[torch.Tensor] = []
 
     while state.step < max_steps:
+
+        current_length = seq_length_at(state.step, curriculum)
+        if current_length != active_seq_length:
+            # Repartition the same flat token stream into windows at this length.
+            train_dataset = MemoryMappedDataset(data_dir, split="train", seq_length=current_length)
+            train_loader = StreamingDataLoader(
+                train_dataset, batch_size=micro_batch, rank=rank, world_size=world_size,
+                seed=config["training"]["seed"] + state.epoch + state.step,
+            )
+            train_iter = iter(train_loader)
+            active_seq_length = current_length
+            tokens_per_batch = micro_batch * current_length * world_size
+            logger.info("Sequence curriculum: step %s -> %s tokens", state.step, current_length)
 
         lr = lr_scheduler.get_lr(state.step)
 
@@ -785,6 +803,7 @@ def train(args: argparse.Namespace):
         state.step += 1
 
         state.tokens_processed += tokens_per_batch * grad_accum_steps
+        tokens_since_log += tokens_per_batch * grad_accum_steps
 
         step_loss = torch.stack(micro_losses).mean()
 
@@ -794,7 +813,8 @@ def train(args: argparse.Namespace):
 
             elapsed = time.time() - step_start_time
 
-            logged_tokens = tokens_per_batch * grad_accum_steps * config["logging"]["log_every_steps"]
+            logged_tokens = tokens_since_log
+            tokens_since_log = 0
 
             tokens_per_sec = logged_tokens / max(elapsed, 1e-9)
 

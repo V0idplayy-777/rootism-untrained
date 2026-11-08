@@ -11,18 +11,18 @@ python scripts/corpus_report.py --strict   # exit 1 if any invariant regresses
 
 ## Composition
 
-13 slices, weights sum to 1.00. By document share: **73% real** permissively
-licensed code, **6% hybrid** (real code with an induced instruction), **21%
+13 slices, weights sum to 1.00. By document share: **71% real** permissively
+licensed code, **8% hybrid** (real code with an induced instruction), **21%
 synthetic**.
 
 | Slice | Weight | Kind | What it is |
 | --- | --- | --- | --- |
-| `the-stack-code` | 0.48 | real | Permissively licensed source (Stack v2 / StarCoderData / pinned GitHub) |
-| `tests` | 0.07 | real | Real unit and integration suites |
-| `github-prs` | 0.07 | real | Pull-request diffs and discussion |
+| `the-stack-code` | 0.40 | real | Permissively licensed source (Stack v2 / StarCoderData / pinned GitHub) |
+| `tests` | 0.11 | real | Real unit and integration suites |
+| `github-prs` | 0.09 | real | Pull-request diffs and discussion |
 | `github-issues` | 0.06 | real | Issue threads |
 | `docs-and-comments` | 0.05 | real | Documentation, architecture notes, docstrings |
-| `instruction-sft` | 0.06 | hybrid | Real-code induction (8 shapes) + phrasing/cross-domain augmentation |
+| `instruction-sft` | 0.08 | hybrid | Real-code induction (8 shapes) + phrasing/cross-domain augmentation |
 | `app-sft` | 0.05 | synthetic | Pytest-verified multi-file applications |
 | `repair-trace-sft` | 0.04 | synthetic | fail → diagnose → minimal diff → green |
 | `security-sft` | 0.03 | synthetic | CWE-tagged safe/vulnerable pairs |

@@ -8,8 +8,10 @@ Design invariants:
 - Weights sum to ``1.00`` exactly.
 - Real permissively licensed code and repository artifacts (``the-stack-code``,
   ``github-issues``, ``github-prs``, ``tests``, ``docs-and-comments``) form the
-  73% backbone; adding real-code-induced instructions brings real-derived tokens
-  above 76%.
+  71% backbone; adding real-code-induced instructions brings real-derived tokens
+  above 79%. The generic ``the-stack-code`` slice is deliberately capped at
+  0.40 (down from 0.48) so that a ~70B-token run spends its compute on tests,
+  pull requests, issues and instructions instead of raw code volume.
 - High-value synthetic/verified slices (security, repair traces, verified apps,
   preference/DPO, tool recovery, multi-file scaffolding) remain bounded
   minorities. ``upsample`` records the repeat factor already reflected in the
@@ -49,14 +51,14 @@ DEFAULT_MIXTURE: list[SourceSpec] = [
     ),
     SourceSpec(
         "github-prs",
-        0.07,
+        0.09,
         upsample=1.0,
         kind="real",
         description="Unified diffs, code review comments, and commit messages",
     ),
     SourceSpec(
         "tests",
-        0.07,
+        0.11,
         upsample=1.0,
         kind="real",
         description="Real unit and integration test suites",
@@ -70,7 +72,7 @@ DEFAULT_MIXTURE: list[SourceSpec] = [
     ),
     SourceSpec(
         "instruction-sft",
-        0.06,
+        0.08,
         upsample=1.0,
         kind="hybrid",
         description="Diverse coding instructions (real + AST-induced + phrasing/cross-domain augmented)",
@@ -126,7 +128,7 @@ DEFAULT_MIXTURE: list[SourceSpec] = [
     ),
     SourceSpec(
         "the-stack-code",
-        0.48,
+        0.40,
         upsample=1.0,
         kind="real",
         description="Permissively licensed source code (The Stack v2 / StarCoderData / curated GitHub+PyPI+npm)",
