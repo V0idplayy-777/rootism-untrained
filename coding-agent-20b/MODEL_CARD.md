@@ -24,10 +24,10 @@ anneal on tests/issues/PRs/docs (plus security and distribution-shift sources)
 Data: permissive-license code (SPDX gate in `dataset/production_processor.py`,
 reused by the tokenizer corpus sampler), MinHash-LSH dedup, attention-aware
 packing (`dataset/packing.py`), frozen Corpus v1 mixture in `dataset/mixture.py`
-(13 slices, weights sum to 1.00; 73% real / 6% hybrid / 21% synthetic by
+(13 slices, weights sum to 1.00; 71% real / 8% hybrid / 21% synthetic by
 document share):
-`the-stack-code 0.48 · tests 0.07 · github-prs 0.07 · github-issues 0.06 ·
-instruction-sft 0.06 · docs-and-comments 0.05 · app-sft 0.05 ·
+`the-stack-code 0.40 · tests 0.11 · github-prs 0.09 · github-issues 0.06 ·
+instruction-sft 0.08 · docs-and-comments 0.05 · app-sft 0.05 ·
 repair-trace-sft 0.04 · security-sft 0.03 · app-repair-sft 0.03 ·
 app-preference-dpo 0.02 · recovery-sft 0.02 · project-scaffold-sft 0.02`
 (upsampling: security ×3, repair-trace ×2.5, app-sft ×2.5, app-repair ×2.5).
@@ -87,3 +87,8 @@ Pinned deps (`requirements.txt`), fixed tokenizer tie-breaking, seeded
 generation/sampling, corpus manifest (`tokenizer/manifest.json`, corpus SHA-256)
 and validation/benchmark reports saved beside the vocab. See
 `docs/REPRODUCIBILITY.md`.
+
+The revised stage plan totals 69.83B tokens, with a 2k → 4k → 8k pretrain
+curriculum and no default long-context training. See the README for execution
+limitations, token accounting, and the distinction between planned sampling
+weights and realized high-value data. Quality and runtime require validation.

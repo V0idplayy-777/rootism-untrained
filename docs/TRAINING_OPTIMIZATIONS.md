@@ -98,15 +98,15 @@ dependencies). No new failures.
   is set above the `lm_head` shard size so the fused CE's repeated `lm_head`
   calls reuse the already-gathered parameter. If your DeepSpeed version behaves
   differently, set `"fused_linear_cross_entropy": false` for that run.
-* The 20B recipe declares `sequence_length=32768` while the model is natively
-  `max_position_embeddings=8192` with no YaRN scaling. That is a **pre-existing
-  property of the HEAD recipe** and was deliberately left untouched (changing
-  it would change the learning problem). A dedicated test trains a tiny model at
-  3× its declared context and confirms loss, logits and all gradients are
-  identical to the reference, with and without explicit `position_ids`, so the
-  optimisation does not introduce any additional long-context error.
+* The revised 20B recipe uses a 2k → 4k → 8k curriculum, within the
+  native 8k context. The long-context equivalence test remains useful for
+  inference profiles; it does not establish long-context quality.
 
 ## Measured savings
+
+**Historical baseline:** the 20B figures below describe the former 300B/32k
+recipe, not the current 69.83B/8k curriculum. Run the benchmark script again
+for a current 8k upper-length projection.
 
 `python scripts/benchmark_training.py` runs baseline and optimised in separate
 processes, interleaved three times, on a scaled-down but structurally identical
@@ -184,7 +184,7 @@ removed GPU→CPU syncs (1.6 ms / 4.8 ms).
   (229 GiB/GPU needed, plus the `"auto"` accumulation `TypeError` and the
   double loss scaling). The fused CE plus state offload is what makes it
   possible.
-* 300 B tokens on 8 GPUs is genuinely a ~2.5-year job. Scale world size
+* Historically, 300 B tokens on 8 GPUs was a ~2.5-year job. Scale world size
   instead — ZeRO-3 shards roughly linearly, so 64 GPUs is ~8× faster (~51 d
   ideal, ~114 d at 45 % MFU). The **percentage** saving is hardware-independent.
 

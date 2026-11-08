@@ -37,9 +37,10 @@ echo "  Config:      $CONFIG"
 echo "  Master Port: $MASTER_PORT"
 echo "============================================================"
 
-if [ ! -d "data/processed" ]; then
-    echo "ERROR: Processed dataset not found at data/processed"
-    echo "Run: python scripts/generate_dataset.py first"
+DATA_DIR=$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["data"]["data_dir"])' "$CONFIG")
+if [ ! -f "$DATA_DIR/train_manifest.json" ] || [ ! -f "$DATA_DIR/val_manifest.json" ]; then
+    echo "ERROR: train/val manifests not found in $DATA_DIR"
+    echo "Build Corpus v1 shards first; see docs/CORPUS_V1.md"
     exit 1
 fi
 

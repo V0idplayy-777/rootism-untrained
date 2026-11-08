@@ -342,7 +342,7 @@ class MemoryMappedDataset:
 
         self.total_tokens = self.manifest["total_tokens"]
 
-        self.num_sequences = self.total_tokens // self.seq_length
+        self.num_sequences = max(0, (self.total_tokens - 1) // self.seq_length)
 
         logger.info(
             f"Loaded {split} dataset: {self.total_tokens:,} tokens, "

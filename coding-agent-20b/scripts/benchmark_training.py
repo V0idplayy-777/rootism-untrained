@@ -429,8 +429,8 @@ def main() -> int:
     recipes = {
         "3B": dict(cfg=get_3b_config(), micro_batch=1, seq_len=4096,
                    total_tokens=18_000_000_000, global_batch_size=512),
-        "20B": dict(cfg=get_20b_config(), micro_batch=2, seq_len=32768,
-                    total_tokens=300_000_000_000, global_batch_size=2048),
+        "20B": dict(cfg=get_20b_config(), micro_batch=2, seq_len=8192,
+                    total_tokens=69_826_772_992, global_batch_size=2048),
     }
     projections_by_gpu: dict[str, dict] = {}
     for gpu_key in gpu_keys:

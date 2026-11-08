@@ -176,7 +176,7 @@ def test_files_block_prioritises_the_product_surface():
 def test_mixture_upsamples_app_generation_sources():
     weights = {source.name: source.weight for source in DEFAULT_MIXTURE}
     upsample = {source.name: source.upsample for source in DEFAULT_MIXTURE}
-    assert weights["the-stack-code"] == 0.48
+    assert weights["the-stack-code"] == 0.40
     assert weights["app-sft"] == 0.05 and upsample["app-sft"] == 2.5
     assert weights["app-repair-sft"] == 0.03 and upsample["app-repair-sft"] == 2.5
     assert weights["app-preference-dpo"] == 0.02

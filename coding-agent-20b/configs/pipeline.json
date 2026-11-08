@@ -5,19 +5,19 @@
       "kind": "pretrain",
       "learning_rate": 0.0003,
       "min_lr": 3e-05,
-      "warmup_steps": 2000,
-      "total_steps": 100000,
+      "warmup_steps": 84,
+      "total_steps": 4186,
       "seq_length": 8192,
       "weight_decay": 0.1,
       "data": {
         "mixture": "dataset/mixture.DEFAULT_MIXTURE",
         "weights": {
-          "the-stack-code": 0.48,
+          "the-stack-code": 0.4,
           "github-issues": 0.06,
-          "github-prs": 0.07,
-          "tests": 0.07,
+          "github-prs": 0.09,
+          "tests": 0.11,
           "docs-and-comments": 0.05,
-          "instruction-sft": 0.06,
+          "instruction-sft": 0.08,
           "security-sft": 0.03,
           "repair-trace-sft": 0.04,
           "app-sft": 0.05,
@@ -33,11 +33,11 @@
             2048
           ],
           [
-            2000,
+            644,
             4096
           ],
           [
-            6000,
+            1610,
             8192
           ]
         ],
@@ -56,15 +56,16 @@
           "drop_policy": "downsample synthetic slices deterministically (seed 42) before shards"
         },
         "gates": "dataset.quality_gates.evaluate_manifest"
-      }
+      },
+      "total_tokens": 54022635520
     },
     {
       "name": "midtrain",
       "kind": "midtrain",
       "learning_rate": 0.00015,
       "min_lr": 1.5e-05,
-      "warmup_steps": 500,
-      "total_steps": 20000,
+      "warmup_steps": 19,
+      "total_steps": 775,
       "seq_length": 8192,
       "weight_decay": 0.1,
       "data": {
@@ -89,16 +90,23 @@
           "enforced_by": "dataset.quality_gates.check_synthetic_budget",
           "drop_policy": "downsample synthetic slices deterministically (seed 42) before shards"
         },
-        "gates": "dataset.quality_gates.evaluate_manifest"
-      }
+        "gates": "dataset.quality_gates.evaluate_manifest",
+        "seq_curriculum": [
+          [
+            0,
+            8192
+          ]
+        ]
+      },
+      "total_tokens": 13002342400
     },
     {
       "name": "sft",
       "kind": "sft",
       "learning_rate": 2e-05,
       "min_lr": 2e-06,
-      "warmup_steps": 200,
-      "total_steps": 6000,
+      "warmup_steps": 5,
+      "total_steps": 155,
       "seq_length": 8192,
       "weight_decay": 0.1,
       "data": {
@@ -134,16 +142,23 @@
           ],
           "enforced_by": "dataset.quality_gates.check_synthetic_budget",
           "drop_policy": "downsample synthetic slices deterministically (seed 42) before shards"
-        }
-      }
+        },
+        "seq_curriculum": [
+          [
+            0,
+            8192
+          ]
+        ]
+      },
+      "total_tokens": 2600468480
     },
     {
       "name": "dpo",
       "kind": "dpo",
       "learning_rate": 5e-07,
       "min_lr": 5e-08,
-      "warmup_steps": 50,
-      "total_steps": 1500,
+      "warmup_steps": 1,
+      "total_steps": 24,
       "seq_length": 4096,
       "weight_decay": 0.0,
       "extra": {
@@ -175,8 +190,15 @@
           ],
           "enforced_by": "dataset.quality_gates.check_synthetic_budget",
           "drop_policy": "downsample synthetic slices deterministically (seed 42) before shards"
-        }
-      }
+        },
+        "seq_curriculum": [
+          [
+            0,
+            4096
+          ]
+        ]
+      },
+      "total_tokens": 201326592
     }
   ],
   "checkpointing": {
